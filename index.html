@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BARodrIA - Panel Modular v4.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Space Grotesk', sans-serif; }
+        .mono-font { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen flex flex-col md:flex-row overflow-x-hidden">
+
+    <aside class="w-full md:w-64 bg-gray-900 border-b md:border-b-0 md:border-r border-gray-800 flex flex-col shrink-0 font-sans">
+        <div class="p-6 border-b border-gray-800">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🍸</span>
+                <div>
+                    <h1 class="font-bold text-lg text-emerald-400 tracking-wider">BARodrIA</h1>
+                    <span class="text-xs text-gray-500 font-medium tracking-widest uppercase">Admin v4.0</span>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 p-4 space-y-1" id="menu-navegacion">
+            <button data-view="dashboard" class="btn-nav w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition bg-emerald-500/10 text-emerald-400">
+                <span>📊</span> Dashboard
+            </button>
+            <button data-view="insumos" class="btn-nav w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-400 hover:bg-gray-800 hover:text-white transition">
+                <span>🛒</span> Insumos
+            </button>
+            <button data-view="subrecetas" class="btn-nav w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-400 hover:bg-gray-800 hover:text-white transition">
+                <span>🧪</span> Sub-recetas
+            </button>
+            <button data-view="cocteles" class="btn-nav w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-400 hover:bg-gray-800 hover:text-white transition">
+                <span>🍸</span> Cócteles
+            </button>
+            <button data-view="servicio" class="btn-nav w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-400 hover:bg-gray-800 hover:text-white transition font-mono border border-emerald-500/20 bg-emerald-950/20">
+                <span>📱</span> Modo Bartender
+            </button>
+            <button data-view="catalogos" class="btn-nav w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-400 hover:bg-gray-800 hover:text-white transition">
+                <span>⚙️</span> Catálogos Estáticos
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-gray-800 text-xs text-gray-500 space-y-2">
+            <div class="flex items-center gap-2">
+                <span id="indicador-conexion" class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="texto-conexion">Sistema Modular Activo</span>
+            </div>
+            <div class="text-[10px] text-gray-600 font-mono">Entorno VSCode / Git</div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0">
+        <header class="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-8 shrink-0">
+            <div class="flex items-center gap-2 text-sm text-gray-400">
+                <span>📅</span><span class="font-mono">Agosto 2026</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="bg-gray-800 px-3 py-1 rounded text-xs text-gray-400 font-mono">Esquema: public</div>
+            </div>
+        </header>
+
+        <div id="app-content" class="flex-1 p-8 overflow-y-auto">
+            </div>
+    </main>
+
+    <script type="module" src="./src/js/main.js"></script>
+</body>
+</html>

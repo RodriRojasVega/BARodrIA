@@ -1,0 +1,81 @@
+<div class="space-y-8 animate-fade-in">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-bold tracking-tight text-white">Maestro de Insumos</h2>
+            <p class="text-gray-400 mt-1">Ingresa y gestiona los insumos base y compuestos para el costeo de cócteles.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <input type="text" id="buscador-insumos" oninput="filtrarInsumos()" placeholder="Buscar insumo..." class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 h-fit space-y-4">
+            <h3 class="text-lg font-bold text-emerald-400 border-b border-gray-800 pb-2">Agregar Insumo</h3>
+            <form id="form-insumo" class="space-y-4 text-sm">
+                <div>
+                    <label class="block text-gray-400 mb-1">Nombre Comercial</label>
+                    <input type="text" id="insumo-nombre" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required placeholder="Ej: Pisco Valle Luna 40º">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">ID Único (Slug / Sin espacios ni tildes)</label>
+                    <input type="text" id="insumo-slug" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required placeholder="ej: pisco-valle-luna">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-gray-400 mb-1">Tipo</label>
+                        <select id="insumo-tipo" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none">
+                            <option value="simple">Simple (Comprado)</option>
+                            <option value="compuesto">Compuesto (Artesanal)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">Medida</label>
+                        <select id="insumo-unidad" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none">
+                            <option value="ml">ml (Mililitro)</option>
+                            <option value="g">g (Gramo)</option>
+                            <option value="unit">unit (Unidad)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-gray-400 mb-1">Formato Envase</label>
+                        <input type="number" step="0.01" id="insumo-formato" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required value="750">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">Precio Compra ($)</label>
+                        <input type="number" id="insumo-precio" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required value="12000">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">Graduación Alcohólica (% ABV)</label>
+                    <input type="number" step="0.1" id="insumo-abv" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required value="40">
+                </div>
+                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-gray-900 font-bold py-2.5 rounded-lg transition uppercase tracking-wider">Guardar en Supabase</button>
+            </form>
+        </div>
+
+        <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 lg:col-span-2 space-y-4">
+            <h3 class="text-lg font-bold text-white border-b border-gray-800 pb-2">Catálogo Activo</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-800 text-gray-400">
+                            <th class="pb-3">Insumo</th>
+                            <th class="pb-3 text-center">Tipo</th>
+                            <th class="pb-3 text-right">Formato</th>
+                            <th class="pb-3 text-right">Costo ml/g</th>
+                            <th class="pb-3 text-right">Precio Compra</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-insumos" class="divide-y divide-gray-800">
+                        <tr>
+                            <td colspan="5" class="text-center py-8 text-gray-500">Conectando con Supabase...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

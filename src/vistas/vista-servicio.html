@@ -1,0 +1,49 @@
+<div class="space-y-8 animate-fade-in">
+    <div class="bg-emerald-950/20 border border-emerald-500/20 p-6 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-emerald-400 tracking-wider font-mono">📱 MODO BARTENDER</h2>
+            <p class="text-sm text-gray-300 mt-1">Interfaz optimizada para tablet de barra. Recetas y alertas de pasos críticos de servicio.</p>
+        </div>
+        <div>
+            <span class="bg-emerald-500 text-gray-950 text-xs px-3 py-1.5 rounded-lg font-bold font-mono uppercase">SERVICIO ACTIVO</span>
+        </div>
+    </div>
+
+    <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl flex items-center gap-4">
+        <label class="text-gray-400 text-sm font-bold uppercase tracking-wider">Comanda Actual:</label>
+        <select id="selector-coctel-servicio" onchange="cargarModoServicio(this.value)" class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 font-mono">
+            <option value="">Cargando carta...</option>
+        </select>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 lg:col-span-2 space-y-6">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-lg text-white">Orden de Preparación: <span id="modo-servicio-nombre" class="text-emerald-400">---</span></h3>
+                <button onclick="reiniciarChecklist()" class="text-xs text-gray-500 hover:text-white uppercase font-mono bg-gray-800 px-3 py-1 rounded">Reiniciar Tareas</button>
+            </div>
+
+            <div class="space-y-3" id="checklist-servicio">
+                <div class="text-center py-8 text-gray-500">Selecciona un cóctel para ver sus instrucciones de barra.</div>
+            </div>
+        </div>
+
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 flex flex-col justify-between text-center space-y-6">
+            <div class="space-y-2">
+                <h3 class="font-bold text-gray-400 uppercase tracking-widest text-xs">Cronómetro de Barra</h3>
+                <p class="text-xs text-gray-600">Monitoreo activo para evitar sobre-dilución o falta de emulsión.</p>
+            </div>
+
+            <div class="py-8 bg-gray-950 rounded-xl border border-gray-850">
+                <div id="reloj-pantalla" class="text-6xl font-bold font-mono text-emerald-400">00:00</div>
+                <div id="reloj-etiqueta" class="text-xs text-gray-500 uppercase tracking-widest mt-2">Reloj Libre</div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="cancelarCronometro()" class="flex-1 bg-gray-800 hover:bg-gray-750 text-gray-400 py-3 rounded-lg font-bold text-sm transition uppercase tracking-wider font-mono">Detener / Cancelar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<audio id="sonido-alarma" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav" preload="auto"></audio>

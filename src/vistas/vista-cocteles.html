@@ -1,0 +1,123 @@
+<div class="space-y-8 animate-fade-in">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-bold tracking-tight text-white">Estandarización de Cócteles</h2>
+            <p class="text-gray-400 mt-1">Auditoría financiera, balance químico y notas de cata de las copas activas.</p>
+        </div>
+        <div>
+            <button onclick="abrirModalCoctel(null)" class="bg-emerald-500 hover:bg-emerald-600 text-gray-950 font-bold px-4 py-2 rounded-lg text-sm transition uppercase tracking-wider flex items-center gap-2">
+                <span>+</span> Nuevo Cóctel
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4 h-fit">
+            <div class="relative">
+                <input type="text" id="buscador-cocteles" oninput="filtrarCocteles()" placeholder="Buscar cóctel por nombre..." class="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                <span class="absolute left-3 top-2.5 text-gray-500">🔍</span>
+            </div>
+            
+            <div class="space-y-2 max-h-[500px] overflow-y-auto" id="lista-cocteles-contenedor">
+                </div>
+        </div>
+
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden flex flex-col lg:col-span-2 h-fit" id="detalle-coctel-contenedor">
+            <div class="text-center py-24 text-gray-500">
+                <span class="text-5xl">🍸</span>
+                <p class="mt-4 text-sm max-w-sm mx-auto">Selecciona un cóctel de la carta para auditar sus propiedades físicas, químicas y el COGS real de copa.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal-coctel" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden overflow-y-auto">
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-3xl w-full mx-4 my-8 space-y-4 max-h-[92vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+            <h3 id="modal-coctel-titulo" class="text-lg font-bold text-emerald-400">Estandarizar Cóctel</h3>
+            <button onclick="cerrarModalCoctel()" class="text-gray-400 hover:text-white text-xl font-bold">&times;</button>
+        </div>
+        
+        <form id="form-coctel" onsubmit="guardarCoctel(event)" class="space-y-4 text-sm">
+            <input type="hidden" id="coctel-id">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-400 mb-1 font-medium">Nombre en Carta</label>
+                    <input type="text" id="coctel-nombre" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required oninput="generarSlugCoctel(this.value)">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1 font-medium">Slug Único</label>
+                    <input type="text" id="coctel-slug" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div>
+                    <label class="block text-gray-400 mb-1 font-medium">Categoría</label>
+                    <select id="coctel-categoria-id" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-xs focus:outline-none"></select>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1 font-medium">Familia</label>
+                    <select id="coctel-familia-id" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-xs focus:outline-none"></select>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1 font-medium">Vajilla</label>
+                    <select id="coctel-soporte-id" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-xs focus:outline-none"></select>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1 font-medium">Hielo</label>
+                    <select id="coctel-hielo-id" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-xs focus:outline-none"></select>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1 font-medium">Técnica</label>
+                    <select id="coctel-tecnica-id" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white text-xs focus:outline-none" onchange="recalcularValoresFisicosCoctel()"></select>
+                </div>
+            </div>
+
+            <div class="space-y-2 border-t border-gray-800 pt-3">
+                <div class="flex justify-between items-center">
+                    <h4 class="font-bold text-white tracking-wide">Receta Líquida e Insumos (BOM)</h4>
+                    <button type="button" onclick="agregarFilaIngredienteCoctel(null)" class="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-3 py-1 rounded border border-emerald-500/20 transition uppercase font-semibold">+ Agregar Ingrediente</button>
+                </div>
+                <div id="coctel-ingredientes-filas" class="space-y-2 max-h-[160px] overflow-y-auto pr-1"></div>
+            </div>
+
+            <div class="space-y-2 border-t border-gray-800 pt-3">
+                <div class="flex justify-between items-center">
+                    <h4 class="font-bold text-white tracking-wide">Secuencia Operativa</h4>
+                    <button type="button" onclick="agregarFilaPasoCoctel(null)" class="text-xs bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 px-3 py-1 rounded border border-purple-500/20 transition uppercase font-semibold">+ Agregar Paso</button>
+                </div>
+                <div id="coctel-pasos-filas" class="space-y-2 max-h-[160px] overflow-y-auto pr-1"></div>
+            </div>
+
+            <div class="border-t border-gray-800 pt-3 space-y-3">
+                <h4 class="font-bold text-gray-300 uppercase tracking-wider text-xs">Atributos Sensoriales</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div><label class="block text-gray-400 mb-0.5">Inspiración (Storytelling)</label><input type="text" id="coctel-inspiracion" class="w-full bg-gray-800 border border-gray-700 rounded p-1.5 text-xs text-white"></div>
+                    <div><label class="block text-gray-400 mb-0.5">Vista</label><input type="text" id="coctel-vista" class="w-full bg-gray-800 border border-gray-700 rounded p-1.5 text-xs text-white"></div>
+                    <div><label class="block text-gray-400 mb-0.5">Nariz</label><input type="text" id="coctel-nariz" class="w-full bg-gray-800 border border-gray-700 rounded p-1.5 text-xs text-white"></div>
+                    <div><label class="block text-gray-400 mb-0.5">Boca</label><input type="text" id="coctel-boca" class="w-full bg-gray-800 border border-gray-700 rounded p-1.5 text-xs text-white"></div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div><label class="block text-gray-400 mb-0.5">Maridaje</label><input type="text" id="coctel-maridaje" class="w-full bg-gray-800 border border-gray-700 rounded p-1.5 text-xs text-white"></div>
+                    <div><label class="block text-gray-400 mb-0.5">Justificación</label><input type="text" id="coctel-justificacion" class="w-full bg-gray-800 border border-gray-700 rounded p-1.5 text-xs text-white"></div>
+                    <div><label class="block text-gray-400 mb-0.5">Alternativa</label><input type="text" id="coctel-alternativa" class="w-full bg-gray-800 border border-gray-700 rounded p-1.5 text-xs text-white"></div>
+                </div>
+                <div><label class="block text-gray-400 mb-0.5">Tips de Barra</label><input type="text" id="coctel-tips" class="w-full bg-gray-800 border border-gray-700 rounded p-1.5 text-xs text-white"></div>
+            </div>
+
+            <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                <div><span class="text-[10px] text-gray-500 uppercase font-semibold">COGS / Costo</span><div id="modal-coctel-costo" class="text-xl font-bold font-mono text-purple-400">$0</div></div>
+                <div><span class="text-[10px] text-gray-500 uppercase font-semibold">Precio (8.0x)</span><div id="modal-coctel-precio" class="text-xl font-bold font-mono text-emerald-400">$0</div></div>
+                <div><span class="text-[10px] text-gray-500 uppercase font-semibold">Alcohol (% ABV)</span><div id="modal-coctel-abv" class="text-xl font-bold font-mono text-white">0.0%</div></div>
+                <div><span class="text-[10px] text-gray-500 uppercase font-semibold">Azúcar (w/v)</span><div id="modal-coctel-azucar" class="text-xl font-bold font-mono text-amber-400">0.0%</div></div>
+            </div>
+
+            <div class="flex gap-3 pt-4 border-t border-gray-850">
+                <button type="button" onclick="cerrarModalCoctel()" class="flex-1 bg-gray-850 hover:bg-gray-800 text-gray-300 py-2.5 rounded-lg font-bold transition">Cancelar</button>
+                <button type="submit" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-gray-950 py-2.5 rounded-lg font-bold transition uppercase tracking-wider">Guardar Cóctel</button>
+            </div>
+        </form>
+    </div>
+</div>
