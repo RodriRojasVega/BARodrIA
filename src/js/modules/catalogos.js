@@ -50,6 +50,16 @@ const configCatalogos = {
             { name: "herramienta_requerida", label: "Herramientas", type: "text", required: true }, 
             { name: "dilucion_estimada_porcentaje", label: "Dilución (0 a 1)", type: "number", step: "0.01", required: true }
         ] 
+    },
+    // Agrega esto dentro del objeto configCatalogos en insumos/catalogos.js
+    tipos_sub_recetas: { 
+    endpoint: "tipos_sub_recetas", 
+    headers: ["Slug", "Nombre del Tipo", "Descripción", "Acciones"], 
+    fields: [
+        { name: "slug", label: "Slug Único (ej. syrup)", type: "text", required: true }, 
+        { name: "nombre", label: "Nombre Visible", type: "text", required: true }, 
+        { name: "descripcion", label: "Descripción", type: "textarea", required: false }
+    ] 
     }
 };
 

@@ -4,9 +4,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 let listaSubRecetasLocal = [];
 let listaSubRecetaIngredientesLocal = [];
 let listaInsumosLocal = []; 
+let listaTiposSubRecetasLocal = [];
 
 export async function initSubrecetas() {
-    await asegurarInsumosCargados();
+    await asegurarDatosCargados();
     await obtenerSubRecetasSupabase();
 
     const formSubReceta = document.getElementById('form-subreceta');
@@ -16,17 +17,22 @@ export async function initSubrecetas() {
     }
 }
 
-async function asegurarInsumosCargados() {
+async function asegurarDatosCargados() {
     try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/insumos?select=*`, { 
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-        });
-        if (response.ok) {
-            listaInsumosLocal = await response.json();
+        const [resInsumos, resTipos] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/insumos?select=*`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }),
+            fetch(`${SUPABASE_URL}/rest/v1/tipos_sub_recetas?select=*`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } })
+        ]);
+
+        if (resInsumos.ok) {
+            listaInsumosLocal = await resInsumos.json();
             window.__local_db_insumos = listaInsumosLocal;
         }
+        if (resTipos.ok) {
+            listaTiposSubRecetasLocal = await resTipos.json();
+        }
     } catch (e) {
-        console.error("Error al cargar insumos para el costeo de sub-recetas", e);
+        console.error("Error al cargar datos auxiliares para sub-recetas", e);
     }
 }
 
@@ -72,12 +78,16 @@ function renderizarListaSubRecetas(datos) {
         });
         const costoUnitario = costoTotal / parseFloat(receta.rendimiento_batch || 1);
 
+        // Buscar el nombre del tipo mediante la relación tipo_id
+        const tipoObj = listaTiposSubRecetasLocal.find(t => t.id == receta.tipo_id);
+        const nombreTipo = tipoObj ? tipoObj.nombre : 'Elaboración';
+
         return `
             <div onclick="verDetalleSubReceta(${receta.id})" class="p-4 rounded-lg bg-gray-800/40 border border-gray-850 hover:bg-gray-800/80 cursor-pointer transition flex justify-between items-center group">
                 <div class="space-y-1">
                     <h4 class="font-bold text-white group-hover:text-purple-400 transition text-sm">${receta.nombre}</h4>
                     <div class="flex items-center gap-2">
-                        <span class="text-[9px] bg-purple-950 text-purple-400 border border-purple-900/30 px-2 py-0.5 rounded font-bold uppercase tracking-wider">${receta.tipo}</span>
+                        <span class="text-[9px] bg-purple-950 text-purple-400 border border-purple-900/30 px-2 py-0.5 rounded font-bold uppercase tracking-wider">${nombreTipo}</span>
                         <span class="text-xs text-gray-500 font-mono">${Number(receta.rendimiento_batch).toFixed(0)} ${receta.unidad_rendimiento}</span>
                     </div>
                 </div>
@@ -93,6 +103,9 @@ window.verDetalleSubReceta = function(id) {
     const contenedor = document.getElementById('detalle-subreceta-contenedor');
     const receta = listaSubRecetasLocal.find(x => x.id === id);
     if (!receta || !contenedor) return;
+
+    const tipoObj = listaTiposSubRecetasLocal.find(t => t.id == receta.tipo_id);
+    const nombreTipo = tipoObj ? tipoObj.nombre : 'Elaboración';
 
     const ingredientes = listaSubRecetaIngredientesLocal.filter(ing => ing.sub_receta_id == id);
     let costoTotalBatch = 0;
@@ -120,7 +133,7 @@ window.verDetalleSubReceta = function(id) {
         <div class="space-y-6 animate-fade-in">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-800 pb-4 gap-4">
                 <div>
-                    <span class="bg-purple-500/10 text-purple-400 text-xs px-2.5 py-1 rounded font-semibold uppercase tracking-wider">${receta.tipo}</span>
+                    <span class="bg-purple-500/10 text-purple-400 text-xs px-2.5 py-1 rounded font-semibold uppercase tracking-wider">${nombreTipo}</span>
                     <h3 class="text-2xl font-bold text-white mt-1">${receta.nombre}</h3>
                 </div>
                 <div class="flex items-center gap-2">
@@ -168,10 +181,20 @@ window.verDetalleSubReceta = function(id) {
     `;
 }
 
-window.abrirModalSubReceta = function(id = null) {
+window.abrirModalSubReceta = async function(id = null) {
     const modal = document.getElementById('modal-subreceta');
     const titulo = document.getElementById('modal-subreceta-titulo');
     const filasContenedor = document.getElementById('ingredientes-subreceta-filas');
+    
+    if (!modal) return;
+
+    // Asegurar tipos frescos para el selector del modal
+    await asegurarDatosCargados();
+    const selectTipo = document.getElementById('subreceta-tipo-id') || document.getElementById('subreceta-tipo');
+    if (selectTipo && listaTiposSubRecetasLocal.length > 0) {
+        selectTipo.innerHTML = listaTiposSubRecetasLocal.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+    }
+
     filasContenedor.innerHTML = '';
     modal.classList.remove('hidden');
 
@@ -182,7 +205,9 @@ window.abrirModalSubReceta = function(id = null) {
         document.getElementById('subreceta-nombre').value = receta.nombre;
         document.getElementById('subreceta-slug').value = receta.slug;
         document.getElementById('subreceta-slug').disabled = true;
-        document.getElementById('subreceta-tipo').value = receta.tipo;
+        
+        if (selectTipo) selectTipo.value = receta.tipo_id;
+
         document.getElementById('subreceta-rendimiento').value = receta.rendimiento_batch;
         document.getElementById('subreceta-unidad').value = receta.unidad_rendimiento;
         document.getElementById('subreceta-instrucciones').value = receta.elaboracion_instrucciones;
@@ -268,10 +293,13 @@ async function guardarSubReceta(e) {
     const idInput = document.getElementById('subreceta-id').value;
     const esEdicion = idInput !== '';
 
+    const selectTipo = document.getElementById('subreceta-tipo-id') || document.getElementById('subreceta-tipo');
+    const tipoIdVal = selectTipo ? parseInt(selectTipo.value) : 1;
+
     const payloadSubReceta = {
         slug: document.getElementById('subreceta-slug').value,
         nombre: document.getElementById('subreceta-nombre').value,
-        tipo: document.getElementById('subreceta-tipo').value,
+        tipo_id: tipoIdVal,
         rendimiento_batch: parseFloat(document.getElementById('subreceta-rendimiento').value) || 1,
         unidad_rendimiento: document.getElementById('subreceta-unidad').value,
         elaboracion_instrucciones: document.getElementById('subreceta-instrucciones').value,
