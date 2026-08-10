@@ -60,7 +60,16 @@ const configCatalogos = {
         { name: "nombre", label: "Nombre Visible", type: "text", required: true }, 
         { name: "descripcion", label: "Descripción", type: "textarea", required: false }
     ] 
-    }
+    },
+    tipos_insumos: { 
+        endpoint: "tipos_insumos", 
+        headers: ["Slug", "Nombre del Tipo", "Descripción", "Acciones"], 
+        fields: [
+            { name: "slug", label: "Slug Único (ej. destilado)", type: "text", required: true }, 
+            { name: "nombre", label: "Nombre Visible", type: "text", required: true }, 
+            { name: "descripcion", label: "Descripción", type: "textarea", required: false }
+        ] 
+    },
 };
 
 export function initCatalogos() {
@@ -125,7 +134,6 @@ function renderizarTablaCatalogo() {
             if (field.name === 'dilucion_estimada_porcentaje' && val !== undefined) val = `${(Number(val) * 100).toFixed(0)}%`;
             if (field.name === 'capacidad_operativa_ml' && val !== undefined) val = `${val} ml`;
             
-            // Si es un campo largo (como descripción), le damos un ancho máximo y permitimos multilíneas ordenadas
             const esTextoLargo = field.type === 'textarea' || field.name === 'descripcion' || field.name === 'formula_balance_sugerida';
             const estilosCelda = esTextoLargo ? 
                 'max-w-xs md:max-w-md whitespace-normal break-words text-gray-300 text-xs leading-relaxed' : 
@@ -141,7 +149,9 @@ function renderizarTablaCatalogo() {
                 <button type="button" data-action="eliminar" data-id="${item.id}" data-slug="${item.slug}" class="text-xs bg-red-950/20 hover:bg-red-900/40 text-red-400 px-2.5 py-1 rounded border border-red-500/20 transition">Eliminar</button>
             </td>
         `;
-        return `<tr class="hover:bg-gray-800/40 transition border-b border-gray-850 align-top">${celdasHtml}${accionesHtml}</tr>`;
+        
+        // Reemplazamos border-b por una línea oscura y sutil (border-gray-800/40) para evitar contrastes gruesos
+        return `<tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40 align-top">${celdasHtml}${accionesHtml}</tr>`;
     }).join('');
 
     cuerpo.querySelectorAll('button[data-action="editar"]').forEach(btn => {

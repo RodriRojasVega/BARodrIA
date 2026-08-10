@@ -23,11 +23,14 @@
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="block text-gray-400 mb-1">Tipo</label>
-                        <select id="insumo-tipo" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none">
-                            <option value="simple">Simple (Comprado)</option>
-                            <option value="compuesto">Compuesto (Artesanal)</option>
-                        </select>
+                        <label class="block text-xs font-medium text-gray-400 mb-1">Tipo de Insumo</label>
+                        <select id="insumo-tipo-id" class="w-full bg-gray-800 text-white rounded p-2 text-sm border border-gray-700 focus:outline-none">
+                            </select>
+                    </div>
+
+                    <div class="flex items-center gap-2 pt-2">
+                        <input type="checkbox" id="insumo-es-artesanal" class="w-4 h-4 bg-gray-800 border-gray-700 rounded text-emerald-500 focus:ring-0">
+                        <label for="insumo-es-artesanal" class="text-xs text-gray-300 font-medium">¿Es de origen artesanal / producción propia?</label>
                     </div>
                     <div>
                         <label class="block text-gray-400 mb-1">Medida</label>
