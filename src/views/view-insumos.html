@@ -12,8 +12,19 @@
             </button>
         </div>
 
-        <div class="relative">
-            <input type="text" id="buscador-insumos" oninput="window.filtrarInsumos()" placeholder="Buscar insumo por nombre..." class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="relative w-full">
+                <input type="text" id="buscador-insumos" oninput="window.filtrarInsumos()" placeholder="Buscar insumo por nombre o tipo..." class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <span class="text-xs text-gray-400 font-mono">Mostrar:</span>
+                <select id="select-registros-insumos" onchange="window.cambiarRegistrosPorPaginaInsumos(this)" class="bg-gray-900 border border-gray-800 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono">
+                    <option value="10" selected>10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
         </div>
 
         <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
@@ -21,20 +32,28 @@
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-gray-950 text-gray-400 text-[10px] uppercase border-b border-gray-800 tracking-wider">
                         <tr>
-                            <th class="py-3.5 px-4 font-bold">Nombre</th>
-                            <th class="py-3.5 px-3 font-bold">Tipo</th>
-                            <th class="py-3.5 px-3 font-bold text-center">Artesanal</th>
-                            <th class="py-3.5 px-3 font-bold text-center">Graduación</th>
-                            <th class="py-3.5 px-3 font-bold text-right">Precio Compra</th>
-                            <th class="py-3.5 px-3 font-bold text-center">Envase</th>
+                            <th onclick="window.ordenarInsumosPorColumna('nombre')" class="py-3.5 px-4 font-bold cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="nombre">Nombre <span class="sort-indicator">↕</span></th>
+                            <th onclick="window.ordenarInsumosPorColumna('tipo_id')" class="py-3.5 px-3 font-bold cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="tipo_id">Tipo <span class="sort-indicator">↕</span></th>
+                            <th onclick="window.ordenarInsumosPorColumna('es_artesanal')" class="py-3.5 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="es_artesanal">Artesanal <span class="sort-indicator">↕</span></th>
+                            <th onclick="window.ordenarInsumosPorColumna('graduacion_alcohol_base')" class="py-3.5 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="graduacion_alcohol_base">Graduación <span class="sort-indicator">↕</span></th>
+                            <th onclick="window.ordenarInsumosPorColumna('precio_compra')" class="py-3.5 px-3 font-bold text-right cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="precio_compra">Precio Compra <span class="sort-indicator">↕</span></th>
+                            <th onclick="window.ordenarInsumosPorColumna('formato_envase')" class="py-3.5 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="formato_envase">Envase <span class="sort-indicator">↕</span></th>
                             <th class="py-3.5 px-3 font-bold text-center">Unidad</th>
-                            <th class="py-3.5 px-3 font-bold text-center">Rendimiento</th>
-                            <th class="py-3.5 px-3 font-bold text-right">Costo Unitario</th>
+                            <th onclick="window.ordenarInsumosPorColumna('rendimiento_neto_porcentaje')" class="py-3.5 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="rendimiento_neto_porcentaje">Rendimiento <span class="sort-indicator">↕</span></th>
+                            <th onclick="window.ordenarInsumosPorColumna('costo_unitario')" class="py-3.5 px-3 font-bold text-right cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="costo_unitario">Costo Unitario <span class="sort-indicator">↕</span></th>
                         </tr>
                     </thead>                            
                     <tbody id="tabla-insumos-cuerpo" class="divide-y divide-gray-800/60 text-xs">
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between bg-gray-900 border border-gray-800 px-6 py-4 rounded-xl shadow-xl">
+            <span id="paginador-insumos-info" class="text-xs font-mono text-gray-400">Mostrando página 1</span>
+            <div class="flex gap-2">
+                <button type="button" onclick="window.cambiarPaginaInsumos(-1)" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3.5 py-2 rounded-lg transition font-mono">Anterior</button>
+                <button type="button" onclick="window.cambiarPaginaInsumos(1)" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3.5 py-2 rounded-lg transition font-mono">Siguiente</button>
             </div>
         </div>
     </div>
@@ -74,12 +93,13 @@
                     <thead>
                         <tr class="bg-gray-950 border-b border-gray-800 text-[10px] uppercase font-mono tracking-wider text-gray-400">
                             <th class="py-3 px-4 font-semibold">Fecha y Hora</th>
+                            <th class="py-3 px-3 font-semibold">Proveedor / Origen</th>
                             <th class="py-3 px-3 font-semibold text-right">Precio de Compra / Oferta</th>
                             <th class="py-3 px-3 font-semibold text-right">Costo Unitario Resultante</th>
                         </tr>
                     </thead>
                     <tbody id="tabla-historico-insumo-completo" class="divide-y divide-gray-800/50 text-sm">
-                        <tr><td colspan="3" class="text-center py-6 text-gray-500 text-xs">Cargando registros...</td></tr>
+                        <tr><td colspan="4" class="text-center py-6 text-gray-500 text-xs">Cargando registros...</td></tr>
                     </tbody>
                 </table>
             </div>

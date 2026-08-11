@@ -1,54 +1,75 @@
 // src/js/main.js
 import './utils.js'; // Esto asegura que las utilidades globales estén listas en todo el sistema
 
+const MODULO_PATHS = {
+    dashboard: './modules/dashboard.js',
+    catalogos: './modules/catalogos.js',
+    insumos: './modules/insumos.js',
+    subrecetas: './modules/subrecetas.js',
+    cocteles: './modules/cocteles.js',
+    servicio: './modules/servicio.js',
+    proveedores: './modules/proveedores.js',
+};
+
+const INIT_MODULOS = {
+    dashboard: 'initDashboard',
+    catalogos: 'initCatalogos',
+    insumos: 'initInsumos',
+    subrecetas: 'initSubRecetas',
+    cocteles: 'initCocteles',
+    servicio: 'initServicio',
+    proveedores: 'initProveedores',
+};
+
 document.addEventListener("DOMContentLoaded", () => {
     console.log("Motor Modular SPA Iniciado");
 
     const appContent = document.getElementById('app-content');
-    const navButtons = document.querySelectorAll('.btn-nav');
+    
+    function inicializarClicksNav() {
+        const navButtons = document.querySelectorAll('.btn-nav');
+        navButtons.forEach(btn => {
+            btn.replaceWith(btn.cloneNode(true));
+        });
+
+        document.querySelectorAll('.btn-nav').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const vista = e.currentTarget.getAttribute('data-view');
+                if (vista) cargarVista(vista);
+            });
+        });
+    }
+
+    async function cargarModulo(vista) {
+        const ruta = MODULO_PATHS[vista];
+        if (!ruta) return;
+
+        try {
+            const modulo = await import(ruta);
+            const initFn = modulo[INIT_MODULOS[vista]] ?? modulo.default;
+            if (typeof initFn === 'function') {
+                await initFn();
+            }
+        } catch (err) {
+            console.error(`Error al importar o inicializar el módulo [${vista}]:`, err);
+            throw new Error(`No se pudo cargar el script del módulo ${vista}. Verifique rutas relativas o red.`);
+        }
+    }
 
     async function cargarVista(vista) {
         try {
             appContent.innerHTML = `<div class="text-center mt-20 text-emerald-500 font-mono animate-pulse">Cargando módulo ${vista}...</div>`;
-            
-            // 1. Buscamos en la carpeta 'views'
-            const response = await fetch(`./src/views/view-${vista}.html`);
+
+            // CORRECCIÓN CRÍTICA: Usar la variable ${vista} de forma dinámica, no hardcodeada
+            const response = await fetch(`./src/views/view-${vista}.html?v=${Date.now()}`);
             if (!response.ok) throw new Error(`Módulo no encontrado: view-${vista}.html`);
-            
+
             appContent.innerHTML = await response.text();
+            
+            // Damos un respiro al DOM para que pinte las etiquetas antes de inicializar el JS
+            await new Promise(resolve => setTimeout(resolve, 50));
 
-            // 2. Buscamos la lógica en la carpeta 'modules' (AÑADIDO DASHBOARD AQUÍ)
-            if (vista === 'dashboard') {
-                const modulo = await import('./modules/dashboard.js');
-                if (typeof modulo.initDashboard === 'function') {
-                    modulo.initDashboard();
-                } else if (typeof modulo.default === 'function') {
-                    modulo.default();
-                }
-            } else if (vista === 'catalogos') {
-                const modulo = await import('./modules/catalogos.js');
-                modulo.initCatalogos();
-            } else if (vista === 'insumos') {
-                const modulo = await import('./modules/insumos.js');
-                modulo.initInsumos();
-            } else if (vista === 'subrecetas') {
-                const modulo = await import('./modules/subrecetas.js');
-                modulo.initSubRecetas();
-            } else if (vista === 'cocteles') {
-                const modulo = await import('./modules/cocteles.js');
-                modulo.initCocteles();
-            } else if (vista === 'servicio') {
-                const modulo = await import('./modules/servicio.js');
-                modulo.initServicio();
-            } else if (vista === 'proveedores') {
-                const modulo = await import('./modules/proveedores.js');
-                if (typeof modulo.inicializarModuloProveedores === 'function') {
-                    modulo.inicializarModuloProveedores();
-                } else if (typeof modulo.default === 'function') {
-                    modulo.default();
-                }
-            }
-
+            await cargarModulo(vista);
             actualizarMenuActivo(vista);
 
         } catch (error) {
@@ -68,9 +89,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    navButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => cargarVista(e.currentTarget.getAttribute('data-view')));
-    });
-
+    inicializarClicksNav();
     cargarVista('dashboard');
 });

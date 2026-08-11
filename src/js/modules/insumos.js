@@ -1,4 +1,4 @@
-// Módulo de Insumos y Costos (Vistas Separadas / Supabase / Proveedores / Histórico Dual y Paginado)
+// Módulo de Insumos y Costos (Vistas Separadas / Supabase / Proveedores / Histórico / Listado Paginado y Ordenable)
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -15,8 +15,14 @@ let insumoSeleccionadoId = null;
 // Variables para el paginador y buscador de la sub-pantalla de histórico
 let historicoInsumoActualData = [];
 let paginaActualHistorico = 1;
-const registrosPorPagina = 10;
+const registrosPorPaginaHistorico = 10;
 let insumoActualNombreCache = '';
+
+// Variables para el paginador, buscador y ordenamiento del listado principal de insumos
+let paginaActualInsumos = 1;
+let registrosPorPaginaInsumos = 10;
+let columnaOrdenInsumos = 'nombre';
+let direccionOrdenInsumos = 'asc';
 
 export async function initInsumos() {
     await cargarTiposInsumos();
@@ -38,7 +44,7 @@ window.cambiarVistaInsumos = function(vista) {
 
     if (vista === 'listado') {
         if (vListado) vListado.classList.remove('hidden');
-        renderizarTablaInsumos(listaInsumosLocal);
+        processAndRenderInsumosTable();
     } else if (vista === 'detalle') {
         if (vDetalle) vDetalle.classList.remove('hidden');
     } else if (vista === 'formulario') {
@@ -108,7 +114,7 @@ async function obtenerInsumosSupabase() {
             };
         });
 
-        renderizarTablaInsumos(listaInsumosLocal);
+        processAndRenderInsumosTable();
     } catch (e) {
         console.error("Error crítico obteniendo insumos:", e);
         if (cuerpo) {
@@ -117,16 +123,97 @@ async function obtenerInsumosSupabase() {
     }
 }
 
-function renderizarTablaInsumos(datos) {
+// --- LÓGICA DE PAGINACIÓN, BUSCADOR Y ORDENAMIENTO DEL LISTADO PRINCIPAL ---
+
+window.filtrarInsumos = function() {
+    paginaActualInsumos = 1;
+    processAndRenderInsumosTable();
+}
+
+window.cambiarRegistrosPorPaginaInsumos = function(selectElem) {
+    registrosPorPaginaInsumos = parseInt(selectElem.value) || 10;
+    paginaActualInsumos = 1;
+    processAndRenderInsumosTable();
+}
+
+window.cambiarPaginaInsumos = function(delta) {
+    paginaActualInsumos += delta;
+    processAndRenderInsumosTable();
+}
+
+window.ordenarInsumosPorColumna = function(columna) {
+    if (columnaOrdenInsumos === columna) {
+        direccionOrdenInsumos = direccionOrdenInsumos === 'asc' ? 'desc' : 'asc';
+    } else {
+        columnaOrdenInsumos = columna;
+        direccionOrdenInsumos = 'asc';
+    }
+    processAndRenderInsumosTable();
+}
+
+function processAndRenderInsumosTable() {
     const cuerpo = document.getElementById('tabla-insumos-cuerpo');
+    const infoPaginador = document.getElementById('paginador-insumos-info');
     if (!cuerpo) return;
 
-    if (!Array.isArray(datos) || datos.length === 0) {
-        cuerpo.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-gray-500 text-sm">No hay insumos registrados.</td></tr>`;
+    const query = (document.getElementById('buscador-insumos')?.value || '').toLowerCase();
+
+    // 1. Filtrar
+    const filtrados = listaInsumosLocal.filter(i => {
+        const nombreMatch = i.nombre.toLowerCase().includes(query);
+        const tipoObj = listaTiposInsumosLocal.find(t => t.id == i.tipo_id);
+        const tipoMatch = tipoObj ? tipoObj.nombre.toLowerCase().includes(query) : false;
+        return nombreMatch || tipoMatch;
+    });
+
+    // 2. Ordenar
+    filtrados.sort((a, b) => {
+        let valA = a[columnaOrdenInsumos];
+        let valB = b[columnaOrdenInsumos];
+
+        if (columnaOrdenInsumos === 'tipo_id') {
+            const tA = listaTiposInsumosLocal.find(t => t.id == a.tipo_id)?.nombre || '';
+            const tB = listaTiposInsumosLocal.find(t => t.id == b.tipo_id)?.nombre || '';
+            valA = tA;
+            valB = tB;
+        }
+
+        if (valA === null || valA === undefined) valA = '';
+        if (valB === null || valB === undefined) valB = '';
+
+        if (typeof valA === 'string') {
+            valA = valA.toLowerCase();
+            valB = valB.toLowerCase();
+        }
+
+        if (valA < valB) return direccionOrdenInsumos === 'asc' ? -1 : 1;
+        if (valA > valB) return direccionOrdenInsumos === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    // 3. Paginación
+    const totalRegistros = filtrados.length;
+    const totalPaginas = Math.ceil(totalRegistros / registrosPorPaginaInsumos) || 1;
+
+    if (paginaActualInsumos > totalPaginas) paginaActualInsumos = totalPaginas;
+    if (paginaActualInsumos < 1) paginaActualInsumos = 1;
+
+    const inicio = (paginaActualInsumos - 1) * registrosPorPaginaInsumos;
+    const fin = inicio + registrosPorPaginaInsumos;
+    const registrosPagina = filtrados.slice(inicio, fin);
+
+    if (infoPaginador) {
+        infoPaginador.innerText = `Mostrando página ${paginaActualInsumos} de ${totalPaginas} (${totalRegistros} registros totales)`;
+    }
+
+    actualizarIndicadoresVisualesOrden();
+
+    if (registrosPagina.length === 0) {
+        cuerpo.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-gray-500 text-sm">No se encontraron insumos registrados.</td></tr>`;
         return;
     }
 
-    cuerpo.innerHTML = datos.map(insumo => {
+    cuerpo.innerHTML = registrosPagina.map(insumo => {
         const tipoObj = listaTiposInsumosLocal.find(t => t.id == insumo.tipo_id);
         const nombreTipo = tipoObj ? tipoObj.nombre : 'General';
         
@@ -156,6 +243,24 @@ function renderizarTablaInsumos(datos) {
         `;
     }).join('');
 }
+
+function actualizarIndicadoresVisualesOrden() {
+    document.querySelectorAll('.th-sortable').forEach(th => {
+        const col = th.getAttribute('data-col');
+        const indicador = th.querySelector('.sort-indicator');
+        if (!indicador) return;
+
+        if (col === columnaOrdenInsumos) {
+            indicador.textContent = direccionOrdenInsumos === 'asc' ? ' ▲' : ' ▼';
+            indicador.style.color = '#34d399';
+        } else {
+            indicador.textContent = ' ↕';
+            indicador.style.color = '#6b7280';
+        }
+    });
+}
+
+// --- FIN LÓGICA DE LISTADO ---
 
 window.verDetalleInsumo = function(id) {
     insumoSeleccionadoId = id;
@@ -269,7 +374,6 @@ window.verDetalleInsumo = function(id) {
     window.cambiarVistaInsumos('detalle');
 }
 
-// Funciones para la navegación y gestión de la sub-pantalla de Histórico
 window.abrirVistaHistoricoInsumo = async function(insumoId, nombreInsumo) {
     insumoSeleccionadoId = insumoId;
     insumoActualNombreCache = nombreInsumo;
@@ -297,13 +401,20 @@ async function cargarDatosHistoricoCompleto(insumoId) {
     const cuerpo = document.getElementById('tabla-historico-insumo-completo');
     if (!cuerpo) return;
 
-    cuerpo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-gray-500 font-mono text-xs">Cargando registros...</td></tr>`;
+    cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500 font-mono text-xs">Cargando registros...</td></tr>`;
 
     try {
         if (!window.supabaseClient) return;
+        
+        // Traemos el histórico y unimos con la tabla proveedores para obtener su nombre
         const { data, error } = await window.supabaseClient
             .from('insumo_precios_historicos')
-            .select('*')
+            .select(`
+                *,
+                proveedores (
+                    nombre
+                )
+            `)
             .eq('insumo_id', insumoId)
             .order('created_at', { ascending: false });
 
@@ -312,7 +423,7 @@ async function cargarDatosHistoricoCompleto(insumoId) {
         renderizarTablaHistoricoPaginada();
     } catch (e) {
         console.warn("Error al cargar histórico completo:", e);
-        cuerpo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-red-400 text-xs">Error al conectar con el servidor.</td></tr>`;
+        cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-red-400 text-xs">Error al conectar con el servidor.</td></tr>`;
     }
 }
 
@@ -326,17 +437,18 @@ window.renderizarTablaHistoricoPaginada = function() {
     const filtrados = historicoInsumoActualData.filter(h => {
         const fechaStr = h.created_at ? new Date(h.created_at).toLocaleString('es-CL').toLowerCase() : '';
         const precioStr = h.precio_compra ? h.precio_compra.toString() : '';
-        return fechaStr.includes(query) || precioStr.includes(query);
+        const provNombre = h.proveedores && h.proveedores.nombre ? h.proveedores.nombre.toLowerCase() : 'precio general insumo';
+        return fechaStr.includes(query) || precioStr.includes(query) || provNombre.includes(query);
     });
 
     const totalRegistros = filtrados.length;
-    const totalPaginas = Math.ceil(totalRegistros / registrosPorPagina) || 1;
+    const totalPaginas = Math.ceil(totalRegistros / registrosPorPaginaHistorico) || 1;
 
     if (paginaActualHistorico > totalPaginas) paginaActualHistorico = totalPaginas;
     if (paginaActualHistorico < 1) paginaActualHistorico = 1;
 
-    const inicio = (paginaActualHistorico - 1) * registrosPorPagina;
-    const fin = inicio + registrosPorPagina;
+    const inicio = (paginaActualHistorico - 1) * registrosPorPaginaHistorico;
+    const fin = inicio + registrosPorPaginaHistorico;
     const registrosPagina = filtrados.slice(inicio, fin);
 
     if (infoPaginador) {
@@ -344,7 +456,7 @@ window.renderizarTablaHistoricoPaginada = function() {
     }
 
     if (registrosPagina.length === 0) {
-        cuerpo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-gray-500 text-xs">No se encontraron registros históricos.</td></tr>`;
+        cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500 text-xs">No se encontraron registros históricos.</td></tr>`;
         return;
     }
 
@@ -354,9 +466,16 @@ window.renderizarTablaHistoricoPaginada = function() {
             timeStyle: 'short' 
         }) : 'Fecha no registrada';
 
+        // Determinamos a quién corresponde el registro
+        let origenTexto = '<span class="text-emerald-400/80 font-mono text-xs">Precio General Insumo</span>';
+        if (h.proveedor_id && h.proveedores && h.proveedores.nombre) {
+            origenTexto = `<span class="text-white font-semibold">${h.proveedores.nombre}</span>`;
+        }
+
         return `
             <tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm">
                 <td class="py-3 px-4 font-mono text-gray-300 text-xs">${fechaFormateada}</td>
+                <td class="py-3 px-3">${origenTexto}</td>
                 <td class="py-3 px-3 text-right font-mono text-emerald-400 font-bold">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(h.precio_compra, 0) : h.precio_compra}</td>
                 <td class="py-3 px-3 text-right font-mono text-gray-300">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(h.costo_unitario, 0) : h.costo_unitario}</td>
             </tr>
@@ -462,7 +581,7 @@ window.renderizarProveedoresInsumoForm = function() {
                 </label>
                 <div class="flex items-center gap-1.5">
                     <span class="text-[10px] text-gray-400 font-mono">Oferta $:</span>
-                    <input type="number" step="0.01" id="precio-oferta-${p.id}" value="${precioOfertaVal}" ${!isChecked ? 'disabled' : ''} oninput="window.actualizarPrecioOferta(${p.id}, this.value)" placeholder="Ej: 14500" class="w-32 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono transition shadow-inner">
+                    <input type="number" step="0.01" id="precio-oferta-${p.id}" value="${precioOfertaVal}" ${!isChecked ? 'disabled' : ''} oninput="window.actualizarPrecioOfertaInsumo(${p.id}, this.value)" placeholder="Ej: 14500" class="w-32 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono transition shadow-inner">
                 </div>
             </div>
         `;
@@ -472,7 +591,10 @@ window.renderizarProveedoresInsumoForm = function() {
 window.toggleProveedorInsumo = function(proveedorId, isChecked) {
     const inputPrecio = document.getElementById(`precio-oferta-${proveedorId}`);
     if (isChecked) {
-        proveedoresAsociadosActuales.set(proveedorId, null);
+        // Al marcar, si no tiene valor previo, se inicia en null pero NO afecta el precio de compra general
+        if (!proveedoresAsociadosActuales.has(proveedorId)) {
+            proveedoresAsociadosActuales.set(proveedorId, null);
+        }
         if (inputPrecio) {
             inputPrecio.disabled = false;
             inputPrecio.focus();
@@ -486,9 +608,10 @@ window.toggleProveedorInsumo = function(proveedorId, isChecked) {
     }
 }
 
-window.actualizarPrecioOferta = function(proveedorId, valor) {
+window.actualizarPrecioOfertaInsumo = function(proveedorId, valor) {
     const num = valor === '' ? null : parseFloat(valor);
-    if (proveedoresAsociadosActuales.has(proveedorId)) {
+    // Solo actualiza el mapa del proveedor en memoria de forma completamente aislada del precio base
+    if (proveedoresAsociadosActuales.has(proveedorId) || proveedoresAsociadosActuales.size >= 0) {
         proveedoresAsociadosActuales.set(proveedorId, isNaN(num) ? null : num);
     }
 }
@@ -630,6 +753,22 @@ window.guardarInsumo = async function(e) {
     try {
         let insumoIdReal = idInput;
 
+        // 1. Obtener precios de oferta previos de los proveedores antes de borrarlos (para auditoría real)
+        let preciosProveedoresAnteriores = new Map();
+        if (esEdicion) {
+            const { data: relsAnteriores } = await window.supabaseClient
+                .from('insumo_proveedores')
+                .select('proveedor_id, precio_oferta')
+                .eq('insumo_id', idInput);
+            
+            if (relsAnteriores) {
+                relsAnteriores.forEach(r => {
+                    preciosProveedoresAnteriores.set(r.proveedor_id, r.precio_oferta);
+                });
+            }
+        }
+
+        // 2. Guardar o actualizar el insumo principal
         if (esEdicion) {
             const { error: errUpd } = await window.supabaseClient
                 .from('insumos')
@@ -647,6 +786,7 @@ window.guardarInsumo = async function(e) {
             }
         }
 
+        // 3. Limpiar relaciones anteriores de proveedores
         if (esEdicion) {
             await window.supabaseClient
                 .from('insumo_proveedores')
@@ -656,6 +796,7 @@ window.guardarInsumo = async function(e) {
 
         let registrosHistoricos = [];
 
+        // El histórico general del insumo siempre registra el cambio de precio de compra principal
         registrosHistoricos.push({
             insumo_id: parseInt(insumoIdReal),
             proveedor_id: null,
@@ -663,11 +804,16 @@ window.guardarInsumo = async function(e) {
             costo_unitario: costoUnitarioCalculado
         });
 
+        // 4. Procesar proveedores y registrar en el histórico SOLO si el precio de oferta cambió o es nuevo
         if (proveedoresAsociadosActuales.size > 0) {
             const nuevasRelaciones = Array.from(proveedoresAsociadosActuales.entries()).map(([provId, oferta]) => {
                 const precioOfertaVal = oferta !== null && !isNaN(oferta) ? oferta : null;
+                const precioAnterior = preciosProveedoresAnteriores.get(parseInt(provId));
 
-                if (precioOfertaVal !== null) {
+                // Condición de auditoría: Registrar en el histórico solo si el precio cambió o es un proveedor nuevo
+                const precioCambio = precioAnterior !== precioOfertaVal;
+
+                if (precioOfertaVal !== null && precioCambio) {
                     registrosHistoricos.push({
                         insumo_id: parseInt(insumoIdReal),
                         proveedor_id: parseInt(provId),
@@ -690,6 +836,7 @@ window.guardarInsumo = async function(e) {
             if (errRel) console.warn("Aviso al guardar insumo_proveedores:", errRel);
         }
 
+        // 5. Insertar los registros históricos filtrados
         const { error: errHist } = await window.supabaseClient
             .from('insumo_precios_historicos')
             .insert(registrosHistoricos);
@@ -721,12 +868,6 @@ window.eliminarInsumo = async function(id, nombre) {
         console.error("Error al eliminar insumo:", err);
         alert("No se pudo eliminar el insumo.");
     }
-}
-
-window.filtrarInsumos = function() {
-    const query = document.getElementById('buscador-insumos').value.toLowerCase();
-    const filtrados = listaInsumosLocal.filter(i => i.nombre.toLowerCase().includes(query));
-    renderizarTablaInsumos(filtrados);
 }
 
 export default initInsumos;

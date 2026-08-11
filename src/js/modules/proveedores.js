@@ -1,4 +1,4 @@
-// Módulo de Proveedores y Catálogo de Precios Avanzado (Supabase / Vistas Separadas / Histórico Paginado)
+// Módulo de Proveedores y Catálogo de Precios Avanzado (Supabase / Módulos ES)
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -8,10 +8,9 @@ if (!window.supabaseClient && SUPABASE_URL && SUPABASE_ANON_KEY) {
 
 let listaProveedoresLocal = [];
 let listaInsumosGlobal = [];
-let insumosProveedorActual = new Map(); // insumo_id -> precio_oferta
+let insumosProveedorActual = new Map();
 let proveedorSeleccionadoId = null;
 
-// Variables para el paginador y buscador de la sub-pantalla de histórico de proveedores
 let historicoProveedorActualData = [];
 let paginaActualHistoricoProv = 1;
 const registrosPorPaginaProv = 10;
@@ -20,10 +19,21 @@ let proveedorActualNombreCache = '';
 export async function initProveedores() {
     await cargarInsumosGlobales();
     await obtenerProveedoresSupabase();
-    window.cambiarVistaProveedores('listado');
+    cambiarVistaProveedores('listado');
+
+    // Delegación de clics nativa infalible para las filas
+    document.addEventListener('click', function(e) {
+        const fila = e.target.closest('.fila-proveedor');
+        if (fila) {
+            const id = fila.getAttribute('data-id');
+            if (id) {
+                verDetalleProveedor(id);
+            }
+        }
+    });
 }
 
-window.cambiarVistaProveedores = function(vista) {
+export function cambiarVistaProveedores(vista) {
     const vListado = document.getElementById('vista-proveedores-listado');
     const vDetalle = document.getElementById('vista-proveedores-detalle');
     const vForm = document.getElementById('vista-proveedores-formulario');
@@ -49,7 +59,11 @@ window.cambiarVistaProveedores = function(vista) {
 async function cargarInsumosGlobales() {
     try {
         if (!window.supabaseClient) return;
-        const { data, error } = await window.supabaseClient.from('insumos').select('id, nombre, unidad_medida, precio_compra').order('nombre', { ascending: true });
+        const { data, error } = await window.supabaseClient
+            .from('insumos')
+            .select('id, nombre, unidad_medida, precio_compra, formato_envase, rendimiento_neto_porcentaje')
+            .order('nombre', { ascending: true });
+        
         if (error) throw error;
         listaInsumosGlobal = data || [];
     } catch (e) {
@@ -118,7 +132,7 @@ function renderizarTablaProveedores(datos) {
         const totalInsumos = prov.insumos ? prov.insumos.length : 0;
 
         return `
-            <tr onclick="window.verDetalleProveedor(${prov.id})" class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm cursor-pointer group">
+            <tr data-id="${prov.id}" class="fila-proveedor hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm cursor-pointer group">
                 <td class="py-3.5 px-4 font-medium text-white group-hover:text-emerald-400 transition">${prov.nombre}</td>
                 <td class="py-3.5 px-3 text-gray-300 text-xs">${prov.contacto || 'Sin contacto'}</td>
                 <td class="py-3.5 px-3 text-gray-400 text-xs font-mono">${prov.telefono || 'Sin teléfono'}</td>
@@ -129,7 +143,7 @@ function renderizarTablaProveedores(datos) {
     }).join('');
 }
 
-window.verDetalleProveedor = function(id) {
+export function verDetalleProveedor(id) {
     proveedorSeleccionadoId = id;
     const prov = listaProveedoresLocal.find(p => p.id == id);
     if (!prov) return;
@@ -219,11 +233,10 @@ window.verDetalleProveedor = function(id) {
         </div>
     `;
 
-    window.cambiarVistaProveedores('detalle');
+    cambiarVistaProveedores('detalle');
 }
 
-// Funciones para la navegación y gestión de la sub-pantalla de Histórico de Proveedores
-window.abrirVistaHistoricoProveedor = async function(proveedorId, nombreProveedor) {
+export async function abrirVistaHistoricoProveedor(proveedorId, nombreProveedor) {
     proveedorSeleccionadoId = proveedorId;
     proveedorActualNombreCache = nombreProveedor;
     
@@ -234,15 +247,15 @@ window.abrirVistaHistoricoProveedor = async function(proveedorId, nombreProveedo
     if (inputBuscador) inputBuscador.value = '';
 
     paginaActualHistoricoProv = 1;
-    window.cambiarVistaProveedores('historico');
+    cambiarVistaProveedores('historico');
     await cargarDatosHistoricoProveedorCompleto(proveedorId);
 }
 
-window.volverDesdeHistoricoProveedor = function() {
+export function volverDesdeHistoricoProveedor() {
     if (proveedorSeleccionadoId) {
-        window.verDetalleProveedor(proveedorSeleccionadoId);
+        verDetalleProveedor(proveedorSeleccionadoId);
     } else {
-        window.cambiarVistaProveedores('listado');
+        cambiarVistaProveedores('listado');
     }
 }
 
@@ -269,7 +282,7 @@ async function cargarDatosHistoricoProveedorCompleto(proveedorId) {
     }
 }
 
-window.renderizarTablaHistoricoProveedorPaginada = function() {
+export function renderizarTablaHistoricoProveedorPaginada() {
     const cuerpo = document.getElementById('tabla-historico-proveedor-completo');
     const infoPaginador = document.getElementById('paginador-info-proveedor');
     if (!cuerpo) return;
@@ -322,40 +335,60 @@ window.renderizarTablaHistoricoProveedorPaginada = function() {
     }).join('');
 }
 
-window.filtrarHistoricoProveedorLocal = function() {
+export function filtrarHistoricoProveedorLocal() {
     paginaActualHistoricoProv = 1;
     renderizarTablaHistoricoProveedorPaginada();
 }
 
-window.cambiarPaginaHistoricoProveedor = function(delta) {
+export function cambiarPaginaHistoricoProveedor(delta) {
     paginaActualHistoricoProv += delta;
     renderizarTablaHistoricoProveedorPaginada();
 }
 
-window.prepararCreacionProveedor = async function() {
+export function prepararCreacionProveedor() {
     proveedorSeleccionadoId = null;
-    document.getElementById('form-proveedor-titulo').innerText = "Nuevo Proveedor";
-    document.getElementById('form-proveedor').reset();
-    document.getElementById('proveedor-id').value = '';
+    cambiarVistaProveedores('formulario');
+
+    const tituloForm = document.getElementById('form-proveedor-titulo');
+    if (tituloForm) tituloForm.innerText = "Nuevo Proveedor";
+
+    const formEl = document.getElementById('form-proveedor');
+    if (formEl) formEl.reset();
+
+    const inputId = document.getElementById('proveedor-id');
+    if (inputId) inputId.value = '';
 
     insumosProveedorActual.clear();
-    window.renderizarListadosEdicionProveedor();
-
-    window.cambiarVistaProveedores('formulario');
+    renderizarListadosEdicionProveedor();
 }
 
-window.prepararEdicionProveedor = async function(id) {
+export function prepararEdicionProveedor(id) {
     proveedorSeleccionadoId = id;
     const prov = listaProveedoresLocal.find(x => x.id == id);
     if (!prov) return;
 
-    document.getElementById('form-proveedor-titulo').innerText = "Editar Proveedor: " + prov.nombre;
-    document.getElementById('proveedor-id').value = prov.id;
-    document.getElementById('proveedor-nombre').value = prov.nombre || '';
-    document.getElementById('proveedor-contacto').value = prov.contacto || '';
-    document.getElementById('proveedor-telefono').value = prov.telefono || '';
-    document.getElementById('proveedor-email').value = prov.email || '';
-    document.getElementById('proveedor-observaciones').value = prov.observaciones || '';
+    cambiarVistaProveedores('formulario');
+
+    const tituloForm = document.getElementById('form-proveedor-titulo');
+    if (tituloForm) tituloForm.innerText = "Editar Proveedor: " + (prov.nombre || '');
+
+    const inputId = document.getElementById('proveedor-id');
+    if (inputId) inputId.value = prov.id || '';
+
+    const inputNombre = document.getElementById('proveedor-nombre');
+    if (inputNombre) inputNombre.value = prov.nombre || '';
+
+    const inputContacto = document.getElementById('proveedor-contacto');
+    if (inputContacto) inputContacto.value = prov.contacto || '';
+
+    const inputTelefono = document.getElementById('proveedor-telefono');
+    if (inputTelefono) inputTelefono.value = prov.telefono || '';
+
+    const inputEmail = document.getElementById('proveedor-email');
+    if (inputEmail) inputEmail.value = prov.email || '';
+
+    const inputObs = document.getElementById('proveedor-observaciones');
+    if (inputObs) inputObs.value = prov.observaciones || '';
 
     insumosProveedorActual.clear();
     if (prov.insumos && Array.isArray(prov.insumos)) {
@@ -364,11 +397,10 @@ window.prepararEdicionProveedor = async function(id) {
         });
     }
 
-    window.renderizarListadosEdicionProveedor();
-    window.cambiarVistaProveedores('formulario');
+    renderizarListadosEdicionProveedor();
 }
 
-window.renderizarListadosEdicionProveedor = function() {
+export function renderizarListadosEdicionProveedor() {
     const contenedorAsociados = document.getElementById('lista-insumos-asociados');
     const contenedorDisponibles = document.getElementById('lista-insumos-disponibles');
     if (!contenedorAsociados || !contenedorDisponibles) return;
@@ -418,22 +450,22 @@ window.renderizarListadosEdicionProveedor = function() {
     }
 }
 
-window.agregarInsumoAProveedor = function(insumoId) {
+export function agregarInsumoAProveedor(insumoId) {
     insumosProveedorActual.set(insumoId, 0);
-    window.renderizarListadosEdicionProveedor();
+    renderizarListadosEdicionProveedor();
 }
 
-window.removerInsumoDeProveedor = function(insumoId) {
+export function removerInsumoDeProveedor(insumoId) {
     insumosProveedorActual.delete(insumoId);
-    window.renderizarListadosEdicionProveedor();
+    renderizarListadosEdicionProveedor();
 }
 
-window.actualizarPrecioOferta = function(insumoId, valor) {
+export function actualizarPrecioOferta(insumoId, valor) {
     const num = valor === '' ? null : parseFloat(valor);
     insumosProveedorActual.set(insumoId, isNaN(num) ? null : num);
 }
 
-window.guardarProveedor = async function(e) {
+export async function guardarProveedor(e) {
     e.preventDefault();
     if (!window.supabaseClient) return;
 
@@ -501,11 +533,19 @@ window.guardarProveedor = async function(e) {
                 const precioAnterior = relacionesAnterioresMap.has(parseInt(insumoId)) ? relacionesAnterioresMap.get(parseInt(insumoId)) : -1;
                 
                 if (precioOfertaVal !== null && precioOfertaVal !== precioAnterior) {
+                    const insObj = listaInsumosGlobal.find(i => i.id === parseInt(insumoId));
+                    
+                    const formatoEnvase = insObj && insObj.formato_envase && parseFloat(insObj.formato_envase) > 0 ? parseFloat(insObj.formato_envase) : 1;
+                    const rendimientoBruto = insObj && insObj.rendimiento_neto_porcentaje !== null && insObj.rendimiento_neto_porcentaje !== undefined ? parseFloat(insObj.rendimiento_neto_porcentaje) : 1;
+                    const rendimiento = rendimientoBruto > 1 ? rendimientoBruto / 100 : rendimientoBruto;
+
+                    const costoUnitarioCalculado = (precioOfertaVal / formatoEnvase) / (rendimiento > 0 ? rendimiento : 1);
+
                     registrosHistoricos.push({
                         insumo_id: parseInt(insumoId),
                         proveedor_id: parseInt(proveedorIdReal),
                         precio_compra: precioOfertaVal,
-                        costo_unitario: precioOfertaVal / 1
+                        costo_unitario: costoUnitarioCalculado
                     });
                 }
             });
@@ -524,14 +564,14 @@ window.guardarProveedor = async function(e) {
         }
 
         await obtenerProveedoresSupabase();
-        window.verDetalleProveedor(proveedorIdReal);
+        verDetalleProveedor(proveedorIdReal);
     } catch (err) {
         console.error("Error al procesar proveedor:", err);
         alert("Ocurrió un error al guardar el proveedor en Supabase. Revisa la consola.");
     }
 }
 
-window.eliminarProveedor = async function(id, nombre) {
+export async function eliminarProveedor(id, nombre) {
     if (!confirm(`¿Estás seguro de eliminar el proveedor "${nombre}"?`)) return;
 
     try {
@@ -543,17 +583,33 @@ window.eliminarProveedor = async function(id, nombre) {
 
         if (error) throw error;
         await obtenerProveedoresSupabase();
-        window.cambiarVistaProveedores('listado');
+        cambiarVistaProveedores('listado');
     } catch (err) {
         console.error("Error al eliminar proveedor:", err);
         alert("No se pudo eliminar el proveedor.");
     }
 }
 
-window.filtrarProveedores = function() {
+export function filtrarProveedores() {
     const query = document.getElementById('buscador-proveedores').value.toLowerCase();
     const filtrados = listaProveedoresLocal.filter(p => p.nombre.toLowerCase().includes(query) || (p.contacto && p.contacto.toLowerCase().includes(query)));
     renderizarTablaProveedores(filtrados);
 }
+
+// Vinculación segura de seguridad para que el enrutador global y HTML las reconozcan sin excepciones
+window.prepararEdicionProveedor = prepararEdicionProveedor;
+window.prepararCreacionProveedor = prepararCreacionProveedor;
+window.eliminarProveedor = eliminarProveedor;
+window.verDetalleProveedor = verDetalleProveedor;
+window.cambiarVistaProveedores = cambiarVistaProveedores;
+window.abrirVistaHistoricoProveedor = abrirVistaHistoricoProveedor;
+window.volverDesdeHistoricoProveedor = volverDesdeHistoricoProveedor;
+window.filtrarProveedores = filtrarProveedores;
+window.filtrarHistoricoProveedorLocal = filtrarHistoricoProveedorLocal;
+window.cambiarPaginaHistoricoProveedor = cambiarPaginaHistoricoProveedor;
+window.agregarInsumoAProveedor = agregarInsumoAProveedor;
+window.removerInsumoDeProveedor = removerInsumoDeProveedor;
+window.actualizarPrecioOferta = actualizarPrecioOferta;
+window.guardarProveedor = guardarProveedor;
 
 export default initProveedores;
