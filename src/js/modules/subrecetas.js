@@ -2,371 +2,485 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 
 let listaSubRecetasLocal = [];
-let listaSubRecetaIngredientesLocal = [];
-let listaInsumosLocal = []; 
 let listaTiposSubRecetasLocal = [];
+let listaInsumosLocal = [];
 
-export async function initSubrecetas() {
-    await asegurarDatosCargados();
+async function initSubRecetas() {
+    await cargarDatosAuxiliares();
     await obtenerSubRecetasSupabase();
+    window.cambiarVistaSubRecetas('listado');
+}
 
-    const formSubReceta = document.getElementById('form-subreceta');
-    if (formSubReceta) {
-        formSubReceta.replaceWith(formSubReceta.cloneNode(true));
-        document.getElementById('form-subreceta').addEventListener('submit', guardarSubReceta);
+async function cargarDatosAuxiliares() {
+    try {
+        const [resTipos, resInsumos] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/tipos_sub_recetas?select=*&order=nombre.asc`, {
+                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+            }),
+            fetch(`${SUPABASE_URL}/rest/v1/insumos?select=*&order=nombre.asc`, {
+                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+            })
+        ]);
+
+        if (resTipos.ok) listaTiposSubRecetasLocal = await resTipos.json();
+        if (resInsumos.ok) listaInsumosLocal = await resInsumos.json();
+
+        poblarSelectsFormulario();
+    } catch (e) {
+        console.warn("Error cargando datos auxiliares:", e);
     }
 }
 
-async function asegurarDatosCargados() {
-    try {
-        const [resInsumos, resTipos] = await Promise.all([
-            fetch(`${SUPABASE_URL}/rest/v1/insumos?select=*`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }),
-            fetch(`${SUPABASE_URL}/rest/v1/tipos_sub_recetas?select=*`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } })
-        ]);
+function poblarSelectsFormulario() {
+    const selectTipo = document.getElementById('input-tipo-id');
+    if (selectTipo && listaTiposSubRecetasLocal.length > 0) {
+        selectTipo.innerHTML = '<option value="">Seleccione tipo...</option>' + 
+            listaTiposSubRecetasLocal.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+    }
 
-        if (resInsumos.ok) {
-            listaInsumosLocal = await resInsumos.json();
-            window.__local_db_insumos = listaInsumosLocal;
-        }
-        if (resTipos.ok) {
-            listaTiposSubRecetasLocal = await resTipos.json();
-        }
-    } catch (e) {
-        console.error("Error al cargar datos auxiliares para sub-recetas", e);
+    const selectInsumo = document.getElementById('input-insumo-asociado');
+    if (selectInsumo && listaInsumosLocal.length > 0) {
+        selectInsumo.innerHTML = '<option value="">Seleccione insumo en inventario...</option>' + 
+            listaInsumosLocal.map(i => `<option value="${i.id}">${i.nombre} (${i.unidad_medida})</option>`).join('');
     }
 }
 
 async function obtenerSubRecetasSupabase() {
-    const contenedorLista = document.getElementById('lista-subrecetas-contenedor');
-    if (contenedorLista) contenedorLista.innerHTML = `<div class="text-center py-8 text-emerald-500 font-mono animate-pulse">Cargando sub-recetas...</div>`;
+    const contenedor = document.getElementById('contenedor-tarjetas-subrecetas');
+    if (contenedor) contenedor.innerHTML = `<div class="text-center py-12 text-emerald-500 font-mono animate-pulse col-span-full">Cargando sub-recetas...</div>`;
 
     try {
-        const resRecetas = await fetch(`${SUPABASE_URL}/rest/v1/sub_recetas_artesanales?select=*&order=nombre.asc`, { 
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/sub_recetas_artesanales?select=*&order=nombre.asc`, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
         });
-        const resIngredientes = await fetch(`${SUPABASE_URL}/rest/v1/sub_receta_ingredientes?select=*`, { 
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-        });
-
-        if (!resRecetas.ok || !resIngredientes.ok) throw new Error("Error de conexión");
         
-        listaSubRecetasLocal = await resRecetas.json();
-        listaSubRecetaIngredientesLocal = await resIngredientes.json();
+        if (!res.ok) throw new Error("Error HTTP al obtener sub-recetas");
+        
+        listaSubRecetasLocal = await res.json();
         renderizarListaSubRecetas(listaSubRecetasLocal);
-        
     } catch (e) {
-        console.error(e);
-        if (contenedorLista) contenedorLista.innerHTML = `<div class="text-center py-8 text-red-500 font-mono">Sin conexión a Supabase.</div>`;
+        console.error("Error crítico obteniendo sub-recetas:", e);
+        if (contenedor) {
+            contenedor.innerHTML = `<div class="text-center py-12 text-red-400 font-mono text-xs col-span-full">Error al conectar con Supabase.</div>`;
+        }
     }
 }
 
 function renderizarListaSubRecetas(datos) {
-    const contenedor = document.getElementById('lista-subrecetas-contenedor');
+    const contenedor = document.getElementById('contenedor-tarjetas-subrecetas');
     if (!contenedor) return;
 
-    if (datos.length === 0) {
-        contenedor.innerHTML = `<div class="text-center py-8 text-gray-500 text-sm">No hay sub-recetas registradas.</div>`;
+    if (!Array.isArray(datos) || datos.length === 0) {
+        contenedor.innerHTML = `<div class="text-center py-12 text-gray-500 text-sm col-span-full">No hay sub-recetas registradas.</div>`;
         return;
     }
 
-    contenedor.innerHTML = datos.map(receta => {
-        const ingredientes = listaSubRecetaIngredientesLocal.filter(ing => ing.sub_receta_id == receta.id);
-        let costoTotal = 0;
-        ingredientes.forEach(ing => {
-            const insumo = listaInsumosLocal.find(ins => ins.id == ing.insumo_id);
-            if (insumo) costoTotal += parseFloat(ing.cantidad) * parseFloat(insumo.costo_unitario);
-        });
-        const costoUnitario = costoTotal / parseFloat(receta.rendimiento_batch || 1);
-
-        // Buscar el nombre del tipo mediante la relación tipo_id
-        const tipoObj = listaTiposSubRecetasLocal.find(t => t.id == receta.tipo_id);
-        const nombreTipo = tipoObj ? tipoObj.nombre : 'Elaboración';
-
+    contenedor.innerHTML = datos.map(sub => {
+        const tipoObj = listaTiposSubRecetasLocal.find(t => t.id === sub.tipo_id);
+        const tipoTexto = tipoObj ? tipoObj.nombre.toUpperCase() : 'PREPARACIÓN';
+        
         return `
-            <div onclick="verDetalleSubReceta(${receta.id})" class="p-4 rounded-lg bg-gray-800/40 border border-gray-850 hover:bg-gray-800/80 cursor-pointer transition flex justify-between items-center group">
-                <div class="space-y-1">
-                    <h4 class="font-bold text-white group-hover:text-purple-400 transition text-sm">${receta.nombre}</h4>
-                    <div class="flex items-center gap-2">
-                        <span class="text-[9px] bg-purple-950 text-purple-400 border border-purple-900/30 px-2 py-0.5 rounded font-bold uppercase tracking-wider">${nombreTipo}</span>
-                        <span class="text-xs text-gray-500 font-mono">${Number(receta.rendimiento_batch).toFixed(0)} ${receta.unidad_rendimiento}</span>
-                    </div>
+            <div onclick="window.verDetalleSubReceta(${sub.id})" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:border-emerald-500/60 hover:bg-gray-850 transition cursor-pointer shadow-xl group">
+                <div class="flex justify-between items-start gap-2">
+                    <h3 class="text-white font-bold text-base leading-snug group-hover:text-emerald-400 transition">${sub.nombre}</h3>
+                    <span id="card-costo-${sub.id}" class="font-mono font-bold text-pink-400 text-sm whitespace-nowrap">Calculando...</span>
                 </div>
-                <div class="text-right">
-                    <span class="font-mono text-xs text-purple-400 font-bold">$${costoUnitario.toFixed(2)}/${receta.unidad_rendimiento}</span>
+
+                <div class="flex justify-between items-center pt-3 border-t border-gray-800/60">
+                    <span class="bg-purple-950 text-purple-400 border border-purple-900/30 text-[10px] px-2.5 py-0.5 rounded font-bold uppercase tracking-wider">${tipoTexto}</span>
+                    <span class="font-mono text-gray-400 text-xs">${sub.rendimiento_batch || 0} ${sub.unidad_rendimiento || 'ml'}</span>
                 </div>
             </div>
         `;
     }).join('');
-}
 
-window.verDetalleSubReceta = function(id) {
-    const contenedor = document.getElementById('detalle-subreceta-contenedor');
-    const receta = listaSubRecetasLocal.find(x => x.id === id);
-    if (!receta || !contenedor) return;
-
-    const tipoObj = listaTiposSubRecetasLocal.find(t => t.id == receta.tipo_id);
-    const nombreTipo = tipoObj ? tipoObj.nombre : 'Elaboración';
-
-    const ingredientes = listaSubRecetaIngredientesLocal.filter(ing => ing.sub_receta_id == id);
-    let costoTotalBatch = 0;
-    
-    const ingredientesHtml = ingredientes.map(ing => {
-        const insumo = listaInsumosLocal.find(ins => ins.id == ing.insumo_id);
-        let nombreInsumo = insumo ? insumo.nombre : "Insumo desconocido";
-        let costoUnitInsumo = insumo ? parseFloat(insumo.costo_unitario) : 0;
-        let costoProporcional = parseFloat(ing.cantidad) * costoUnitInsumo;
-        costoTotalBatch += costoProporcional;
-        
-        return `
-            <tr class="hover:bg-gray-800/20 text-sm">
-                <td class="py-2.5 font-medium text-gray-300">• ${nombreInsumo}</td>
-                <td class="py-2.5 text-right font-mono text-gray-400">${Number(ing.cantidad).toFixed(1)} ${ing.unidad_medida || 'g'}</td>
-                <td class="py-2.5 text-right font-mono text-purple-400 font-semibold">$${costoProporcional.toFixed(0)}</td>
-            </tr>
-        `;
-    }).join('');
-
-    const rendimientoBatch = parseFloat(receta.rendimiento_batch || 1);
-    const costoUnitarioResultante = costoTotalBatch / rendimientoBatch;
-
-    contenedor.innerHTML = `
-        <div class="space-y-6 animate-fade-in">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-800 pb-4 gap-4">
-                <div>
-                    <span class="bg-purple-500/10 text-purple-400 text-xs px-2.5 py-1 rounded font-semibold uppercase tracking-wider">${nombreTipo}</span>
-                    <h3 class="text-2xl font-bold text-white mt-1">${receta.nombre}</h3>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="abrirModalSubReceta(${receta.id})" class="text-xs bg-gray-800 hover:bg-gray-750 text-purple-400 px-3 py-1.5 rounded border border-purple-500/10 transition uppercase tracking-wider font-semibold">Editar</button>
-                    <button onclick="eliminarSubReceta(${receta.id}, '${receta.nombre}')" class="text-xs bg-red-950/20 hover:bg-red-900/40 text-red-400 px-3 py-1.5 rounded border border-red-500/20 transition uppercase tracking-wider font-semibold">Eliminar</button>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                <div class="bg-gray-800/30 p-4 rounded-xl">
-                    <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Rendimiento Batch</span>
-                    <div class="text-xl font-bold text-white mt-1 font-mono">${rendimientoBatch.toFixed(0)} ${receta.unidad_rendimiento}</div>
-                </div>
-                <div class="bg-gray-800/30 p-4 rounded-xl">
-                    <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Costo Lote</span>
-                    <div class="text-xl font-bold text-purple-400 mt-1 font-mono">$${costoTotalBatch.toFixed(0)}</div>
-                </div>
-                <div class="bg-gray-800/30 p-4 rounded-xl">
-                    <span class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Costo Unitario</span>
-                    <div class="text-xl font-bold text-emerald-400 mt-1 font-mono">$${costoUnitarioResultante.toFixed(2)} / ${receta.unidad_rendimiento}</div>
-                </div>
-            </div>
-            <div class="space-y-2">
-                <h4 class="font-bold text-sm text-gray-300 uppercase tracking-wider">Composición (BOM)</h4>
-                <table class="w-full text-left">
-                    <tbody class="divide-y divide-gray-800/50">${ingredientesHtml}</tbody>
-                </table>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-800/60 text-sm">
-                <div>
-                    <h4 class="font-bold text-purple-400 uppercase text-xs mb-1">Instrucciones de Preparación</h4>
-                    <p class="text-gray-300 whitespace-pre-line">${receta.elaboracion_instrucciones}</p>
-                </div>
-                <div class="space-y-3">
-                    <div>
-                        <h4 class="font-bold text-amber-400 uppercase text-xs mb-0.5">Almacenamiento & Vida Útil</h4>
-                        <p class="text-gray-300">${receta.indicaciones_almacenamiento} (Duración: ${receta.vida_util})</p>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-teal-400 uppercase text-xs mb-0.5">Economía Circular / Mermas</h4>
-                        <p class="text-gray-300">${receta.control_mermas_economia_circular || 'Sin registro de mermas.'}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-window.abrirModalSubReceta = async function(id = null) {
-    const modal = document.getElementById('modal-subreceta');
-    const titulo = document.getElementById('modal-subreceta-titulo');
-    const filasContenedor = document.getElementById('ingredientes-subreceta-filas');
-    
-    if (!modal) return;
-
-    // Asegurar tipos frescos para el selector del modal
-    await asegurarDatosCargados();
-    const selectTipo = document.getElementById('subreceta-tipo-id') || document.getElementById('subreceta-tipo');
-    if (selectTipo && listaTiposSubRecetasLocal.length > 0) {
-        selectTipo.innerHTML = listaTiposSubRecetasLocal.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
-    }
-
-    filasContenedor.innerHTML = '';
-    modal.classList.remove('hidden');
-
-    if (id) {
-        const receta = listaSubRecetasLocal.find(x => x.id === id);
-        titulo.textContent = `Editar Sub-receta`;
-        document.getElementById('subreceta-id').value = id;
-        document.getElementById('subreceta-nombre').value = receta.nombre;
-        document.getElementById('subreceta-slug').value = receta.slug;
-        document.getElementById('subreceta-slug').disabled = true;
-        
-        if (selectTipo) selectTipo.value = receta.tipo_id;
-
-        document.getElementById('subreceta-rendimiento').value = receta.rendimiento_batch;
-        document.getElementById('subreceta-unidad').value = receta.unidad_rendimiento;
-        document.getElementById('subreceta-instrucciones').value = receta.elaboracion_instrucciones;
-        document.getElementById('subreceta-almacenamiento').value = receta.indicaciones_almacenamiento;
-        document.getElementById('subreceta-vidautil').value = receta.vida_util;
-        document.getElementById('subreceta-mermas').value = receta.control_mermas_economia_circular || '';
-        
-        const ingredientes = listaSubRecetaIngredientesLocal.filter(ing => ing.sub_receta_id == id);
-        if (ingredientes.length === 0) window.agregarFilaIngredienteSubReceta(null);
-        else ingredientes.forEach(ing => window.agregarFilaIngredienteSubReceta(ing));
-    } else {
-        titulo.textContent = "Nueva Sub-receta";
-        document.getElementById('subreceta-id').value = '';
-        document.getElementById('subreceta-slug').disabled = false;
-        document.getElementById('form-subreceta').reset();
-        window.agregarFilaIngredienteSubReceta(null);
-    }
-}
-
-window.generarSlugSubReceta = function(valor) {
-    if (document.getElementById('subreceta-id').value !== '') return;
-    document.getElementById('subreceta-slug').value = valor.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
-}
-
-window.agregarFilaIngredienteSubReceta = function(item = null) {
-    const contenedor = document.getElementById('ingredientes-subreceta-filas');
-    const div = document.createElement('div');
-    div.className = "fila-ingrediente-row flex items-center gap-2 bg-gray-850 p-2 rounded border border-gray-800 text-xs";
-    
-    const options = listaInsumosLocal.map(insumo => 
-        `<option value="${insumo.id}" data-costo="${insumo.costo_unitario}" data-unidad="${insumo.unidad_medida}" ${item && item.insumo_id == insumo.id ? 'selected' : ''}>
-            ${insumo.nombre} ($${Number(insumo.costo_unitario).toFixed(2)}/${insumo.unidad_medida})
-        </option>`
-    ).join('');
-
-    div.innerHTML = `
-        <select class="ingrediente-select flex-1 bg-gray-800 text-white rounded p-1.5 focus:outline-none" onchange="recalcularCostosFormularioSubReceta()">
-            ${options}
-        </select>
-        <div class="flex items-center gap-1 w-28">
-            <input type="number" step="0.01" value="${item ? item.cantidad : '10'}" class="ingrediente-cantidad w-full bg-gray-800 text-right text-white rounded p-1.5 focus:outline-none" oninput="recalcularCostosFormularioSubReceta()">
-            <span class="ingrediente-unidad-lbl text-xs text-gray-500 font-mono w-6">g</span>
-        </div>
-        <button type="button" onclick="this.closest('.fila-ingrediente-row').remove(); recalcularCostosFormularioSubReceta()" class="text-red-400 font-bold p-1 px-2 hover:bg-red-950/40 rounded">✕</button>
-    `;
-    contenedor.appendChild(div);
-    window.recalcularCostosFormularioSubReceta();
-}
-
-window.recalcularCostosFormularioSubReceta = function() {
-    let costoTotalBatch = 0;
-    document.querySelectorAll('.fila-ingrediente-row').forEach(fila => {
-        const select = fila.querySelector('.ingrediente-select');
-        const cantidadInput = fila.querySelector('.ingrediente-cantidad');
-        const unidadLbl = fila.querySelector('.ingrediente-unidad-lbl');
-        
-        const optionActiva = select.options[select.selectedIndex];
-        if (optionActiva) {
-            const costoUnitario = parseFloat(optionActiva.getAttribute('data-costo')) || 0;
-            const unidad = optionActiva.getAttribute('data-unidad') || 'g';
-            unidadLbl.textContent = unidad;
-            costoTotalBatch += (parseFloat(cantidadInput.value) || 0) * costoUnitario;
+    datos.forEach(async (sub) => {
+        try {
+            const resBOM = await fetch(`${SUPABASE_URL}/rest/v1/sub_receta_ingredientes?sub_receta_id=eq.${sub.id}&select=*,insumos(*)`, {
+                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+            });
+            if (resBOM.ok) {
+                const items = await resBOM.json();
+                const costoTotal = items.reduce((acc, item) => {
+                    const costoUnit = item.insumos ? Number(item.insumos.costo_unitario || 0) : 0;
+                    return acc + (Number(item.cantidad) * costoUnit);
+                }, 0);
+                const costoUnitarioReal = sub.rendimiento_batch > 0 ? (costoTotal / sub.rendimiento_batch) : 0;
+                
+                const spanCosto = document.getElementById(`card-costo-${sub.id}`);
+                if (spanCosto) {
+                    const costoFormateado = window.formatearMonedaLocal ? window.formatearMonedaLocal(costoUnitarioReal, 4) : costoUnitarioReal.toFixed(4);
+                    spanCosto.textContent = `$${costoFormateado}/${sub.unidad_rendimiento || 'ml'}`;
+                }
+            }
+        } catch (err) {
+            const spanCosto = document.getElementById(`card-costo-${sub.id}`);
+            if (spanCosto) spanCosto.textContent = `$0,0000`;
         }
     });
-    const rendimiento = parseFloat(document.getElementById('subreceta-rendimiento').value) || 1;
-    document.getElementById('form-sub-costo-total').textContent = `$${costoTotalBatch.toFixed(0)}`;
-    document.getElementById('form-sub-costo-unitario').textContent = `$${(costoTotalBatch/rendimiento).toFixed(2)} / ${document.getElementById('subreceta-unidad').value}`;
 }
 
-window.cerrarModalSubReceta = function() {
-    document.getElementById('modal-subreceta').classList.add('hidden');
+// ================= NAVEGACIÓN DE PANTALLAS =================
+window.cambiarVistaSubRecetas = function(vista) {
+    const vListado = document.getElementById('vista-listado');
+    const vDetalle = document.getElementById('vista-detalle');
+    const vFormulario = document.getElementById('vista-formulario');
+
+    if (vListado) vListado.classList.add('hidden');
+    if (vDetalle) vDetalle.classList.add('hidden');
+    if (vFormulario) vFormulario.classList.add('hidden');
+
+    if (vista === 'listado' && vListado) vListado.classList.remove('hidden');
+    if (vista === 'detalle' && vDetalle) vDetalle.classList.remove('hidden');
+    if (vista === 'formulario' && vFormulario) vFormulario.classList.remove('hidden');
 }
 
-window.filtrarSubRecetas = function() {
-    const query = document.getElementById('buscador-subrecetas').value.toLowerCase();
-    const filtrados = listaSubRecetasLocal.filter(c => c.nombre.toLowerCase().includes(query));
-    renderizarListaSubRecetas(filtrados);
-}
+window.verDetalleSubReceta = async function(id) {
+    const sub = listaSubRecetasLocal.find(x => x.id === id);
+    if (!sub) return;
 
-// Función Real de Guardado Multinivel en Supabase
-async function guardarSubReceta(e) {
-    e.preventDefault();
-    const idInput = document.getElementById('subreceta-id').value;
-    const esEdicion = idInput !== '';
+    window.cambiarVistaSubRecetas('detalle');
+    const panel = document.getElementById('panel-detalle-contenido');
+    const accionesSup = document.getElementById('detalle-acciones-superiores');
+    if (!panel) return;
 
-    const selectTipo = document.getElementById('subreceta-tipo-id') || document.getElementById('subreceta-tipo');
-    const tipoIdVal = selectTipo ? parseInt(selectTipo.value) : 1;
+    if (accionesSup) {
+        accionesSup.innerHTML = `
+            <button type="button" onclick="window.prepararEdicionSubReceta(${sub.id})" class="text-xs bg-gray-900 hover:bg-gray-800 text-emerald-400 px-4 py-2 rounded-xl border border-emerald-500/20 font-bold uppercase transition">Editar</button>
+            <button type="button" onclick="window.eliminarSubReceta(${sub.id}, '${sub.nombre}')" class="text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 px-4 py-2 rounded-xl border border-red-500/20 font-bold uppercase transition">Eliminar</button>
+        `;
+    }
 
-    const payloadSubReceta = {
-        slug: document.getElementById('subreceta-slug').value,
-        nombre: document.getElementById('subreceta-nombre').value,
-        tipo_id: tipoIdVal,
-        rendimiento_batch: parseFloat(document.getElementById('subreceta-rendimiento').value) || 1,
-        unidad_rendimiento: document.getElementById('subreceta-unidad').value,
-        elaboracion_instrucciones: document.getElementById('subreceta-instrucciones').value,
-        indicaciones_almacenamiento: document.getElementById('subreceta-almacenamiento').value,
-        vida_util: document.getElementById('subreceta-vidautil').value,
-        control_mermas_economia_circular: document.getElementById('subreceta-mermas').value
-    };
+    panel.innerHTML = `<div class="text-center py-12 text-emerald-500 font-mono animate-pulse">Cargando desglose de la receta...</div>`;
 
-    const url = esEdicion ? 
-        `${SUPABASE_URL}/rest/v1/sub_recetas_artesanales?id=eq.${idInput}` : 
-        `${SUPABASE_URL}/rest/v1/sub_recetas_artesanales`;
+    let ingredientesBOM = [];
+    let pasosList = [];
+    let costoTotalLote = 0;
 
     try {
-        const resSubReceta = await fetch(url, {
+        const [resBOM, resPasos] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/sub_receta_ingredientes?sub_receta_id=eq.${sub.id}&select=*,insumos(*)`, {
+                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+            }),
+            fetch(`${SUPABASE_URL}/rest/v1/sub_receta_pasos_preparacion?sub_receta_id=eq.${sub.id}&order=numero_paso.asc`, {
+                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+            })
+        ]);
+
+        if (resBOM.ok) {
+            ingredientesBOM = await resBOM.json();
+            costoTotalLote = ingredientesBOM.reduce((acc, item) => {
+                const costoInsu = item.insumos ? Number(item.insumos.costo_unitario || 0) : 0;
+                return acc + (Number(item.cantidad) * costoInsu);
+            }, 0);
+        }
+        if (resPasos.ok) pasosList = await resPasos.json();
+    } catch (e) {
+        console.warn("Error cargando detalles relacionales:", e);
+    }
+
+    const costoUnitarioReal = (sub.rendimiento_batch > 0 && costoTotalLote > 0) ? (costoTotalLote / sub.rendimiento_batch) : 0;
+    const tipoObj = listaTiposSubRecetasLocal.find(t => t.id === sub.tipo_id);
+    const tipoTexto = tipoObj ? tipoObj.nombre.toUpperCase() : 'PREPARACIÓN';
+
+    const costoLoteStr = window.formatearMonedaLocal ? window.formatearMonedaLocal(costoTotalLote, 0) : Math.round(costoTotalLote).toLocaleString('es-CL');
+    const costoUnitarioStr = window.formatearMonedaLocal ? window.formatearMonedaLocal(costoUnitarioReal, 4) : costoUnitarioReal.toFixed(4);
+
+    panel.innerHTML = `
+        <div class="bg-gray-900 border border-gray-800 rounded-3xl p-8 shadow-xl space-y-8">
+            <div class="border-b border-gray-800 pb-6">
+                <span class="bg-purple-950 text-purple-400 border border-purple-900/30 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">${tipoTexto}</span>
+                <h1 class="text-3xl font-bold text-white mt-3">${sub.nombre}</h1>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-gray-850/40 p-5 rounded-2xl border border-gray-800">
+                    <span class="text-[11px] text-gray-400 uppercase tracking-widest block mb-1">Rendimiento Batch</span>
+                    <span class="text-2xl font-mono font-bold text-white">${sub.rendimiento_batch || 0} ${sub.unidad_rendimiento || 'ml'}</span>
+                </div>
+                <div class="bg-gray-850/40 p-5 rounded-2xl border border-gray-800">
+                    <span class="text-[11px] text-gray-400 uppercase tracking-widest block mb-1">Costo Lote</span>
+                    <span class="text-2xl font-mono font-bold text-pink-400">$${costoLoteStr}</span>
+                </div>
+                <div class="bg-gray-850/40 p-5 rounded-2xl border border-gray-800">
+                    <span class="text-[11px] text-gray-400 uppercase tracking-widest block mb-1">Costo Unitario</span>
+                    <span class="text-2xl font-mono font-bold text-emerald-400">$${costoUnitarioStr} / ${sub.unidad_rendimiento || 'ml'}</span>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider">Composición (BOM)</h3>
+                <div class="bg-gray-850/20 p-5 rounded-2xl border border-gray-800 space-y-3">
+                    ${ingredientesBOM.length > 0 ? ingredientesBOM.map(item => {
+                        const ins = item.insumos || {};
+                        const costoParcial = Number(item.cantidad) * Number(ins.costo_unitario || 0);
+                        const costoParcialStr = window.formatearMonedaLocal ? window.formatearMonedaLocal(costoParcial, 0) : Math.round(costoParcial).toLocaleString('es-CL');
+                        return `
+                            <div class="flex justify-between items-center text-sm py-2 border-b border-gray-800/40 last:border-0">
+                                <span class="text-gray-200">• ${ins.nombre || 'Insumo'}</span>
+                                <div class="space-x-6 font-mono text-xs">
+                                    <span class="text-gray-400">${item.cantidad} ${item.unidad_medida}</span>
+                                    <span class="text-pink-400 font-bold">$${costoParcialStr}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') : '<div class="text-xs text-gray-500 italic py-2">No hay insumos registrados en esta sub-receta.</div>'}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-800">
+                <div>
+                    <h3 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-4">Pasos de Preparación</h3>
+                    <div class="space-y-3">
+                        ${pasosList.length > 0 ? pasosList.map(p => `
+                            <div class="flex gap-3 text-xs text-gray-300 bg-gray-850/30 p-4 rounded-xl border border-gray-800">
+                                <span class="font-mono font-bold text-purple-400">${p.numero_paso}.</span>
+                                <p class="leading-relaxed">${p.descripcion}</p>
+                            </div>
+                        `).join('') : '<p class="text-xs text-gray-500 italic">Sin pasos registrados.</p>'}
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-2">Almacenamiento & Vida Útil</h3>
+                        <p class="text-xs text-gray-300 bg-gray-850/30 p-4 rounded-xl border border-gray-800 leading-relaxed">
+                            ${sub.indicaciones_almacenamiento || 'N/A'}<br>
+                            ${sub.vida_util ? `<strong class="text-amber-300 mt-1 block">Duración: ${sub.vida_util}</strong>` : ''}
+                        </p>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2">Economía Circular / Mermas</h3>
+                        <p class="text-xs text-gray-300 bg-gray-850/30 p-4 rounded-xl border border-gray-800 leading-relaxed">
+                            ${sub.control_mermas_economia_circular || 'No aplica'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ================= GESTIÓN DINÁMICA DE FILAS =================
+window.agregarFilaIngrediente = function(insumoId = '', cantidad = '', unidad = 'ml') {
+    const contenedor = document.getElementById('contenedor-filas-ingredientes');
+    if (!contenedor) return;
+
+    const rowId = 'ing-' + Date.now() + Math.random().toString(36).substr(2, 5);
+    const optionsHtml = listaInsumosLocal.map(i => `<option value="${i.id}" ${i.id == insumoId ? 'selected' : ''} class="bg-gray-900 text-white">${i.nombre} (${i.unidad_medida})</option>`).join('');
+
+    const div = document.createElement('div');
+    div.id = rowId;
+    div.className = "flex items-center gap-3 bg-gray-900 border border-gray-800 p-3 rounded-xl shadow-sm";
+    div.innerHTML = `
+        <select class="select-insumo-bom flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition">
+            <option value="" class="text-gray-500">Seleccionar insumo...</option>
+            ${optionsHtml}
+        </select>
+        <input type="number" step="0.01" class="input-cant-bom w-28 bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" placeholder="Cantidad" value="${cantidad}">
+        <select class="select-unidad-bom w-28 bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition">
+            <option value="ml" class="bg-gray-900 text-white" ${unidad == 'ml' ? 'selected' : ''}>ml</option>
+            <option value="g" class="bg-gray-900 text-white" ${unidad == 'g' ? 'selected' : ''}>g</option>
+            <option value="unit" class="bg-gray-900 text-white" ${unidad == 'unit' ? 'selected' : ''}>unit</option>
+            <option value="dash" class="bg-gray-900 text-white" ${unidad == 'dash' ? 'selected' : ''}>dash</option>
+        </select>
+        <button type="button" onclick="document.getElementById('${rowId}').remove()" class="text-red-400 hover:text-red-300 font-bold px-3 py-1 text-sm transition">✕</button>
+    `;
+    contenedor.appendChild(div);
+}
+
+window.agregarFilaPaso = function(numero = '', descripcion = '') {
+    const contenedor = document.getElementById('contenedor-filas-pasos');
+    if (!contenedor) return;
+
+    const rowId = 'paso-' + Date.now() + Math.random().toString(36).substr(2, 5);
+    const totalPasos = contenedor.children.length + 1;
+
+    const div = document.createElement('div');
+    div.id = rowId;
+    div.className = "flex items-center gap-3 bg-gray-900 border border-gray-800 p-3 rounded-xl shadow-sm";
+    div.innerHTML = `
+        <span class="font-mono font-bold text-purple-400 text-xs w-8 text-center">${numero || totalPasos}.</span>
+        <input type="text" class="input-desc-paso flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" placeholder="Descripción detallada del paso..." value="${descripcion}">
+        <button type="button" onclick="document.getElementById('${rowId}').remove()" class="text-red-400 hover:text-red-300 font-bold px-3 py-1 text-sm transition">✕</button>
+    `;
+    contenedor.appendChild(div);
+}
+
+// ================= CREAR Y EDITAR =================
+window.prepararCreacionSubReceta = function() {
+    window.cambiarVistaSubRecetas('formulario');
+    
+    const titulo = document.getElementById('form-titulo-seccion');
+    if (titulo) titulo.textContent = "Nueva Sub-receta";
+
+    const inputId = document.getElementById('input-subreceta-id');
+    if (inputId) inputId.value = '';
+
+    const form = document.getElementById('form-subreceta-completo');
+    if (form) form.reset();
+
+    const contIngredientes = document.getElementById('contenedor-filas-ingredientes');
+    const contPasos = document.getElementById('contenedor-filas-pasos');
+    if (contIngredientes) contIngredientes.innerHTML = '';
+    if (contPasos) contPasos.innerHTML = '';
+
+    window.agregarFilaIngrediente();
+    window.agregarFilaPaso();
+}
+
+window.prepararEdicionSubReceta = async function(id) {
+    // Asegurar que los catálogos estén cargados antes de asignar valores
+    if (listaTiposSubRecetasLocal.length === 0 || listaInsumosLocal.length === 0) {
+        await cargarDatosAuxiliares();
+    }
+
+    const sub = listaSubRecetasLocal.find(x => x.id === id);
+    if (!sub) return;
+
+    window.cambiarVistaSubRecetas('formulario');
+    
+    const titulo = document.getElementById('form-titulo-seccion');
+    if (titulo) titulo.textContent = "Editar Sub-receta";
+
+    document.getElementById('input-subreceta-id').value = sub.id;
+    document.getElementById('input-nombre').value = sub.nombre;
+    document.getElementById('input-tipo-id').value = sub.tipo_id || '';
+    document.getElementById('input-rendimiento').value = sub.rendimiento_batch || 0;
+    document.getElementById('input-unidad').value = sub.unidad_rendimiento || 'ml';
+    document.getElementById('input-insumo-asociado').value = sub.insumo_asociado_id || '';
+    document.getElementById('input-almacenamiento').value = sub.indicaciones_almacenamiento || '';
+    document.getElementById('input-vidautil').value = sub.vida_util || '';
+    document.getElementById('input-mermas').value = sub.control_mermas_economia_circular || '';
+
+    document.getElementById('contenedor-filas-ingredientes').innerHTML = '';
+    document.getElementById('contenedor-filas-pasos').innerHTML = '';
+
+    try {
+        const [resBOM, resPasos] = await Promise.all([
+            fetch(`${SUPABASE_URL}/rest/v1/sub_receta_ingredientes?sub_receta_id=eq.${sub.id}&select=*`, {
+                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+            }),
+            fetch(`${SUPABASE_URL}/rest/v1/sub_receta_pasos_preparacion?sub_receta_id=eq.${sub.id}&order=numero_paso.asc`, {
+                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+            })
+        ]);
+
+        if (resBOM.ok) {
+            const items = await resBOM.json();
+            if (items.length > 0) {
+                items.forEach(i => window.agregarFilaIngrediente(i.insumo_id, i.cantidad, i.unidad_medida));
+            } else {
+                window.agregarFilaIngrediente();
+            }
+        }
+
+        if (resPasos.ok) {
+            const pasos = await resPasos.json();
+            if (pasos.length > 0) {
+                pasos.forEach(p => window.agregarFilaPaso(p.numero_paso, p.descripcion));
+            } else {
+                window.agregarFilaPaso();
+            }
+        }
+    } catch (e) {
+        console.warn("Error cargando datos para edición:", e);
+    }
+}
+
+window.guardarSubRecetaCompleta = async function(e) {
+    e.preventDefault();
+    const idInput = document.getElementById('input-subreceta-id').value;
+    const esEdicion = idInput !== '';
+
+    const payload = {
+        nombre: document.getElementById('input-nombre').value,
+        slug: document.getElementById('input-nombre').value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, "").trim().replace(/\s+/g, '-'),
+        tipo_id: parseInt(document.getElementById('input-tipo-id').value),
+        rendimiento_batch: parseFloat(document.getElementById('input-rendimiento').value),
+        unidad_rendimiento: document.getElementById('input-unidad').value,
+        insumo_asociado_id: parseInt(document.getElementById('input-insumo-asociado').value),
+        elaboracion_instrucciones: "Ver pasos detallados en tabla relacional",
+        indicaciones_almacenamiento: document.getElementById('input-almacenamiento').value,
+        vida_util: document.getElementById('input-vidautil').value,
+        control_mermas_economia_circular: document.getElementById('input-mermas').value
+    };
+
+    try {
+        let subRecetaId = idInput;
+        const urlCabecera = esEdicion ? 
+            `${SUPABASE_URL}/rest/v1/sub_recetas_artesanales?id=eq.${idInput}` : 
+            `${SUPABASE_URL}/rest/v1/sub_recetas_artesanales`;
+
+        const resCabecera = await fetch(urlCabecera, {
             method: esEdicion ? 'PATCH' : 'POST',
             headers: { 
                 'apikey': SUPABASE_ANON_KEY, 
                 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 
                 'Content-Type': 'application/json',
-                'Prefer': 'return=representation' 
+                'Prefer': 'return=representation'
             },
-            body: JSON.stringify(payloadSubReceta)
+            body: JSON.stringify(payload)
         });
 
-        if (!resSubReceta.ok) throw new Error("Fallo al guardar sub-receta maestra");
-        const dataSubReceta = await resSubReceta.json();
-        const subRecetaIdReal = dataSubReceta[0].id;
+        if (!resCabecera.ok) throw new Error(await resCabecera.text());
+
+        const dataCabecera = await resCabecera.json();
+        if (!esEdicion && dataCabecera.length > 0) {
+            subRecetaId = dataCabecera[0].id;
+        }
 
         if (esEdicion) {
-            await fetch(`${SUPABASE_URL}/rest/v1/sub_receta_ingredientes?sub_receta_id=eq.${subRecetaIdReal}`, {
-                method: 'DELETE',
-                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-            });
+            await Promise.all([
+                fetch(`${SUPABASE_URL}/rest/v1/sub_receta_ingredientes?sub_receta_id=eq.${subRecetaId}`, {
+                    method: 'DELETE', headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                }),
+                fetch(`${SUPABASE_URL}/rest/v1/sub_receta_pasos_preparacion?sub_receta_id=eq.${subRecetaId}`, {
+                    method: 'DELETE', headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+                })
+            ]);
         }
 
-        const ingredientesPayload = [];
-        document.querySelectorAll('.fila-ingrediente-row').forEach(fila => {
-            const select = fila.querySelector('.ingrediente-select');
-            const cant = parseFloat(fila.querySelector('.ingrediente-cantidad').value) || 0;
-            const unidad = select.options[select.selectedIndex].getAttribute('data-unidad') || 'g';
+        const filasIng = document.querySelectorAll('#contenedor-filas-ingredientes > div');
+        const payloadIngredientes = Array.from(filasIng).map(f => ({
+            sub_receta_id: parseInt(subRecetaId),
+            insumo_id: parseInt(f.querySelector('.select-insumo-bom').value),
+            cantidad: parseFloat(f.querySelector('.input-cant-bom').value) || 0,
+            unidad_medida: f.querySelector('.select-unidad-bom').value
+        })).filter(i => i.insumo_id && i.cantidad > 0);
 
-            ingredientesPayload.push({
-                sub_receta_id: subRecetaIdReal,
-                insumo_id: parseInt(select.value),
-                cantidad: cant,
-                unidad_medida: unidad
-            });
-        });
-
-        if (ingredientesPayload.length > 0) {
+        if (payloadIngredientes.length > 0) {
             await fetch(`${SUPABASE_URL}/rest/v1/sub_receta_ingredientes`, {
                 method: 'POST',
-                headers: { 
-                    'apikey': SUPABASE_ANON_KEY, 
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 
-                    'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify(ingredientesPayload)
+                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payloadIngredientes)
             });
         }
 
-        window.cerrarModalSubReceta();
-        await initSubrecetas();
+        const filasPasos = document.querySelectorAll('#contenedor-filas-pasos > div');
+        const payloadPasos = Array.from(filasPasos).map((f, idx) => ({
+            sub_receta_id: parseInt(subRecetaId),
+            numero_paso: idx + 1,
+            descripcion: f.querySelector('.input-desc-paso').value,
+            es_critico: false
+        })).filter(p => p.descripcion.trim() !== '');
 
-    } catch (error) {
-        console.error("Error al guardar sub-receta:", error);
-        alert("Ocurrió un error al procesar la sub-receta en Supabase.");
+        if (payloadPasos.length > 0) {
+            await fetch(`${SUPABASE_URL}/rest/v1/sub_receta_pasos_preparacion`, {
+                method: 'POST',
+                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payloadPasos)
+            });
+        }
+
+        document.getElementById('form-subreceta-completo').reset();
+        document.getElementById('input-subreceta-id').value = '';
+        await obtenerSubRecetasSupabase();
+        window.cambiarVistaSubRecetas('listado');
+
+    } catch (err) {
+        console.error("Error guardando sub-receta completa:", err);
+        alert("Ocurrió un error al guardar la sub-receta.");
     }
 }
 
@@ -374,24 +488,42 @@ window.eliminarSubReceta = async function(id, nombre) {
     if (!confirm(`¿Estás seguro de eliminar la sub-receta "${nombre}"?`)) return;
 
     try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/sub_recetas_artesanales?id=eq.${id}`, {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/sub_recetas_artesanales?id=eq.${id}`, {
             method: 'DELETE',
-            headers: { 
-                'apikey': SUPABASE_ANON_KEY, 
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}` 
-            }
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
         });
 
-        if (!response.ok) throw new Error("Error al eliminar");
-
-        await initSubrecetas();
-        document.getElementById('detalle-subreceta-contenedor').innerHTML = `
-            <div class="text-center py-12 text-gray-500">
-                <span class="text-4xl">🧪</span>
-                <p class="mt-4 text-sm">Selecciona una sub-receta de la lista para ver su detalle.</p>
-            </div>`;
-    } catch (error) {
-        console.error("Error al eliminar sub-receta:", error);
-        alert("No se pudo eliminar la sub-receta. Verifica si algún cóctel depende de ella.");
+        if (!res.ok) throw new Error("No se pudo eliminar");
+        await obtenerSubRecetasSupabase();
+        window.cambiarVistaSubRecetas('listado');
+    } catch (err) {
+        console.error("Error al eliminar:", err);
+        alert("No se pudo eliminar la sub-receta.");
     }
 }
+
+window.filtrarSubRecetas = function() {
+    const inputBuscador = document.getElementById('buscador-subrecetas');
+    if (!inputBuscador) return;
+    const query = inputBuscador.value.toLowerCase();
+    const filtradas = listaSubRecetasLocal.filter(s => s.nombre.toLowerCase().includes(query));
+    renderizarListaSubRecetas(filtradas);
+}
+
+// ================= EXPORTACIONES GLOBALES Y DE MÓDULO =================
+export { initSubRecetas };
+
+window.initSubRecetas = initSubRecetas;
+window.initSubrecetas = initSubRecetas;
+window.initSubRec = initSubRecetas;
+window.renderizarListaSubRecetas = renderizarListaSubRecetas;
+window.verDetalleSubReceta = verDetalleSubReceta;
+window.prepararCreacionSubReceta = prepararCreacionSubReceta;
+window.prepararEdicionSubReceta = prepararEdicionSubReceta;
+window.guardarSubRecetaCompleta = guardarSubRecetaCompleta;
+
+export default {
+    initSubRecetas,
+    initSubrecetas: initSubRecetas,
+    initSubRec: initSubRecetas
+};

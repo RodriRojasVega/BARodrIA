@@ -1,0 +1,95 @@
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+    <div id="vista-proveedores-listado" class="space-y-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl">
+            <div>
+                <h1 class="text-2xl font-bold text-white tracking-wide">Gestión de Proveedores</h1>
+                <p class="text-xs text-gray-400 mt-1">Directorio de distribuidores, marcas y asociación masiva de insumos.</p>
+            </div>
+            <button type="button" onclick="window.prepararCreacionProveedor()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2">
+                <span>+ Nuevo Proveedor</span>
+            </button>
+        </div>
+
+        <div class="relative">
+            <input type="text" id="buscador-proveedores" oninput="window.filtrarProveedores()" placeholder="Buscar proveedor por nombre, contacto o email..." class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+        </div>
+
+        <div id="contenedor-tarjetas-proveedores" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="text-center py-12 text-emerald-500 font-mono animate-pulse col-span-full">Cargando proveedores...</div>
+        </div>
+    </div>
+
+
+    <div id="vista-proveedores-detalle" class="hidden space-y-6">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-4">
+            <button type="button" onclick="window.cambiarVistaProveedores('listado')" class="text-xs text-emerald-400 hover:text-emerald-300 font-bold uppercase tracking-wider flex items-center gap-2 transition bg-gray-900 border border-gray-800 px-3 py-2 rounded-xl">
+                <span>← Volver al listado</span>
+            </button>
+            <div id="detalle-proveedor-acciones" class="flex gap-2">
+                </div>
+        </div>
+
+        <div id="panel-proveedor-contenido" class="space-y-6">
+            </div>
+    </div>
+
+
+    <div id="vista-proveedores-formulario" class="hidden space-y-6 bg-gray-900 border border-gray-800 rounded-2xl p-6 sm:p-8 shadow-xl">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-4">
+            <h2 id="form-proveedor-titulo" class="text-xl font-bold text-white tracking-wide">Nuevo Proveedor</h2>
+            <button type="button" onclick="window.cambiarVistaProveedores('listado')" class="text-xs text-gray-400 hover:text-white font-semibold uppercase transition">Cancelar</button>
+        </div>
+
+        <form id="form-proveedor-completo" onsubmit="window.guardarProveedor(event)" class="space-y-6">
+            <input type="hidden" id="input-proveedor-id">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Nombre del Proveedor / Empresa</label>
+                    <input type="text" id="prov-nombre" required placeholder="Ej: Liquidos.cl / Comercializadora SPA" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Persona de Contacto</label>
+                    <input type="text" id="prov-contacto" placeholder="Ej: Juan Pérez" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Teléfono</label>
+                    <input type="text" id="prov-telefono" placeholder="Ej: +56912345678" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Correo Electrónico</label>
+                    <input type="email" id="prov-email" placeholder="Ej: ventas@proveedor.cl" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Observaciones / Notas</label>
+                <textarea id="prov-observaciones" rows="2" placeholder="Ej: Despachos los días martes y jueves." class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner"></textarea>
+            </div>
+
+            <div class="space-y-3 pt-4 border-t border-gray-800">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div>
+                        <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Insumos Suministrados por este Proveedor</h3>
+                        <p class="text-xs text-gray-400">Selecciona los insumos del inventario que este proveedor comercializa.</p>
+                    </div>
+                    <input type="text" id="buscador-insumos-checkboxes" oninput="window.filtrarInsumosAsociacion(this.value)" placeholder="Filtrar insumos..." class="w-full sm:w-64 bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+                </div>
+
+                <div id="contenedor-checkboxes-insumos" class="max-h-60 overflow-y-auto space-y-1.5 bg-gray-950 p-3 rounded-xl border border-gray-800">
+                    <div class="text-xs text-gray-500 text-center py-4">Cargando catálogo de insumos...</div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-6 border-t border-gray-800">
+                <button type="button" onclick="window.cambiarVistaProveedores('listado')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold uppercase px-5 py-3 rounded-xl transition">Cancelar</button>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider px-6 py-3 rounded-xl transition shadow-lg">Guardar Proveedor</button>
+            </div>
+        </form>
+    </div>
+
+</div>

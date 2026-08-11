@@ -3,10 +3,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 
 let listaInsumosLocal = [];
 let listaTiposInsumosLocal = [];
-let listaProveedoresLocal = [];
 
 export async function initInsumos() {
-    await cargarDatosAuxiliaresInsumos();
+    await cargarTiposInsumos();
     await obtenerInsumosSupabase();
 
     const formInsumo = document.getElementById('form-insumo');
@@ -16,42 +15,36 @@ export async function initInsumos() {
     }
 }
 
-async function cargarDatosAuxiliaresInsumos() {
+async function cargarTiposInsumos() {
     try {
-        const resTipos = await fetch(`${SUPABASE_URL}/rest/v1/tipos_insumos?select=*`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
-        if (resTipos.ok) listaTiposInsumosLocal = await resTipos.json();
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/tipos_insumos?select=*`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        if (res.ok) {
+            listaTiposInsumosLocal = await res.json();
+        }
     } catch (e) {
         console.warn("No se pudieron cargar los tipos de insumos:", e);
-    }
-
-    try {
-        const resProveedores = await fetch(`${SUPABASE_URL}/rest/v1/proveedores?select=*`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
-        if (resProveedores.ok) listaProveedoresLocal = await resProveedores.json();
-    } catch (e) {
-        console.warn("No se pudieron cargar los proveedores:", e);
     }
 }
 
 async function obtenerInsumosSupabase() {
-    const contenedor = document.getElementById('lista-insumos-contenedor') || document.getElementById('tabla-insumos-cuerpo');
-    if (contenedor) contenedor.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-emerald-500 font-mono animate-pulse">Cargando insumos...</td></tr>`;
+    const cuerpo = document.getElementById('tabla-insumos-cuerpo') || document.getElementById('lista-insumos-contenedor');
+    if (cuerpo) cuerpo.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-emerald-500 font-mono animate-pulse">Cargando insumos...</td></tr>`;
 
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/insumos?select=*&order=nombre.asc`, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
         });
         
-        if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`Error HTTP ${res.status}: ${errText}`);
-        }
+        if (!res.ok) throw new Error("Error HTTP al obtener insumos");
         
         listaInsumosLocal = await res.json();
         renderizarTablaInsumos(listaInsumosLocal);
     } catch (e) {
         console.error("Error crítico obteniendo insumos:", e);
-        if (contenedor) {
-            contenedor.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-400 font-mono text-xs">Error al conectar con Supabase. Revisa la consola (F12).</td></tr>`;
+        if (cuerpo) {
+            cuerpo.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-400 font-mono text-xs">Error al conectar con Supabase.</td></tr>`;
         }
     }
 }
@@ -61,26 +54,36 @@ function renderizarTablaInsumos(datos) {
     if (!cuerpo) return;
 
     if (!Array.isArray(datos) || datos.length === 0) {
-        cuerpo.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-gray-500 text-sm">No hay insumos registrados.</td></tr>`;
+        cuerpo.innerHTML = `<tr><td colspan="10" class="text-center py-8 text-gray-500 text-sm">No hay insumos registrados.</td></tr>`;
         return;
     }
 
     cuerpo.innerHTML = datos.map(insumo => {
         const tipoObj = listaTiposInsumosLocal.find(t => t.id == insumo.tipo_id);
         const nombreTipo = tipoObj ? tipoObj.nombre : 'General';
+        
         const badgeArtesanal = insumo.es_artesanal ? 
-            `<span class="ml-2 bg-purple-950 text-purple-400 border border-purple-900/30 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Artesanal</span>` : '';
+            `<span class="bg-purple-950 text-purple-400 border border-purple-900/30 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Sí</span>` : 
+            `<span class="text-gray-500 text-xs">No</span>`;
+
+        const graduacionTexto = insumo.graduacion_alcohol_base > 0 ? 
+            `<span class="text-amber-400 font-semibold">${insumo.graduacion_alcohol_base}%</span>` : 
+            `<span class="text-gray-500">-</span>`;
+
+        const rendimientoPorcentaje = insumo.rendimiento_neto_porcentaje ? 
+            `${(insumo.rendimiento_neto_porcentaje * 100).toFixed(0)}%` : '100%';
 
         return `
             <tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm">
-                <td class="py-3.5 px-3 font-medium text-white">
-                    ${insumo.nombre}
-                    ${badgeArtesanal}
-                </td>
+                <td class="py-3.5 px-3 font-medium text-white">${insumo.nombre}</td>
                 <td class="py-3.5 px-3 text-gray-400 text-xs font-mono">${nombreTipo}</td>
-                <td class="py-3.5 px-3 text-right font-mono text-emerald-400 font-semibold">$${Number(insumo.costo_unitario || 0).toFixed(2)}</td>
-                <td class="py-3.5 px-3 text-gray-400 text-xs font-mono text-center">${insumo.unidad_medida || 'g'}</td>
-                <td class="py-3.5 px-3 text-gray-400 text-xs font-mono text-center">${insumo.rendimiento_neto_porcentaje ? (insumo.rendimiento_neto_porcentaje * 100).toFixed(0) + '%' : '100%'}</td>
+                <td class="py-3.5 px-3 text-center">${badgeArtesanal}</td>
+                <td class="py-3.5 px-3 text-center">${graduacionTexto}</td>
+                <td class="py-3.5 px-3 text-right font-mono text-gray-200">$${window.formatearMonedaLocal(insumo.precio_compra, 0)}</td>
+                <td class="py-3.5 px-3 text-center font-mono text-gray-300 text-xs">${insumo.formato_envase || 1}</td>
+                <td class="py-3.5 px-3 text-center font-mono text-gray-400 text-xs">${insumo.unidad_medida || 'ml'}</td>
+                <td class="py-3.5 px-3 text-center font-mono text-gray-300 text-xs">${rendimientoPorcentaje}</td>
+                <td class="py-3.5 px-3 text-right font-mono text-emerald-400 font-bold">$${window.formatearMonedaLocal(insumo.costo_unitario, 4)}</td>
                 <td class="py-3.5 px-3 text-right space-x-2 whitespace-nowrap">
                     <button type="button" onclick="abrirModalInsumo(${insumo.id})" class="text-xs bg-gray-800 hover:bg-gray-750 text-emerald-400 px-2.5 py-1 rounded border border-emerald-500/10 transition">Editar</button>
                     <button type="button" onclick="eliminarInsumo(${insumo.id}, '${insumo.nombre}')" class="text-xs bg-red-950/20 hover:bg-red-900/40 text-red-400 px-2.5 py-1 rounded border border-red-500/20 transition">Eliminar</button>
@@ -90,12 +93,30 @@ function renderizarTablaInsumos(datos) {
     }).join('');
 }
 
+// Función global para calcular el costo unitario en vivo mientras el usuario escribe en el modal
+window.calcularCostoUnitarioAutomatico = function() {
+    const precioCompra = parseFloat(document.getElementById('insumo-precio-compra')?.value) || 0;
+    const formatoEnvase = parseFloat(document.getElementById('insumo-formato-envase')?.value) || 1;
+    const rendimiento = (parseFloat(document.getElementById('insumo-rendimiento')?.value) || 100) / 100;
+
+    if (formatoEnvase <= 0) return;
+
+    // Fórmula: Costo por unidad base = (Precio Compra / Formato Envase) / Rendimiento
+    const costoCalculado = (precioCompra / formatoEnvase) / (rendimiento > 0 ? rendimiento : 1);
+
+    const labelCosto = document.getElementById('label-costo-calculado');
+    const inputCosto = document.getElementById('insumo-costo-unitario');
+    
+    if (labelCosto) labelCosto.textContent = `$${formatearMonedaLocal(costoCalculado, 4)}`;
+    if (inputCosto) inputCosto.value = costoCalculado.toFixed(4);
+}
+
 window.abrirModalInsumo = async function(id = null) {
     const modal = document.getElementById('modal-insumo');
     const titulo = document.getElementById('modal-insumo-titulo');
     if (!modal) return;
 
-    await cargarDatosAuxiliaresInsumos();
+    await cargarTiposInsumos();
 
     const selectTipo = document.getElementById('insumo-tipo-id');
     if (selectTipo) {
@@ -113,18 +134,26 @@ window.abrirModalInsumo = async function(id = null) {
         document.getElementById('insumo-id').value = id;
         document.getElementById('insumo-nombre').value = insumo.nombre;
         if (selectTipo) selectTipo.value = insumo.tipo_id || '';
-        document.getElementById('insumo-costo').value = insumo.costo_unitario;
-        document.getElementById('insumo-unidad').value = insumo.unidad_medida;
+        document.getElementById('insumo-unidad').value = insumo.unidad_medida || 'ml';
+        document.getElementById('insumo-formato-envase').value = insumo.formato_envase || 1;
+        document.getElementById('insumo-precio-compra').value = insumo.precio_compra || 0;
+        document.getElementById('insumo-costo-unitario').value = insumo.costo_unitario || 0;
+        document.getElementById('insumo-graduacion').value = insumo.graduacion_alcohol_base || 0;
         document.getElementById('insumo-rendimiento').value = insumo.rendimiento_neto_porcentaje ? insumo.rendimiento_neto_porcentaje * 100 : 100;
         
         const checkArtesanal = document.getElementById('insumo-es-artesanal');
         if (checkArtesanal) checkArtesanal.checked = !!insumo.es_artesanal;
+
+        window.calcularCostoUnitarioAutomatico();
     } else {
         titulo.textContent = "Nuevo Insumo";
         document.getElementById('insumo-id').value = '';
         document.getElementById('form-insumo').reset();
+        document.getElementById('insumo-rendimiento').value = 100;
+        document.getElementById('insumo-formato-envase').value = 1;
         const checkArtesanal = document.getElementById('insumo-es-artesanal');
         if (checkArtesanal) checkArtesanal.checked = false;
+        window.calcularCostoUnitarioAutomatico();
     }
 }
 
@@ -132,18 +161,64 @@ window.cerrarModalInsumo = function() {
     document.getElementById('modal-insumo').classList.add('hidden');
 }
 
+async function generarSlugUnico(nombre, idActual = null) {
+    let slugBase = nombre
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9 ]/g, "")
+        .trim()
+        .replace(/\s+/g, '-');
+
+    if (!slugBase) slugBase = 'insumo';
+
+    let slugFinal = slugBase;
+    let contador = 1;
+
+    while (true) {
+        let urlCheck = `${SUPABASE_URL}/rest/v1/insumos?slug=eq.${slugFinal}&select=id`;
+        if (idActual) {
+            urlCheck += `&id=neq.${idActual}`;
+        }
+
+        try {
+            const res = await fetch(urlCheck, {
+                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+            });
+            const existing = await res.json();
+            if (!existing || existing.length === 0) break;
+            slugFinal = `${slugBase}-${contador}`;
+            contador++;
+        } catch (e) {
+            break;
+        }
+    }
+    return slugFinal;
+}
+
 async function guardarInsumo(e) {
     e.preventDefault();
     const idInput = document.getElementById('insumo-id').value;
     const esEdicion = idInput !== '';
 
-    const nuevoCosto = parseFloat(document.getElementById('insumo-costo').value) || 0;
+    const nombreInsumo = document.getElementById('insumo-nombre').value;
+    const slugUnico = await generarSlugUnico(nombreInsumo, esEdicion ? idInput : null);
+
+    const precioCompra = parseFloat(document.getElementById('insumo-precio-compra').value) || 0;
+    const formatoEnvase = parseFloat(document.getElementById('insumo-formato-envase').value) || 1;
+    const rendimiento = (parseFloat(document.getElementById('insumo-rendimiento').value) || 100) / 100;
+    const costoUnitarioCalculado = (precioCompra / formatoEnvase) / (rendimiento > 0 ? rendimiento : 1);
+
     const insumoPayload = {
-        nombre: document.getElementById('insumo-nombre').value,
+        nombre: nombreInsumo,
+        slug: slugUnico,
         tipo_id: parseInt(document.getElementById('insumo-tipo-id').value) || null,
-        costo_unitario: nuevoCosto,
         unidad_medida: document.getElementById('insumo-unidad').value,
-        rendimiento_neto_porcentaje: (parseFloat(document.getElementById('insumo-rendimiento').value) || 100) / 100,
+        formato_envase: formatoEnvase,
+        precio_compra: precioCompra,
+        costo_unitario: costoUnitarioCalculado,
+        graduacion_alcohol_base: parseFloat(document.getElementById('insumo-graduacion').value) || 0.00,
+        rendimiento_neto_porcentaje: rendimiento,
         es_artesanal: document.getElementById('insumo-es-artesanal')?.checked || false
     };
 
@@ -169,11 +244,16 @@ async function guardarInsumo(e) {
             body: JSON.stringify(insumoPayload)
         });
 
-        if (!res.ok) throw new Error("Error al guardar el insumo");
+        if (!res.ok) {
+            const errorBody = await res.text();
+            throw new Error(`Error al guardar: ${errorBody}`);
+        }
+
         const dataGuardada = await res.json();
         const insumoIdReal = esEdicion ? idInput : dataGuardada[0].id;
 
-        if (!esEdicion || costoAnterior !== nuevoCosto) {
+        // Registrar en histórico de precios si cambió el costo
+        if (!esEdicion || costoAnterior !== costoUnitarioCalculado) {
             await fetch(`${SUPABASE_URL}/rest/v1/insumo_precios_historicos`, {
                 method: 'POST',
                 headers: { 
@@ -183,7 +263,7 @@ async function guardarInsumo(e) {
                 },
                 body: JSON.stringify({
                     insumo_id: insumoIdReal,
-                    precio: nuevoCosto,
+                    precio: costoUnitarioCalculado,
                     fecha_vigencia: new Date().toISOString()
                 })
             });
@@ -193,7 +273,7 @@ async function guardarInsumo(e) {
         await initInsumos();
     } catch (err) {
         console.error("Error al procesar insumo:", err);
-        alert("Ocurrió un error al guardar el insumo en Supabase.");
+        alert("Ocurrió un error al guardar el insumo en Supabase. Revisa la consola.");
     }
 }
 
@@ -219,6 +299,3 @@ window.filtrarInsumos = function() {
     const filtrados = listaInsumosLocal.filter(i => i.nombre.toLowerCase().includes(query));
     renderizarTablaInsumos(filtrados);
 }
-
-window.abrirModalInsumo = abrirModalInsumo;
-window.cerrarModalInsumo = cerrarModalInsumo;

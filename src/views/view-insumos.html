@@ -1,84 +1,118 @@
-<div class="space-y-8 animate-fade-in">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
         <div>
-            <h2 class="text-3xl font-bold tracking-tight text-white">Maestro de Insumos</h2>
-            <p class="text-gray-400 mt-1">Ingresa y gestiona los insumos base y compuestos para el costeo de cócteles.</p>
+            <h2 class="text-xl font-bold text-white">Gestión de Insumos</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Administra costos, formatos de compra, rendimiento y graduación alcohólica.</p>
         </div>
-        <div class="flex items-center gap-2">
-            <input type="text" id="buscador-insumos" oninput="filtrarInsumos()" placeholder="Buscar insumo..." class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
-        </div>
+        <button type="button" onclick="abrirModalInsumo()" class="bg-emerald-500 hover:bg-emerald-600 text-gray-950 px-4 py-2 rounded-lg font-bold text-sm transition">
+            + Nuevo Insumo
+        </button>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 h-fit space-y-4">
-            <h3 class="text-lg font-bold text-emerald-400 border-b border-gray-800 pb-2">Agregar Insumo</h3>
-            <form id="form-insumo" class="space-y-4 text-sm">
-                <div>
-                    <label class="block text-gray-400 mb-1">Nombre Comercial</label>
-                    <input type="text" id="insumo-nombre" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required placeholder="Ej: Pisco Valle Luna 40º">
-                </div>
-                <div>
-                    <label class="block text-gray-400 mb-1">ID Único (Slug / Sin espacios ni tildes)</label>
-                    <input type="text" id="insumo-slug" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required placeholder="ej: pisco-valle-luna">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-400 mb-1">Tipo de Insumo</label>
-                        <select id="insumo-tipo-id" class="w-full bg-gray-800 text-white rounded p-2 text-sm border border-gray-700 focus:outline-none">
-                            </select>
-                    </div>
+    <div>
+        <input type="text" id="buscador-insumos" oninput="filtrarInsumos()" placeholder="Buscar insumo por nombre..." class="w-full bg-gray-900 border border-gray-800 rounded-lg p-2.5 text-white text-sm focus:outline-none focus:border-emerald-500">
+    </div>
 
-                    <div class="flex items-center gap-2 pt-2">
-                        <input type="checkbox" id="insumo-es-artesanal" class="w-4 h-4 bg-gray-800 border-gray-700 rounded text-emerald-500 focus:ring-0">
-                        <label for="insumo-es-artesanal" class="text-xs text-gray-300 font-medium">¿Es de origen artesanal / producción propia?</label>
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+        <table class="w-full text-left">
+            <thead class="bg-gray-850 text-gray-400 text-xs uppercase border-b border-gray-800 tracking-wider">
+                <tr>
+                    <th class="py-3 px-3">Nombre</th>
+                    <th class="py-3 px-3">Tipo</th>
+                    <th class="py-3 px-3 text-center">Artesanal</th>
+                    <th class="py-3 px-3 text-center">Graduación</th>
+                    <th class="py-3 px-3 text-right">Precio Compra</th>
+                    <th class="py-3 px-3 text-center">Envase/Formato</th>
+                    <th class="py-3 px-3 text-center">Unidad Base</th>
+                    <th class="py-3 px-3 text-center">Rendimiento</th>
+                    <th class="py-3 px-3 text-right">Precio Unitario</th>
+                    <th class="py-3 px-3 text-right">Acciones</th>
+                </tr>
+            </thead>                            
+            <tbody id="tabla-insumos-cuerpo" class="divide-y divide-gray-800/40">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="modal-insumo" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-xl w-full mx-4 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+            <h3 id="modal-insumo-titulo" class="text-lg font-bold text-emerald-400">Gestión de Insumo</h3>
+            <button type="button" onclick="cerrarModalInsumo()" class="text-gray-400 hover:text-white text-2xl font-bold leading-none">&times;</button>
+        </div>
+        
+        <form id="form-insumo" class="space-y-4 text-sm">
+            <input type="hidden" id="insumo-id">
+            <input type="hidden" id="insumo-costo-unitario" value="0">
+            
+            <div>
+                <label class="block text-gray-400 mb-1 font-medium">Nombre del Insumo</label>
+                <input type="text" id="insumo-nombre" required placeholder="Ej: Ron Blanco Superior" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-400 mb-1 font-medium">Tipo de Insumo</label>
+                    <select id="insumo-tipo-id" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-emerald-500">
+                        </select>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1 font-medium">Graduación Alcohólica (% ABV)</label>
+                    <input type="number" step="0.1" id="insumo-graduacion" value="0" placeholder="Ej: 40.0" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-emerald-500">
+                </div>
+            </div>
+
+            <div class="bg-gray-850 p-4 rounded-lg border border-gray-800/80 space-y-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 block">Formato de Compra y Costeo</span>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-400 mb-1 font-medium">Precio Total de Compra ($)</label>
+                        <input type="number" step="0.01" id="insumo-precio-compra" placeholder="Ej: 15000" required class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" oninput="calcularCostoUnitarioAutomatico()">
                     </div>
                     <div>
-                        <label class="block text-gray-400 mb-1">Medida</label>
-                        <select id="insumo-unidad" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none">
-                            <option value="ml">ml (Mililitro)</option>
-                            <option value="g">g (Gramo)</option>
-                            <option value="unit">unit (Unidad)</option>
+                        <label class="block text-gray-400 mb-1 font-medium">Unidad Base de Receta</label>
+                        <select id="insumo-unidad" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" onchange="calcularCostoUnitarioAutomatico()">
+                            <option value="ml">Mililitros (ml)</option>
+                            <option value="g">Gramos (g)</option>
+                            <option value="unit">Unidades (unit)</option>
                         </select>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-gray-400 mb-1">Formato Envase</label>
-                        <input type="number" step="0.01" id="insumo-formato" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required value="750">
-                    </div>
-                    <div>
-                        <label class="block text-gray-400 mb-1">Precio Compra ($)</label>
-                        <input type="number" id="insumo-precio" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required value="12000">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-gray-400 mb-1">Graduación Alcohólica (% ABV)</label>
-                    <input type="number" step="0.1" id="insumo-abv" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" required value="40">
-                </div>
-                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-gray-900 font-bold py-2.5 rounded-lg transition uppercase tracking-wider">Guardar en Supabase</button>
-            </form>
-        </div>
 
-        <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 lg:col-span-2 space-y-4">
-            <h3 class="text-lg font-bold text-white border-b border-gray-800 pb-2">Catálogo Activo</h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead>
-                        <tr class="border-b border-gray-800 text-gray-400">
-                            <th class="pb-3">Insumo</th>
-                            <th class="pb-3 text-center">Tipo</th>
-                            <th class="pb-3 text-right">Formato</th>
-                            <th class="pb-3 text-right">Costo ml/g</th>
-                            <th class="pb-3 text-right">Precio Compra</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-insumos" class="divide-y divide-gray-800">
-                        <tr>
-                            <td colspan="5" class="text-center py-8 text-gray-500">Conectando con Supabase...</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-400 mb-1 font-medium">Contenido / Cantidad Envase</label>
+                        <input type="number" step="0.01" id="insumo-formato-envase" placeholder="Ej: 750" required class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" oninput="calcularCostoUnitarioAutomatico()">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1 font-medium">Rendimiento Neto (%)</label>
+                        <input type="number" step="1" id="insumo-rendimiento" value="100" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" oninput="calcularCostoUnitarioAutomatico()">
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-gray-800 flex justify-between items-center text-xs">
+                    <span class="text-gray-400">Costo Unitario Resultante (por ml/g/unit):</span>
+                    <span id="label-costo-calculado" class="font-mono font-bold text-emerald-400 text-base">$0.0000</span>
+                </div>
             </div>
-        </div>
+
+            <div class="flex items-center gap-2 pt-1">
+                <input type="checkbox" id="insumo-es-artesanal" class="w-4 h-4 bg-gray-800 border-gray-700 rounded text-emerald-500 focus:ring-0">
+                <label for="insumo-es-artesanal" class="text-xs text-gray-300 font-medium">¿Es de origen artesanal / producción propia?</label>
+            </div>
+
+            <div class="space-y-3 pt-4 border-t border-gray-800">
+                <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Proveedores que suministran este insumo</h4>
+                <div id="insumo-detalle-proveedores" class="flex flex-wrap gap-2">
+                    </div>
+            </div>
+
+            <div class="flex gap-3 pt-3 border-t border-gray-800">
+                <button type="button" onclick="cerrarModalInsumo()" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-lg font-bold transition">Cancelar</button>
+                <button type="submit" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-gray-950 py-2.5 rounded-lg font-bold transition uppercase tracking-wider">Guardar Insumo</button>
+            </div>
+        </form>
     </div>
 </div>

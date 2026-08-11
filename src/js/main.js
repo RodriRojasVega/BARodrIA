@@ -1,4 +1,6 @@
 // src/js/main.js
+import './utils.js'; // Esto asegura que las utilidades globales estén listas en todo el sistema
+
 document.addEventListener("DOMContentLoaded", () => {
     console.log("Motor Modular SPA Iniciado");
 
@@ -24,13 +26,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 modulo.initInsumos();
             } else if (vista === 'subrecetas') {
                 const modulo = await import('./modules/subrecetas.js');
-                modulo.initSubrecetas();
+                modulo.initSubRecetas();
             } else if (vista === 'cocteles') {
                 const modulo = await import('./modules/cocteles.js');
                 modulo.initCocteles();
             } else if (vista === 'servicio') {
                 const modulo = await import('./modules/servicio.js');
                 modulo.initServicio();
+            } else if (vista === 'proveedores') { // <--- AÑADIDO AQUÍ
+                const modulo = await import('./modules/proveedores.js');
+                if (typeof modulo.inicializarModuloProveedores === 'function') {
+                    modulo.inicializarModuloProveedores();
+                } else if (typeof modulo.default === 'function') {
+                    modulo.default();
+                }
             }
 
             actualizarMenuActivo(vista);
@@ -42,7 +51,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function actualizarMenuActivo(vistaActiva) {
-        navButtons.forEach(btn => {
+        // Seleccionamos dinámicamente los botones por si se actualizó el DOM
+        const actualNavButtons = document.querySelectorAll('.btn-nav');
+        actualNavButtons.forEach(btn => {
             if (btn.getAttribute('data-view') === vistaActiva) {
                 btn.className = "btn-nav w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition bg-emerald-500/10 text-emerald-400";
             } else {
