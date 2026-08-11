@@ -11,14 +11,21 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             appContent.innerHTML = `<div class="text-center mt-20 text-emerald-500 font-mono animate-pulse">Cargando módulo ${vista}...</div>`;
             
-            // 1. Buscamos en la nueva carpeta 'views'
+            // 1. Buscamos en la carpeta 'views'
             const response = await fetch(`./src/views/view-${vista}.html`);
             if (!response.ok) throw new Error(`Módulo no encontrado: view-${vista}.html`);
             
             appContent.innerHTML = await response.text();
 
-            // 2. Buscamos la lógica en la nueva carpeta 'modules'
-            if (vista === 'catalogos') {
+            // 2. Buscamos la lógica en la carpeta 'modules' (AÑADIDO DASHBOARD AQUÍ)
+            if (vista === 'dashboard') {
+                const modulo = await import('./modules/dashboard.js');
+                if (typeof modulo.initDashboard === 'function') {
+                    modulo.initDashboard();
+                } else if (typeof modulo.default === 'function') {
+                    modulo.default();
+                }
+            } else if (vista === 'catalogos') {
                 const modulo = await import('./modules/catalogos.js');
                 modulo.initCatalogos();
             } else if (vista === 'insumos') {
@@ -33,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (vista === 'servicio') {
                 const modulo = await import('./modules/servicio.js');
                 modulo.initServicio();
-            } else if (vista === 'proveedores') { // <--- AÑADIDO AQUÍ
+            } else if (vista === 'proveedores') {
                 const modulo = await import('./modules/proveedores.js');
                 if (typeof modulo.inicializarModuloProveedores === 'function') {
                     modulo.inicializarModuloProveedores();
@@ -51,7 +58,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function actualizarMenuActivo(vistaActiva) {
-        // Seleccionamos dinámicamente los botones por si se actualizó el DOM
         const actualNavButtons = document.querySelectorAll('.btn-nav');
         actualNavButtons.forEach(btn => {
             if (btn.getAttribute('data-view') === vistaActiva) {

@@ -1,4 +1,4 @@
-// Módulo de Proveedores y Catálogo de Precios Avanzado (Supabase / Vistas Separadas)
+// Módulo de Proveedores y Catálogo de Precios Avanzado (Supabase / Vistas Separadas / Histórico Paginado)
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -11,6 +11,12 @@ let listaInsumosGlobal = [];
 let insumosProveedorActual = new Map(); // insumo_id -> precio_oferta
 let proveedorSeleccionadoId = null;
 
+// Variables para el paginador y buscador de la sub-pantalla de histórico de proveedores
+let historicoProveedorActualData = [];
+let paginaActualHistoricoProv = 1;
+const registrosPorPaginaProv = 10;
+let proveedorActualNombreCache = '';
+
 export async function initProveedores() {
     await cargarInsumosGlobales();
     await obtenerProveedoresSupabase();
@@ -21,10 +27,12 @@ window.cambiarVistaProveedores = function(vista) {
     const vListado = document.getElementById('vista-proveedores-listado');
     const vDetalle = document.getElementById('vista-proveedores-detalle');
     const vForm = document.getElementById('vista-proveedores-formulario');
+    const vHistorico = document.getElementById('vista-proveedores-historico');
 
     if (vListado) vListado.classList.add('hidden');
     if (vDetalle) vDetalle.classList.add('hidden');
     if (vForm) vForm.classList.add('hidden');
+    if (vHistorico) vHistorico.classList.add('hidden');
 
     if (vista === 'listado') {
         if (vListado) vListado.classList.remove('hidden');
@@ -33,6 +41,8 @@ window.cambiarVistaProveedores = function(vista) {
         if (vDetalle) vDetalle.classList.remove('hidden');
     } else if (vista === 'formulario') {
         if (vForm) vForm.classList.remove('hidden');
+    } else if (vista === 'historico') {
+        if (vHistorico) vHistorico.classList.remove('hidden');
     }
 }
 
@@ -124,6 +134,8 @@ window.verDetalleProveedor = function(id) {
     const prov = listaProveedoresLocal.find(p => p.id == id);
     if (!prov) return;
 
+    proveedorActualNombreCache = prov.nombre;
+
     document.getElementById('detalle-proveedor-acciones').innerHTML = `
         <button type="button" onclick="window.prepararEdicionProveedor(${prov.id})" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition shadow">Editar</button>
         <button type="button" onclick="window.eliminarProveedor(${prov.id}, '${prov.nombre}')" class="text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition border border-red-900/50">Eliminar</button>
@@ -194,10 +206,130 @@ window.verDetalleProveedor = function(id) {
                 </table>
             </div>
         </div>
+
+        <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl flex items-center justify-between shadow-xl">
+            <div>
+                <span class="text-xs font-bold text-white block uppercase tracking-wider font-mono text-emerald-400">Histórico de Auditoría de Tarifas</span>
+                <p class="text-[11px] text-gray-400 mt-0.5">Consulta todos los registros de auditoría y cambios de precios con buscador y paginación.</p>
+            </div>
+            <button type="button" onclick="window.abrirVistaHistoricoProveedor(${prov.id}, '${prov.nombre.replace(/'/g, "\\'")}')" class="text-xs bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 px-4 py-2.5 rounded-xl border border-emerald-500/30 font-bold transition flex items-center gap-1.5 shadow">
+                <span>Ver Histórico Completo</span>
+                <span>→</span>
+            </button>
+        </div>
     `;
 
-    window.cargarHistoricoProveedor(id);
     window.cambiarVistaProveedores('detalle');
+}
+
+// Funciones para la navegación y gestión de la sub-pantalla de Histórico de Proveedores
+window.abrirVistaHistoricoProveedor = async function(proveedorId, nombreProveedor) {
+    proveedorSeleccionadoId = proveedorId;
+    proveedorActualNombreCache = nombreProveedor;
+    
+    const titulo = document.getElementById('titulo-historico-proveedor');
+    if (titulo) titulo.innerText = `Histórico de Auditoría: ${nombreProveedor}`;
+
+    const inputBuscador = document.getElementById('buscador-historico-proveedor');
+    if (inputBuscador) inputBuscador.value = '';
+
+    paginaActualHistoricoProv = 1;
+    window.cambiarVistaProveedores('historico');
+    await cargarDatosHistoricoProveedorCompleto(proveedorId);
+}
+
+window.volverDesdeHistoricoProveedor = function() {
+    if (proveedorSeleccionadoId) {
+        window.verDetalleProveedor(proveedorSeleccionadoId);
+    } else {
+        window.cambiarVistaProveedores('listado');
+    }
+}
+
+async function cargarDatosHistoricoProveedorCompleto(proveedorId) {
+    const cuerpo = document.getElementById('tabla-historico-proveedor-completo');
+    if (!cuerpo) return;
+
+    cuerpo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-gray-500 font-mono text-xs">Cargando registros...</td></tr>`;
+
+    try {
+        if (!window.supabaseClient) return;
+        const { data, error } = await window.supabaseClient
+            .from('insumo_precios_historicos')
+            .select('*')
+            .eq('proveedor_id', proveedorId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        historicoProveedorActualData = data || [];
+        renderizarTablaHistoricoProveedorPaginada();
+    } catch (e) {
+        console.warn("Error al cargar histórico completo del proveedor:", e);
+        cuerpo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-red-400 text-xs">Error al conectar con el servidor.</td></tr>`;
+    }
+}
+
+window.renderizarTablaHistoricoProveedorPaginada = function() {
+    const cuerpo = document.getElementById('tabla-historico-proveedor-completo');
+    const infoPaginador = document.getElementById('paginador-info-proveedor');
+    if (!cuerpo) return;
+
+    const query = (document.getElementById('buscador-historico-proveedor')?.value || '').toLowerCase();
+    
+    const filtrados = historicoProveedorActualData.filter(h => {
+        const fechaStr = h.created_at ? new Date(h.created_at).toLocaleString('es-CL').toLowerCase() : '';
+        const precioStr = h.precio_compra ? h.precio_compra.toString() : '';
+        const insObj = listaInsumosGlobal.find(i => i.id === h.insumo_id);
+        const nombreInsumo = insObj ? insObj.nombre.toLowerCase() : '';
+        return fechaStr.includes(query) || precioStr.includes(query) || nombreInsumo.includes(query);
+    });
+
+    const totalRegistros = filtrados.length;
+    const totalPaginas = Math.ceil(totalRegistros / registrosPorPaginaProv) || 1;
+
+    if (paginaActualHistoricoProv > totalPaginas) paginaActualHistoricoProv = totalPaginas;
+    if (paginaActualHistoricoProv < 1) paginaActualHistoricoProv = 1;
+
+    const inicio = (paginaActualHistoricoProv - 1) * registrosPorPaginaProv;
+    const fin = inicio + registrosPorPaginaProv;
+    const registrosPagina = filtrados.slice(inicio, fin);
+
+    if (infoPaginador) {
+        infoPaginador.innerText = `Mostrando página ${paginaActualHistoricoProv} de ${totalPaginas} (${totalRegistros} registros totales)`;
+    }
+
+    if (registrosPagina.length === 0) {
+        cuerpo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-gray-500 text-xs">No se encontraron registros históricos.</td></tr>`;
+        return;
+    }
+
+    cuerpo.innerHTML = registrosPagina.map(h => {
+        const fechaFormateada = h.created_at ? new Date(h.created_at).toLocaleString('es-CL', { 
+            dateStyle: 'medium', 
+            timeStyle: 'short' 
+        }) : 'Fecha no registrada';
+
+        const insObj = listaInsumosGlobal.find(i => i.id === h.insumo_id);
+        const nombreInsumo = insObj ? insObj.nombre : `Insumo #${h.insumo_id}`;
+
+        return `
+            <tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm">
+                <td class="py-3 px-4 font-mono text-gray-300 text-xs">${fechaFormateada}</td>
+                <td class="py-3 px-3 font-medium text-white text-xs">${nombreInsumo}</td>
+                <td class="py-3 px-3 text-right font-mono text-emerald-400 font-bold">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(h.precio_compra, 0) : h.precio_compra}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+window.filtrarHistoricoProveedorLocal = function() {
+    paginaActualHistoricoProv = 1;
+    renderizarTablaHistoricoProveedorPaginada();
+}
+
+window.cambiarPaginaHistoricoProveedor = function(delta) {
+    paginaActualHistoricoProv += delta;
+    renderizarTablaHistoricoProveedorPaginada();
 }
 
 window.prepararCreacionProveedor = async function() {
@@ -244,7 +376,6 @@ window.renderizarListadosEdicionProveedor = function() {
     const insumosAsociadosArr = listaInsumosGlobal.filter(ins => insumosProveedorActual.has(ins.id));
     const insumosDisponiblesArr = listaInsumosGlobal.filter(ins => !insumosProveedorActual.has(ins.id));
 
-    // Renderizar asociados (con precio editable)
     if (insumosAsociadosArr.length === 0) {
         contenedorAsociados.innerHTML = `<div class="text-xs text-gray-500 py-3 text-center">No hay insumos asignados a este proveedor. Agrega algunos desde el listado derecho.</div>`;
     } else {
@@ -270,7 +401,6 @@ window.renderizarListadosEdicionProveedor = function() {
         }).join('');
     }
 
-    // Renderizar disponibles
     if (insumosDisponiblesArr.length === 0) {
         contenedorDisponibles.innerHTML = `<div class="text-xs text-gray-500 py-3 text-center">Todos los insumos globales ya están asociados a este proveedor.</div>`;
     } else {
@@ -289,7 +419,7 @@ window.renderizarListadosEdicionProveedor = function() {
 }
 
 window.agregarInsumoAProveedor = function(insumoId) {
-    insumosProveedorActual.set(insumoId, 0); // Precio inicial por defecto
+    insumosProveedorActual.set(insumoId, 0);
     window.renderizarListadosEdicionProveedor();
 }
 
@@ -338,7 +468,6 @@ window.guardarProveedor = async function(e) {
             }
         }
 
-        // Consultar relaciones anteriores en Supabase para aplicar validación inteligente (Diff Check)
         let relacionesAnterioresMap = new Map();
         if (esEdicion) {
             const { data: relsViejas } = await window.supabaseClient
@@ -350,7 +479,6 @@ window.guardarProveedor = async function(e) {
                 relsViejas.forEach(r => relacionesAnterioresMap.set(r.insumo_id, r.precio_oferta));
             }
 
-            // Borrar relaciones viejas para recrear las nuevas
             await window.supabaseClient
                 .from('insumo_proveedores')
                 .delete()
@@ -370,7 +498,6 @@ window.guardarProveedor = async function(e) {
                     precio_oferta: precioOfertaVal
                 });
 
-                // VALIDACIÓN INTELIGENTE (DIFF CHECK): Solo registrar en histórico si es nuevo o el precio cambió
                 const precioAnterior = relacionesAnterioresMap.has(parseInt(insumoId)) ? relacionesAnterioresMap.get(parseInt(insumoId)) : -1;
                 
                 if (precioOfertaVal !== null && precioOfertaVal !== precioAnterior) {
@@ -390,7 +517,6 @@ window.guardarProveedor = async function(e) {
             if (errRel) console.warn("Aviso al guardar insumo_proveedores:", errRel);
         }
 
-        // Insertar en histórico solo si hay cambios reales detectados
         if (registrosHistoricos.length > 0) {
             await window.supabaseClient
                 .from('insumo_precios_historicos')
@@ -404,51 +530,6 @@ window.guardarProveedor = async function(e) {
         alert("Ocurrió un error al guardar el proveedor en Supabase. Revisa la consola.");
     }
 }
-
-window.cargarHistoricoProveedor = async function(proveedorId) {
-    const cuerpoHist = document.getElementById('tabla-historico-proveedor');
-    if (!cuerpoHist) return;
-
-    cuerpoHist.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-500 font-mono text-xs">Cargando histórico...</td></tr>`;
-
-    try {
-        if (!window.supabaseClient) return;
-        const { data, error } = await window.supabaseClient
-            .from('insumo_precios_historicos')
-            .select('*')
-            .eq('proveedor_id', proveedorId)
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-            cuerpoHist.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs">No hay registros históricos de precios para este proveedor.</td></tr>`;
-            return;
-        }
-
-        cuerpoHist.innerHTML = data.map(h => {
-            const fechaFormateada = h.created_at ? new Date(h.created_at).toLocaleString('es-CL', { 
-                dateStyle: 'medium', 
-                timeStyle: 'short' 
-            }) : 'Fecha no registrada';
-
-            const insObj = listaInsumosGlobal.find(i => i.id === h.insumo_id);
-            const nombreInsumo = insObj ? insObj.nombre : `Insumo #${h.insumo_id}`;
-
-            return `
-                <tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm">
-                    <td class="py-3 px-4 font-mono text-gray-300 text-xs">${fechaFormateada}</td>
-                    <td class="py-3 px-3 font-medium text-white text-xs">${nombreInsumo}</td>
-                    <td class="py-3 px-3 text-right font-mono text-emerald-400 font-bold">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(h.precio_compra, 0) : h.precio_compra}</td>
-                </tr>
-            `;
-        }).join('');
-
-    } catch (e) {
-        console.warn("Error al cargar histórico del proveedor:", e);
-        cuerpoHist.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-red-400 text-xs">Error al cargar el histórico.</td></tr>`;
-    }
-};
 
 window.eliminarProveedor = async function(id, nombre) {
     if (!confirm(`¿Estás seguro de eliminar el proveedor "${nombre}"?`)) return;

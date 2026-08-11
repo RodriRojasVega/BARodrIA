@@ -1,45 +1,29 @@
-<div class="space-y-8 animate-fade-in">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl">
         <div>
-            <h2 class="text-3xl font-bold tracking-tight text-white">Catálogos Maestros</h2>
-            <p class="text-gray-400 mt-1">Gestión de tablas maestras del sistema (Categorías, Familias, Soportes, Hielos, Técnicas).</p>
+            <span class="text-xs uppercase font-bold tracking-wider text-emerald-400 font-mono">Gestión de Parámetros</span>
+            <h1 class="text-2xl font-black text-white mt-1">Catálogos y Tablas Maestras</h1>
+            <p class="text-xs text-gray-400 mt-1">Administración de clasificaciones, tipos y parámetros de configuración del sistema.</p>
         </div>
-        <div>
-            <button id="btn-nuevo-catalogo" class="bg-emerald-500 hover:bg-emerald-600 text-gray-950 font-bold px-4 py-2 rounded-lg text-sm transition uppercase tracking-wider">
-                + Nuevo Registro
-            </button>
+        <div class="flex items-center gap-2 bg-emerald-950/40 border border-emerald-900/50 px-3 py-1.5 rounded-xl">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-xs font-mono text-emerald-400 font-semibold">Supabase Conectado</span>
         </div>
     </div>
 
-    <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl flex items-center gap-4">
-        <label class="text-gray-400 text-sm font-bold uppercase tracking-wider">Seleccionar Tabla:</label>
-        <select id="selector-tabla-catalogo" class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-emerald-500 font-mono">
-            <option value="categorias">Categorías de Consumo</option>
-            <option value="familias">Familias de Coctelería</option>
-            <option value="soportes">Soportes y Vajilla</option>
-            <option value="hielos">Tipos de Hielo</option>
-            <option value="tecnicas">Técnicas de Barra</option>
-            <option value="tipos_sub_recetas">Tipos de Sub-recetas</option>
-            <option value="tipos_insumos">Tipos de Insumos</option>
-        </select>
-    </div>
-
-    <div class="bg-gray-900 p-6 rounded-xl border border-gray-800 space-y-4">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-                <thead id="cabecera-catalogo" class="border-b border-gray-800 text-gray-400"></thead>
-                <tbody id="tabla-catalogo" class="divide-y divide-gray-800/60"></tbody>
-            </table>
+    <div class="space-y-4">
+        <div class="border-b border-gray-800 pb-3">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                Configuración de Tablas
+            </h2>
+            <p class="text-xs text-gray-400 mt-0.5">Selecciona una categoría para gestionar sus registros y valores asociados.</p>
         </div>
-    </div>
-</div>
 
-<div id="modal-catalogo" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-lg w-full mx-4 space-y-4">
-        <div class="flex justify-between items-center border-b border-gray-800 pb-3">
-            <h3 id="modal-catalogo-titulo" class="text-lg font-bold text-emerald-400">Gestión de Catálogo</h3>
-            <button type="button" onclick="cerrarModalCatalogo()" class="text-gray-400 hover:text-white text-2xl font-bold leading-none">&times;</button>
+        <div id="catalogos-container" class="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl space-y-6">
+            <div class="text-center py-12 text-gray-500 font-mono text-xs animate-pulse">
+                Cargando registros de catálogos...
+            </div>
         </div>
-        <div id="catalogo-formulario-contenedor"></div>
     </div>
 </div>

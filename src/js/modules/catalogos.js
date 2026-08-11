@@ -1,277 +1,229 @@
-// src/js/modules/catalogos.js
+// Módulo de Catálogos y Tablas Maestras (Con celdas multilínea y CRUD completo)
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-let tablaCatalogoActiva = 'categorias';
-let datosCatalogoLocal = [];
-
-const configCatalogos = {
-    categorias: { 
-        endpoint: "categorias", 
-        headers: ["Slug", "Nombre Comercial", "Descripción", "Acciones"], 
-        fields: [
-            { name: "slug", label: "Slug Único", type: "text", required: true }, 
-            { name: "nombre", label: "Nombre Comercial", type: "text", required: true }, 
-            { name: "descripcion", label: "Descripción", type: "textarea", required: true }
-        ] 
-    },
-    familias: { 
-        endpoint: "familias", 
-        headers: ["Slug", "Nombre", "Fórmula de Balance", "Acciones"], 
-        fields: [
-            { name: "slug", label: "Slug Único", type: "text", required: true }, 
-            { name: "nombre", label: "Nombre de Familia", type: "text", required: true }, 
-            { name: "formula_balance_sugerida", label: "Fórmula Sugerida", type: "text", required: false }
-        ] 
-    },
-    soportes: { 
-        endpoint: "soportes", 
-        headers: ["Slug", "Nombre", "Capacidad Operativa", "Acciones"], 
-        fields: [
-            { name: "slug", label: "Slug Único", type: "text", required: true }, 
-            { name: "nombre", label: "Nombre de Vajilla", type: "text", required: true }, 
-            { name: "capacidad_operativa_ml", label: "Capacidad (ml)", type: "number", required: true }
-        ] 
-    },
-    hielos: { 
-        endpoint: "hielos", 
-        headers: ["Slug", "Nombre", "Dilución Pasiva", "Acciones"], 
-        fields: [
-            { name: "slug", label: "Slug Único", type: "text", required: true }, 
-            { name: "nombre", label: "Nombre de Hielo", type: "text", required: true }, 
-            { name: "dilucion_pasiva", label: "Perfil de Dilución", type: "text", required: true }
-        ] 
-    },
-    tecnicas: { 
-        endpoint: "tecnicas", 
-        headers: ["Slug", "Nombre", "Herramientas", "Dilución (%)", "Acciones"], 
-        fields: [
-            { name: "slug", label: "Slug Único", type: "text", required: true }, 
-            { name: "nombre", label: "Nombre de Técnica", type: "text", required: true }, 
-            { name: "herramienta_requerida", label: "Herramientas", type: "text", required: true }, 
-            { name: "dilucion_estimada_porcentaje", label: "Dilución (0 a 1)", type: "number", step: "0.01", required: true }
-        ] 
-    },
-    // Agrega esto dentro del objeto configCatalogos en insumos/catalogos.js
-    tipos_sub_recetas: { 
-    endpoint: "tipos_sub_recetas", 
-    headers: ["Slug", "Nombre del Tipo", "Descripción", "Acciones"], 
-    fields: [
-        { name: "slug", label: "Slug Único (ej. syrup)", type: "text", required: true }, 
-        { name: "nombre", label: "Nombre Visible", type: "text", required: true }, 
-        { name: "descripcion", label: "Descripción", type: "textarea", required: false }
-    ] 
-    },
-    tipos_insumos: { 
-        endpoint: "tipos_insumos", 
-        headers: ["Slug", "Nombre del Tipo", "Descripción", "Acciones"], 
-        fields: [
-            { name: "slug", label: "Slug Único (ej. destilado)", type: "text", required: true }, 
-            { name: "nombre", label: "Nombre Visible", type: "text", required: true }, 
-            { name: "descripcion", label: "Descripción", type: "textarea", required: false }
-        ] 
-    },
-};
-
-export function initCatalogos() {
-    const selector = document.getElementById('selector-tabla-catalogo');
-    if (selector) {
-        selector.value = tablaCatalogoActiva;
-        selector.onchange = (e) => cambiarTablaCatalogo(e.target.value);
-    }
-
-    const btnNuevo = document.getElementById('btn-nuevo-catalogo');
-    if (btnNuevo) {
-        btnNuevo.onclick = () => abrirModalCatalogo(null);
-    }
-
-    cambiarTablaCatalogo(tablaCatalogoActiva);
+if (!window.supabaseClient && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-async function cambiarTablaCatalogo(nuevaTabla) {
-    tablaCatalogoActiva = nuevaTabla;
-    await cargarDatosCatalogo();
+let tablaActualActiva = 'categorias';
+
+export async function initCatalogos() {
+    await renderizarModuloCatalogos();
 }
 
-async function cargarDatosCatalogo() {
-    const config = configCatalogos[tablaCatalogoActiva];
-    const cabecera = document.getElementById('cabecera-catalogo');
-    const cuerpo = document.getElementById('tabla-catalogo');
-    if (!cabecera || !cuerpo) return;
+async function renderizarModuloCatalogos() {
+    const contenedor = document.getElementById('catalogos-container');
+    if (!contenedor) return;
 
-    cabecera.innerHTML = `<tr>${config.headers.map((h, index) => {
-        const alineacion = index === config.headers.length - 1 ? 'text-right' : 'text-left';
-        return `<th class="pb-3 ${alineacion} text-gray-400 font-semibold">${h}</th>`;
-    }).join('')}</tr>`;
-    
-    cuerpo.innerHTML = `<tr><td colspan="${config.headers.length}" class="text-center py-8 text-emerald-500 font-mono animate-pulse">Cargando registros...</td></tr>`;
-
-    try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/${config.endpoint}?select=*&order=id.asc`, {
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-        });
-        if (!response.ok) throw new Error("Error de conexión");
-        datosCatalogoLocal = await response.json();
-        renderizarTablaCatalogo();
-    } catch (error) {
-        console.error(error);
-        cuerpo.innerHTML = `<tr><td colspan="${config.headers.length}" class="text-center py-8 text-red-500 font-mono">Error al conectar con la base de datos.</td></tr>`;
-    }
-}
-
-function renderizarTablaCatalogo() {
-    const config = configCatalogos[tablaCatalogoActiva];
-    const cuerpo = document.getElementById('tabla-catalogo');
-    if (!cuerpo) return;
-
-    if (datosCatalogoLocal.length === 0) {
-        cuerpo.innerHTML = `<tr><td colspan="${config.headers.length}" class="text-center py-8 text-gray-500">No hay elementos registrados en esta tabla.</td></tr>`;
-        return;
-    }
-
-    cuerpo.innerHTML = datosCatalogoLocal.map(item => {
-        let celdasHtml = config.fields.map(field => {
-            let val = item[field.name];
-            if (field.name === 'dilucion_estimada_porcentaje' && val !== undefined) val = `${(Number(val) * 100).toFixed(0)}%`;
-            if (field.name === 'capacidad_operativa_ml' && val !== undefined) val = `${val} ml`;
-            
-            const esTextoLargo = field.type === 'textarea' || field.name === 'descripcion' || field.name === 'formula_balance_sugerida';
-            const estilosCelda = esTextoLargo ? 
-                'max-w-xs md:max-w-md whitespace-normal break-words text-gray-300 text-xs leading-relaxed' : 
-                'text-white';
-            const estiloSlug = field.name === 'slug' ? 'font-mono text-xs text-gray-400' : '';
-
-            return `<td class="py-3.5 px-3 ${estilosCelda} ${estiloSlug}">${val || '—'}</td>`;
-        }).join('');
-
-        let accionesHtml = `
-            <td class="py-3.5 px-3 text-right space-x-2 whitespace-nowrap">
-                <button type="button" data-action="editar" data-id="${item.id}" class="text-xs bg-gray-800 hover:bg-gray-750 text-emerald-400 px-2.5 py-1 rounded border border-emerald-500/10 transition">Editar</button>
-                <button type="button" data-action="eliminar" data-id="${item.id}" data-slug="${item.slug}" class="text-xs bg-red-950/20 hover:bg-red-900/40 text-red-400 px-2.5 py-1 rounded border border-red-500/20 transition">Eliminar</button>
-            </td>
-        `;
-        
-        // Reemplazamos border-b por una línea oscura y sutil (border-gray-800/40) para evitar contrastes gruesos
-        return `<tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40 align-top">${celdasHtml}${accionesHtml}</tr>`;
-    }).join('');
-
-    cuerpo.querySelectorAll('button[data-action="editar"]').forEach(btn => {
-        btn.onclick = () => abrirModalCatalogo(parseInt(btn.getAttribute('data-id')));
-    });
-    cuerpo.querySelectorAll('button[data-action="eliminar"]').forEach(btn => {
-        btn.onclick = () => eliminarElementoCatalogo(parseInt(btn.getAttribute('data-id')), btn.getAttribute('data-slug'));
-    });
-}
-
-function abrirModalCatalogo(id = null) {
-    const modal = document.getElementById('modal-catalogo');
-    const contenedorForm = document.getElementById('catalogo-formulario-contenedor') || document.getElementById('catalopo-formulario-contenedor');
-    const titulo = document.getElementById('modal-catalogo-titulo');
-    
-    if (!modal || !contenedorForm) return;
-
-    modal.classList.remove('hidden');
-    const config = configCatalogos[tablaCatalogoActiva];
-    if (titulo) titulo.textContent = id ? `Editar registro en ${tablaCatalogoActiva}` : `Nuevo registro en ${tablaCatalogoActiva}`;
-
-    let itemEdicion = id ? datosCatalogoLocal.find(x => x.id === id) : null;
-
-    contenedorForm.innerHTML = `
-        <form id="form-catalogo-dinamico" class="space-y-4 text-sm">
-            <input type="hidden" id="catalogo-item-id" value="${id || ''}">
-            ${config.fields.map(field => {
-                const valorActual = itemEdicion ? (itemEdicion[field.name] || '') : '';
-                const esSlug = field.name === 'slug';
-                return `
-                    <div>
-                        <label class="block text-gray-400 mb-1 font-medium">${field.label}</label>
-                        ${field.type === 'textarea' ? 
-                            `<textarea id="input-${field.name}" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" rows="2" ${field.required ? 'required' : ''}>${valorActual}</textarea>` :
-                            `<input type="${field.type}" id="input-${field.name}" value="${valorActual}" ${field.step ? `step="${field.step}"` : ''} class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:border-emerald-500" ${esSlug && id ? 'disabled' : ''} ${field.required ? 'required' : ''}>`
-                        }
-                    </div>
-                `;
-            }).join('')}
-            <div class="flex gap-3 pt-4 border-t border-gray-800">
-                <button type="button" id="btn-cancelar-catalogo" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-lg font-bold transition">Cancelar</button>
-                <button type="submit" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-gray-950 py-2.5 rounded-lg font-bold transition uppercase tracking-wider">Guardar</button>
+    contenedor.innerHTML = `
+        <div class="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center pb-4 border-b border-gray-800">
+            <div class="flex flex-wrap gap-2" id="catalogos-tabs">
+                <button data-tabla="categorias" class="tab-catalogo px-4 py-2 rounded-xl text-xs font-mono font-bold transition bg-emerald-500 text-gray-950">Categorías</button>
+                <button data-tabla="familias" class="tab-catalogo px-4 py-2 rounded-xl text-xs font-mono font-bold transition bg-gray-800 text-gray-400 hover:text-white">Familias</button>
+                <button data-tabla="soportes" class="tab-catalogo px-4 py-2 rounded-xl text-xs font-mono font-bold transition bg-gray-800 text-gray-400 hover:text-white">Soportes</button>
+                <button data-tabla="hielos" class="tab-catalogo px-4 py-2 rounded-xl text-xs font-mono font-bold transition bg-gray-800 text-gray-400 hover:text-white">Hielos</button>
+                <button data-tabla="tecnicas" class="tab-catalogo px-4 py-2 rounded-xl text-xs font-mono font-bold transition bg-gray-800 text-gray-400 hover:text-white">Técnicas</button>
+                <button data-tabla="tipos_insumos" class="tab-catalogo px-4 py-2 rounded-xl text-xs font-mono font-bold transition bg-gray-800 text-gray-400 hover:text-white">Tipos Insumos</button>
+                <button data-tabla="tipos_sub_recetas" class="tab-catalogo px-4 py-2 rounded-xl text-xs font-mono font-bold transition bg-gray-800 text-gray-400 hover:text-white">Tipos Sub-recetas</button>
             </div>
-        </form>
+            <button id="btn-nuevo-registro" class="bg-emerald-500 hover:bg-emerald-400 text-gray-950 px-4 py-2 rounded-xl text-xs font-mono font-bold transition flex items-center gap-2 shadow-lg">
+                <span>+ Nuevo Registro</span>
+            </button>
+        </div>
+        <div id="catalogo-tabla-content" class="overflow-x-auto">
+            <div class="text-center py-8 text-gray-500 font-mono text-xs animate-pulse">Cargando registros...</div>
+        </div>
     `;
 
-    document.getElementById('btn-cancelar-catalogo').onclick = cerrarModalCatalogo;
-    document.getElementById('form-catalogo-dinamico').onsubmit = guardarElementoCatalogo;
-}
-
-function cerrarModalCatalogo() {
-    const modal = document.getElementById('modal-catalogo');
-    if (modal) modal.classList.add('hidden');
-}
-
-async function guardarElementoCatalogo(e) {
-    e.preventDefault();
-    const config = configCatalogos[tablaCatalogoActiva];
-    const id = document.getElementById('catalogo-item-id').value;
-    
-    const payload = {};
-    config.fields.forEach(field => {
-        const input = document.getElementById(`input-${field.name}`);
-        if (input && !input.disabled) {
-            payload[field.name] = field.type === 'number' ? parseFloat(input.value) : input.value;
-        }
+    const botones = contenedor.querySelectorAll('.tab-catalogo');
+    botones.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            botones.forEach(b => {
+                b.className = "tab-catalogo px-4 py-2 rounded-xl text-xs font-mono font-bold transition bg-gray-800 text-gray-400 hover:text-white";
+            });
+            e.currentTarget.className = "tab-catalogo px-4 py-2 rounded-xl text-xs font-mono font-bold transition bg-emerald-500 text-gray-950";
+            
+            tablaActualActiva = e.currentTarget.getAttribute('data-tabla');
+            await cargarDatosTabla(tablaActualActiva);
+        });
     });
 
-    const esEdicion = id !== '';
-    const url = esEdicion ? 
-        `${SUPABASE_URL}/rest/v1/${config.endpoint}?id=eq.${id}` : 
-        `${SUPABASE_URL}/rest/v1/${config.endpoint}`;
+    document.getElementById('btn-nuevo-registro').addEventListener('click', () => {
+        abrirModalRegistro(tablaActualActiva);
+    });
+
+    await cargarDatosTabla(tablaActualActiva);
+}
+
+async function cargarDatosTabla(nombreTabla) {
+    const contenidoTabla = document.getElementById('catalogo-tabla-content');
+    if (!contenidoTabla) return;
+
+    contenidoTabla.innerHTML = `<div class="text-center py-8 text-gray-500 font-mono text-xs animate-pulse">Consultando ${nombreTabla}...</div>`;
 
     try {
-        const headers = { 
-            'apikey': SUPABASE_ANON_KEY, 
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 
-            'Content-Type': 'application/json' 
-        };
-        if (!esEdicion) headers['Prefer'] = 'return=minimal';
+        const { data, error } = await window.supabaseClient
+            .from(nombreTabla)
+            .select('*')
+            .order('id', { ascending: true });
 
-        const response = await fetch(url, {
-            method: esEdicion ? 'PATCH' : 'POST',
-            headers: headers,
-            body: JSON.stringify(payload)
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            contenidoTabla.innerHTML = `<div class="text-center py-8 text-gray-500 font-mono text-xs">No hay registros en esta tabla. Usa el botón "+ Nuevo Registro" para agregar uno.</div>`;
+            return;
+        }
+
+        const columnas = Object.keys(data[0]);
+
+        let html = `
+            <table class="w-full text-left border-collapse table-auto">
+                <thead>
+                    <tr class="border-b border-gray-800 text-gray-400 font-mono text-[10px] uppercase tracking-wider">
+                        ${columnas.map(col => `<th class="py-3 px-4">${col}</th>`).join('')}
+                        <th class="py-3 px-4 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800/60 text-sm text-gray-300 font-sans">
+        `;
+
+        data.forEach(row => {
+            html += `<tr class="hover:bg-gray-800/40 transition">`;
+            columnas.forEach(col => {
+                let valor = row[col];
+                if (typeof valor === 'boolean') {
+                    valor = valor ? '<span class="text-emerald-400 font-mono text-xs font-bold">Sí</span>' : '<span class="text-gray-500 font-mono text-xs">No</span>';
+                } else if (valor === null || valor === undefined) {
+                    valor = '<span class="text-gray-600 italic">null</span>';
+                } else {
+                    // Convertir a string y aplicar clases multilínea para preservar proporciones
+                    valor = `<div class="whitespace-normal break-words max-w-xs md:max-w-md">${valor}</div>`;
+                }
+                html += `<td class="py-3 px-4 align-top">${valor}</td>`;
+            });
+            
+            // Botones de Editar y Eliminar por fila
+            html += `
+                <td class="py-3 px-4 text-right space-x-2 align-top whitespace-nowrap">
+                    <button onclick="window.editarRegistro('${nombreTabla}', ${row.id}, '${encodeURIComponent(JSON.stringify(row))}')" class="text-xs font-mono bg-gray-800 hover:bg-gray-700 text-emerald-400 px-2.5 py-1 rounded-lg transition">Editar</button>
+                    <button onclick="window.eliminarRegistro('${nombreTabla}', ${row.id})" class="text-xs font-mono bg-red-950/40 hover:bg-red-900/60 text-red-400 px-2.5 py-1 rounded-lg transition">Eliminar</button>
+                </td>
+            `;
+            html += `</tr>`;
         });
 
-        if (!response.ok) throw new Error("Error al guardar");
+        html += `
+                </tbody>
+            </table>
+        `;
 
-        cerrarModalCatalogo();
-        await cambiarTablaCatalogo(tablaCatalogoActiva);
+        contenidoTabla.innerHTML = html;
 
-    } catch (error) {
-        console.error("Error al guardar:", error);
-        alert("Ocurrió un error al guardar el registro.");
+    } catch (e) {
+        console.error(`Error cargando la tabla ${nombreTabla}:`, e);
+        contenidoTabla.innerHTML = `<div class="text-red-400 p-4 font-mono text-xs bg-red-950/20 border border-red-900 rounded">Error al cargar los datos: ${e.message}</div>`;
     }
 }
 
-async function eliminarElementoCatalogo(id, slug) {
-    if (!confirm(`¿Estás seguro de eliminar "${slug}"?`)) return;
-    
-    const config = configCatalogos[tablaCatalogoActiva];
-    const url = `${SUPABASE_URL}/rest/v1/${config.endpoint}?id=eq.${id}`;
+window.eliminarRegistro = async (nombreTabla, id) => {
+    if (!confirm(`¿Estás seguro de eliminar el registro #${id} de ${nombreTabla}?`)) return;
 
     try {
-        const response = await fetch(url, {
-            method: 'DELETE',
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-        });
-        
-        if (!response.ok) throw new Error("Error de Supabase");
-        
-        await cambiarTablaCatalogo(tablaCatalogoActiva);
-    } catch (error) {
-        console.error("Error al eliminar:", error);
-        alert("No se pudo eliminar. El elemento podría estar vinculado.");
+        const { error } = await window.supabaseClient
+            .from(nombreTabla)
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        await cargarDatosTabla(nombreTabla);
+    } catch (e) {
+        alert(`Error al eliminar: ${e.message}`);
     }
+};
+
+window.editarRegistro = (nombreTabla, id, rowJsonStr) => {
+    const rowData = JSON.parse(decodeURIComponent(rowJsonStr));
+    abrirModalRegistro(nombreTabla, rowData);
+};
+
+function abrirModalRegistro(nombreTabla, datosExistentes = null) {
+    const esEdicion = datosExistentes !== null;
+    const camposPermitidos = Object.keys(datosExistentes || { nombre: '', descripcion: '' }).filter(k => k !== 'id' && k !== 'created_at');
+
+    const modalExistente = document.getElementById('modal-catalogo');
+    if (modalExistente) modalExistente.remove();
+
+    const modalHTML = `
+        <div id="modal-catalogo" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-4">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                    <h3 class="text-sm font-bold font-mono text-emerald-400 uppercase tracking-wider">
+                        ${esEdicion ? `Editar en ${nombreTabla} (ID: ${datosExistentes.id})` : `Nuevo registro en ${nombreTabla}`}
+                    </h3>
+                    <button id="cerrar-modal" class="text-gray-400 hover:text-white font-mono text-xs">✕</button>
+                </div>
+                <form id="form-catalogo" class="space-y-4">
+                    ${camposPermitidos.map(campo => {
+                        const valorActual = datosExistentes ? (datosExistentes[campo] ?? '') : '';
+                        const esTextoLargo = campo.includes('descripcion') || campo.includes('observaciones') || campo.includes('resena') || campo.includes('formula');
+                        
+                        return `
+                            <div class="space-y-1">
+                                <label class="text-[10px] uppercase font-mono font-bold text-gray-400 block">${campo}</label>
+                                ${esTextoLargo ? `
+                                    <textarea name="${campo}" rows="3"
+                                        class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-sans resize-y">${valorActual}</textarea>
+                                ` : `
+                                    <input type="text" name="${campo}" value="${valorActual}"
+                                        class="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 font-sans">
+                                `}
+                            </div>
+                        `;
+                    }).join('')}
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" id="btn-cancelar" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-xl text-xs font-mono transition">Cancelar</button>
+                        <button type="submit" class="bg-emerald-500 hover:bg-emerald-400 text-gray-950 px-4 py-2 rounded-xl text-xs font-mono font-bold transition">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    document.getElementById('cerrar-modal').onclick = () => document.getElementById('modal-catalogo').remove();
+    document.getElementById('btn-cancelar').onclick = () => document.getElementById('modal-catalogo').remove();
+
+    document.getElementById('form-catalogo').onsubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const payload = {};
+        formData.forEach((val, key) => { payload[key] = val; });
+
+        try {
+            let error;
+            if (esEdicion) {
+                const { error: err } = await window.supabaseClient
+                    .from(nombreTabla)
+                    .update(payload)
+                    .eq('id', datosExistentes.id);
+                error = err;
+            } else {
+                const { error: err } = await window.supabaseClient
+                    .from(nombreTabla)
+                    .insert([payload]);
+                error = err;
+            }
+
+            if (error) throw error;
+
+            document.getElementById('modal-catalogo').remove();
+            await cargarDatosTabla(nombreTabla);
+        } catch (err) {
+            alert(`Error al guardar: ${err.message}`);
+        }
+    };
 }
 
-// Vincular de forma global la "x" y los cierres de este modal específicos
-window.cambiarTablaCatalogo = cambiarTablaCatalogo;
-window.abrirModalCatalogo = abrirModalCatalogo;
-window.cerrarModalCatalogo = cerrarModalCatalogo;
+export default initCatalogos;
