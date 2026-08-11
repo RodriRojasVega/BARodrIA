@@ -1,4 +1,4 @@
-// Módulo de Proveedores y Asociación de Insumos (Supabase / Many-to-Many)
+// Módulo de Proveedores y Catálogo de Precios Avanzado (Supabase / Vistas Separadas)
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -8,343 +8,471 @@ if (!window.supabaseClient && SUPABASE_URL && SUPABASE_ANON_KEY) {
 
 let listaProveedoresLocal = [];
 let listaInsumosGlobal = [];
-let insumosAsociadosActuales = new Set();
+let insumosProveedorActual = new Map(); // insumo_id -> precio_oferta
+let proveedorSeleccionadoId = null;
 
-export async function inicializarModuloProveedores() {
-    await window.cargarInsumosGlobales();
-    await window.cargarDatosProveedores();
+export async function initProveedores() {
+    await cargarInsumosGlobales();
+    await obtenerProveedoresSupabase();
     window.cambiarVistaProveedores('listado');
 }
 
 window.cambiarVistaProveedores = function(vista) {
-    document.getElementById('vista-proveedores-listado').classList.add('hidden');
-    document.getElementById('vista-proveedores-detalle').classList.add('hidden');
-    document.getElementById('vista-proveedores-formulario').classList.add('hidden');
+    const vListado = document.getElementById('vista-proveedores-listado');
+    const vDetalle = document.getElementById('vista-proveedores-detalle');
+    const vForm = document.getElementById('vista-proveedores-formulario');
+
+    if (vListado) vListado.classList.add('hidden');
+    if (vDetalle) vDetalle.classList.add('hidden');
+    if (vForm) vForm.classList.add('hidden');
 
     if (vista === 'listado') {
-        document.getElementById('vista-proveedores-listado').classList.remove('hidden');
-        window.renderizarTarjetasProveedores(listaProveedoresLocal);
+        if (vListado) vListado.classList.remove('hidden');
+        renderizarTablaProveedores(listaProveedoresLocal);
     } else if (vista === 'detalle') {
-        document.getElementById('vista-proveedores-detalle').classList.remove('hidden');
+        if (vDetalle) vDetalle.classList.remove('hidden');
     } else if (vista === 'formulario') {
-        document.getElementById('vista-proveedores-formulario').classList.remove('hidden');
+        if (vForm) vForm.classList.remove('hidden');
     }
 }
 
-window.cargarInsumosGlobales = async function() {
+async function cargarInsumosGlobales() {
     try {
         if (!window.supabaseClient) return;
-        const { data, error } = await window.supabaseClient
-            .from('insumos')
-            .select('id, nombre, unidad_medida')
-            .order('nombre', { ascending: true });
-
+        const { data, error } = await window.supabaseClient.from('insumos').select('id, nombre, unidad_medida, precio_compra').order('nombre', { ascending: true });
         if (error) throw error;
         listaInsumosGlobal = data || [];
     } catch (e) {
-        console.error("Error al cargar insumos globales:", e);
-        listaInsumosGlobal = [];
+        console.warn("No se pudieron cargar los insumos globales:", e);
     }
 }
 
-window.cargarDatosProveedores = async function() {
+async function obtenerProveedoresSupabase() {
+    const cuerpo = document.getElementById('tabla-proveedores-cuerpo');
+    if (cuerpo) cuerpo.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-emerald-500 font-mono animate-pulse">Cargando proveedores...</td></tr>`;
+
     try {
-        if (!window.supabaseClient) {
-            console.error("Cliente de Supabase no disponible.");
-            return;
-        }
+        if (!window.supabaseClient) return;
 
         const { data: proveedores, error: errProv } = await window.supabaseClient
             .from('proveedores')
             .select('*')
             .order('nombre', { ascending: true });
-
+        
         if (errProv) throw errProv;
 
-        const { data: relaciones, error: errRel } = await window.supabaseClient
+        const { data: rels, error: errRel } = await window.supabaseClient
             .from('insumo_proveedores')
-            .select('proveedor_id, insumo_id');
+            .select('*');
 
-        if (errRel) {
-            console.warn("Aviso al consultar insumo_proveedores:", errRel);
-        }
+        if (errRel) console.warn("Aviso al consultar insumo_proveedores:", errRel);
 
-        listaProveedoresLocal = (proveedores || []).map(p => {
-            const insumosIds = (relaciones || [])
-                .filter(r => r.proveedor_id === p.id)
-                .map(r => r.insumo_id);
-            
+        listaProveedoresLocal = (proveedores || []).map(prov => {
+            const misInsumos = (rels || [])
+                .filter(r => r.proveedor_id === prov.id)
+                .map(r => {
+                    const insObj = listaInsumosGlobal.find(i => i.id === r.insumo_id);
+                    return {
+                        insumo_id: r.insumo_id,
+                        nombre: insObj ? insObj.nombre : 'Insumo desconocido',
+                        precio_oferta: r.precio_oferta,
+                        unidad_medida: insObj ? insObj.unidad_medida : 'ml'
+                    };
+                });
+
             return {
-                ...p,
-                insumos: insumosIds,
-                insumos_count: insumosIds.length
+                ...prov,
+                insumos: misInsumos
             };
         });
 
+        renderizarTablaProveedores(listaProveedoresLocal);
     } catch (e) {
-        console.error("Error crítico al cargar proveedores desde Supabase:", e);
-        listaProveedoresLocal = [];
+        console.error("Error crítico obteniendo proveedores:", e);
+        if (cuerpo) {
+            cuerpo.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-red-400 font-mono text-xs">Error al conectar con Supabase.</td></tr>`;
+        }
     }
 }
 
-window.renderizarTarjetasProveedores = function(proveedores) {
-    const contenedor = document.getElementById('contenedor-tarjetas-proveedores');
-    if (!contenedor) return;
+function renderizarTablaProveedores(datos) {
+    const cuerpo = document.getElementById('tabla-proveedores-cuerpo');
+    if (!cuerpo) return;
 
-    if (proveedores.length === 0) {
-        contenedor.innerHTML = `<div class="text-center py-12 text-gray-500 font-mono col-span-full">No hay proveedores registrados.</div>`;
+    if (!Array.isArray(datos) || datos.length === 0) {
+        cuerpo.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500 text-sm">No hay proveedores registrados.</td></tr>`;
         return;
     }
 
-    contenedor.innerHTML = proveedores.map(p => `
-        <div onclick="window.verDetalleProveedor(${p.id})" class="bg-gray-900 border border-gray-800 p-5 rounded-2xl shadow-xl flex flex-col justify-between space-y-4 hover:border-emerald-500/50 cursor-pointer transition group">
-            <div class="space-y-2">
-                <div class="flex justify-between items-start">
-                    <h3 class="font-bold text-white text-base group-hover:text-emerald-400 transition">${p.nombre}</h3>
-                    <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full font-mono border border-emerald-500/20">${p.insumos_count || 0} insumos</span>
-                </div>
-                <div class="text-xs text-gray-400 space-y-1">
-                    <p>👤 <strong>Contacto:</strong> ${p.contacto || 'No especificado'}</p>
-                    <p>📞 <strong>Teléfono:</strong> ${p.telefono || 'No especificado'}</p>
-                    <p>✉️ <strong>Email:</strong> ${p.email || 'No especificado'}</p>
-                </div>
-            </div>
-            <div class="text-[11px] text-emerald-500/80 font-semibold pt-2 border-t border-gray-800 flex items-center justify-between">
-                <span>Ver detalles e insumos</span>
-                <span class="group-hover:translate-x-1 transition">→</span>
-            </div>
-        </div>
-    `).join('');
-}
+    cuerpo.innerHTML = datos.map(prov => {
+        const totalInsumos = prov.insumos ? prov.insumos.length : 0;
 
-window.prepararCreacionProveedor = function() {
-    document.getElementById('form-proveedor-titulo').innerText = "Nuevo Proveedor";
-    document.getElementById('form-proveedor-completo').reset();
-    document.getElementById('input-proveedor-id').value = '';
-    insumosAsociadosActuales.clear();
-    window.renderizarCheckboxesInsumos();
-    window.cambiarVistaProveedores('formulario');
-}
-
-window.prepararEdicionProveedor = async function(id) {
-    const prov = listaProveedoresLocal.find(p => p.id == id);
-    if (!prov) return;
-
-    document.getElementById('form-proveedor-titulo').innerText = "Editar Proveedor: " + prov.nombre;
-    document.getElementById('input-proveedor-id').value = prov.id;
-    document.getElementById('prov-nombre').value = prov.nombre || '';
-    document.getElementById('prov-contacto').value = prov.contacto || '';
-    document.getElementById('prov-telefono').value = prov.telefono || '';
-    document.getElementById('prov-email').value = prov.email || '';
-    document.getElementById('prov-observaciones').value = prov.observaciones || '';
-
-    insumosAsociadosActuales.clear();
-    if (prov.insumos && Array.isArray(prov.insumos)) {
-        prov.insumos.forEach(iId => insumosAsociadosActuales.add(iId));
-    }
-
-    window.renderizarCheckboxesInsumos();
-    window.cambiarVistaProveedores('formulario');
-}
-
-window.renderizarCheckboxesInsumos = function(filtro = '') {
-    const contenedor = document.getElementById('contenedor-checkboxes-insumos');
-    if (!contenedor) return;
-
-    const filtrados = listaInsumosGlobal.filter(i => i.nombre.toLowerCase().includes(filtro.toLowerCase()));
-
-    if (filtrados.length === 0) {
-        contenedor.innerHTML = `<div class="text-xs text-gray-500 text-center py-2">No se encontraron insumos.</div>`;
-        return;
-    }
-
-    contenedor.innerHTML = filtrados.map(i => {
-        const isChecked = insumosAsociadosActuales.has(i.id) ? 'checked' : '';
         return `
-            <label class="flex items-center justify-between p-2 rounded-xl hover:bg-gray-900 cursor-pointer transition border border-transparent hover:border-gray-800">
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" value="${i.id}" ${isChecked} onchange="window.toggleInsumoAsociacion(${i.id}, this.checked)" class="w-4 h-4 rounded bg-gray-850 border-gray-700 text-emerald-600 focus:ring-emerald-500">
-                    <span class="text-xs text-white font-medium">${i.nombre}</span>
-                </div>
-                <span class="text-[10px] font-mono text-gray-400 bg-gray-850 px-2 py-0.5 rounded">${i.unidad_medida || 'unit'}</span>
-            </label>
+            <tr onclick="window.verDetalleProveedor(${prov.id})" class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm cursor-pointer group">
+                <td class="py-3.5 px-4 font-medium text-white group-hover:text-emerald-400 transition">${prov.nombre}</td>
+                <td class="py-3.5 px-3 text-gray-300 text-xs">${prov.contacto || 'Sin contacto'}</td>
+                <td class="py-3.5 px-3 text-gray-400 text-xs font-mono">${prov.telefono || 'Sin teléfono'}</td>
+                <td class="py-3.5 px-3 text-gray-400 text-xs">${prov.email || 'Sin email'}</td>
+                <td class="py-3.5 px-3 text-center font-mono text-emerald-400 font-bold">${totalInsumos} insumos</td>
+            </tr>
         `;
     }).join('');
 }
 
-window.toggleInsumoAsociacion = function(insumoId, isChecked) {
-    if (isChecked) {
-        insumosAsociadosActuales.add(insumoId);
+window.verDetalleProveedor = function(id) {
+    proveedorSeleccionadoId = id;
+    const prov = listaProveedoresLocal.find(p => p.id == id);
+    if (!prov) return;
+
+    document.getElementById('detalle-proveedor-acciones').innerHTML = `
+        <button type="button" onclick="window.prepararEdicionProveedor(${prov.id})" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition shadow">Editar</button>
+        <button type="button" onclick="window.eliminarProveedor(${prov.id}, '${prov.nombre}')" class="text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition border border-red-900/50">Eliminar</button>
+    `;
+
+    document.getElementById('panel-proveedor-contenido').innerHTML = `
+        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-gray-800 pb-4">
+                <div>
+                    <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full font-mono border border-emerald-500/20">Distribuidor Autorizado</span>
+                    <h2 class="text-2xl font-bold text-white mt-2">${prov.nombre}</h2>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Total Insumos Suministrados</span>
+                    <span class="text-xl font-mono font-bold text-emerald-400">${prov.insumos ? prov.insumos.length : 0} productos</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Contacto Comercial</span>
+                    <span class="text-sm text-white font-semibold">${prov.contacto || 'No especificado'}</span>
+                </div>
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Teléfono</span>
+                    <span class="text-sm font-mono text-gray-300 font-semibold">${prov.telefono || 'No especificado'}</span>
+                </div>
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Correo Electrónico</span>
+                    <span class="text-sm text-gray-300 font-semibold">${prov.email || 'No especificado'}</span>
+                </div>
+            </div>
+
+            ${prov.observaciones ? `
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Observaciones / Notas</span>
+                    <p class="text-xs text-gray-300">${prov.observaciones}</p>
+                </div>
+            ` : ''}
+        </div>
+
+        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">Catálogo de Precios y Ofertas del Proveedor</h3>
+                <span class="text-[10px] text-gray-400 font-mono">Listado oficial de insumos surtidos</span>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-950 border-b border-gray-800 text-[10px] uppercase font-mono tracking-wider text-gray-400">
+                            <th class="py-3 px-4 font-semibold">Insumo</th>
+                            <th class="py-3 px-3 font-semibold">Unidad</th>
+                            <th class="py-3 px-3 font-semibold text-right">Precio de Oferta Actual</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800/50 text-sm">
+                        ${prov.insumos && prov.insumos.length > 0 ? prov.insumos.map(i => `
+                            <tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40">
+                                <td class="py-3 px-4 font-medium text-white text-xs">${i.nombre}</td>
+                                <td class="py-3 px-3 text-gray-400 text-xs font-mono">${i.unidad_medida}</td>
+                                <td class="py-3 px-3 text-right font-mono text-emerald-400 font-bold text-xs">
+                                    ${i.precio_oferta ? '$' + window.formatearMonedaLocal(i.precio_oferta, 0) : 'Sin precio definido'}
+                                </td>
+                            </tr>
+                        `).join('') : `<tr><td colspan="3" class="text-center py-6 text-gray-500 text-xs">Este proveedor no tiene insumos asociados en su catálogo actualmente.</td></tr>`}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    window.cargarHistoricoProveedor(id);
+    window.cambiarVistaProveedores('detalle');
+}
+
+window.prepararCreacionProveedor = async function() {
+    proveedorSeleccionadoId = null;
+    document.getElementById('form-proveedor-titulo').innerText = "Nuevo Proveedor";
+    document.getElementById('form-proveedor').reset();
+    document.getElementById('proveedor-id').value = '';
+
+    insumosProveedorActual.clear();
+    window.renderizarListadosEdicionProveedor();
+
+    window.cambiarVistaProveedores('formulario');
+}
+
+window.prepararEdicionProveedor = async function(id) {
+    proveedorSeleccionadoId = id;
+    const prov = listaProveedoresLocal.find(x => x.id == id);
+    if (!prov) return;
+
+    document.getElementById('form-proveedor-titulo').innerText = "Editar Proveedor: " + prov.nombre;
+    document.getElementById('proveedor-id').value = prov.id;
+    document.getElementById('proveedor-nombre').value = prov.nombre || '';
+    document.getElementById('proveedor-contacto').value = prov.contacto || '';
+    document.getElementById('proveedor-telefono').value = prov.telefono || '';
+    document.getElementById('proveedor-email').value = prov.email || '';
+    document.getElementById('proveedor-observaciones').value = prov.observaciones || '';
+
+    insumosProveedorActual.clear();
+    if (prov.insumos && Array.isArray(prov.insumos)) {
+        prov.insumos.forEach(ins => {
+            insumosProveedorActual.set(ins.insumo_id, ins.precio_oferta);
+        });
+    }
+
+    window.renderizarListadosEdicionProveedor();
+    window.cambiarVistaProveedores('formulario');
+}
+
+window.renderizarListadosEdicionProveedor = function() {
+    const contenedorAsociados = document.getElementById('lista-insumos-asociados');
+    const contenedorDisponibles = document.getElementById('lista-insumos-disponibles');
+    if (!contenedorAsociados || !contenedorDisponibles) return;
+
+    const insumosAsociadosArr = listaInsumosGlobal.filter(ins => insumosProveedorActual.has(ins.id));
+    const insumosDisponiblesArr = listaInsumosGlobal.filter(ins => !insumosProveedorActual.has(ins.id));
+
+    // Renderizar asociados (con precio editable)
+    if (insumosAsociadosArr.length === 0) {
+        contenedorAsociados.innerHTML = `<div class="text-xs text-gray-500 py-3 text-center">No hay insumos asignados a este proveedor. Agrega algunos desde el listado derecho.</div>`;
     } else {
-        insumosAsociadosActuales.delete(insumoId);
+        contenedorAsociados.innerHTML = insumosAsociadosArr.map(ins => {
+            const precioActual = insumosProveedorActual.get(ins.id);
+            const precioFormateado = precioActual !== null && precioActual !== undefined ? precioActual : '';
+
+            return `
+                <div class="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 gap-3">
+                    <div class="flex-1">
+                        <span class="text-xs text-white font-semibold block">${ins.nombre}</span>
+                        <span class="text-[10px] text-gray-400 font-mono">Unidad: ${ins.unidad_medida}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] text-gray-400 font-mono">Oferta $:</span>
+                            <input type="number" step="0.01" id="input-oferta-${ins.id}" value="${precioFormateado}" oninput="window.actualizarPrecioOferta(${ins.id}, this.value)" placeholder="0" class="w-28 bg-gray-900 border border-gray-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono">
+                        </div>
+                        <button type="button" onclick="window.removerInsumoDeProveedor(${ins.id})" class="text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 px-2.5 py-1.5 rounded-lg border border-red-900/50 transition font-bold" title="Quitar insumo">✕</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Renderizar disponibles
+    if (insumosDisponiblesArr.length === 0) {
+        contenedorDisponibles.innerHTML = `<div class="text-xs text-gray-500 py-3 text-center">Todos los insumos globales ya están asociados a este proveedor.</div>`;
+    } else {
+        contenedorDisponibles.innerHTML = insumosDisponiblesArr.map(ins => `
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-gray-950/60 border border-gray-800/60 gap-3">
+                <div>
+                    <span class="text-xs text-gray-300 font-medium block">${ins.nombre}</span>
+                    <span class="text-[10px] text-gray-500 font-mono">Unidad: ${ins.unidad_medida}</span>
+                </div>
+                <button type="button" onclick="window.agregarInsumoAProveedor(${ins.id})" class="text-xs bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 px-3 py-1.5 rounded-lg border border-emerald-500/30 transition font-bold flex items-center gap-1">
+                    <span>+ Agregar</span>
+                </button>
+            </div>
+        `).join('');
     }
 }
 
-window.filtrarInsumosAsociacion = function(texto) {
-    window.renderizarCheckboxesInsumos(texto);
+window.agregarInsumoAProveedor = function(insumoId) {
+    insumosProveedorActual.set(insumoId, 0); // Precio inicial por defecto
+    window.renderizarListadosEdicionProveedor();
+}
+
+window.removerInsumoDeProveedor = function(insumoId) {
+    insumosProveedorActual.delete(insumoId);
+    window.renderizarListadosEdicionProveedor();
+}
+
+window.actualizarPrecioOferta = function(insumoId, valor) {
+    const num = valor === '' ? null : parseFloat(valor);
+    insumosProveedorActual.set(insumoId, isNaN(num) ? null : num);
 }
 
 window.guardarProveedor = async function(e) {
     e.preventDefault();
     if (!window.supabaseClient) return;
 
-    const id = document.getElementById('input-proveedor-id').value;
-    const payload = {
-        nombre: document.getElementById('prov-nombre').value,
-        contacto: document.getElementById('prov-contacto').value,
-        telefono: document.getElementById('prov-telefono').value,
-        email: document.getElementById('prov-email').value,
-        observaciones: document.getElementById('prov-observaciones').value
+    const idInput = document.getElementById('proveedor-id').value;
+    const esEdicion = idInput !== '';
+
+    const proveedorPayload = {
+        nombre: document.getElementById('proveedor-nombre').value,
+        contacto: document.getElementById('proveedor-contacto').value,
+        telefono: document.getElementById('proveedor-telefono').value,
+        email: document.getElementById('proveedor-email').value,
+        observaciones: document.getElementById('proveedor-observaciones').value
     };
 
     try {
-        let proveedorId = id;
-        const esEdicion = id !== '';
-
-        const urlCabecera = esEdicion ? 
-            `${SUPABASE_URL}/rest/v1/proveedores?id=eq.${id}` : 
-            `${SUPABASE_URL}/rest/v1/proveedores`;
-
-        const resCabecera = await fetch(urlCabecera, {
-            method: esEdicion ? 'PATCH' : 'POST',
-            headers: { 
-                'apikey': SUPABASE_ANON_KEY, 
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (!resCabecera.ok) throw new Error(await resCabecera.text());
-
-        const dataCabecera = await resCabecera.json();
-        if (!esEdicion && dataCabecera.length > 0) {
-            proveedorId = dataCabecera[0].id;
-        }
+        let proveedorIdReal = idInput;
 
         if (esEdicion) {
-            await fetch(`${SUPABASE_URL}/rest/v1/insumo_proveedores?proveedor_id=eq.${proveedorId}`, {
-                method: 'DELETE',
-                headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-            });
+            const { error: errUpd } = await window.supabaseClient
+                .from('proveedores')
+                .update(proveedorPayload)
+                .eq('id', idInput);
+            if (errUpd) throw errUpd;
+        } else {
+            const { data: dataProv, error: errProv } = await window.supabaseClient
+                .from('proveedores')
+                .insert([proveedorPayload])
+                .select();
+            if (errProv) throw errProv;
+            if (dataProv && dataProv.length > 0) {
+                proveedorIdReal = dataProv[0].id;
+            }
         }
 
-        if (insumosAsociadosActuales.size > 0) {
-            const nuevasRelaciones = Array.from(insumosAsociadosActuales).map(insumoId => ({
-                proveedor_id: parseInt(proveedorId),
-                insumo_id: parseInt(insumoId)
-            }));
+        // Consultar relaciones anteriores en Supabase para aplicar validación inteligente (Diff Check)
+        let relacionesAnterioresMap = new Map();
+        if (esEdicion) {
+            const { data: relsViejas } = await window.supabaseClient
+                .from('insumo_proveedores')
+                .select('*')
+                .eq('proveedor_id', proveedorIdReal);
+            
+            if (relsViejas) {
+                relsViejas.forEach(r => relacionesAnterioresMap.set(r.insumo_id, r.precio_oferta));
+            }
 
-            await fetch(`${SUPABASE_URL}/rest/v1/insumo_proveedores`, {
-                method: 'POST',
-                headers: { 
-                    'apikey': SUPABASE_ANON_KEY, 
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 
-                    'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify(nuevasRelaciones)
-            });
+            // Borrar relaciones viejas para recrear las nuevas
+            await window.supabaseClient
+                .from('insumo_proveedores')
+                .delete()
+                .eq('proveedor_id', proveedorIdReal);
         }
 
-        await window.inicializarModuloProveedores();
+        let nuevasRelaciones = [];
+        let registrosHistoricos = [];
+
+        if (insumosProveedorActual.size > 0) {
+            insumosProveedorActual.forEach((precioOferta, insumoId) => {
+                const precioOfertaVal = precioOferta !== null && !isNaN(precioOferta) ? precioOferta : null;
+
+                nuevasRelaciones.push({
+                    insumo_id: parseInt(insumoId),
+                    proveedor_id: parseInt(proveedorIdReal),
+                    precio_oferta: precioOfertaVal
+                });
+
+                // VALIDACIÓN INTELIGENTE (DIFF CHECK): Solo registrar en histórico si es nuevo o el precio cambió
+                const precioAnterior = relacionesAnterioresMap.has(parseInt(insumoId)) ? relacionesAnterioresMap.get(parseInt(insumoId)) : -1;
+                
+                if (precioOfertaVal !== null && precioOfertaVal !== precioAnterior) {
+                    registrosHistoricos.push({
+                        insumo_id: parseInt(insumoId),
+                        proveedor_id: parseInt(proveedorIdReal),
+                        precio_compra: precioOfertaVal,
+                        costo_unitario: precioOfertaVal / 1
+                    });
+                }
+            });
+
+            const { error: errRel } = await window.supabaseClient
+                .from('insumo_proveedores')
+                .insert(nuevasRelaciones);
+
+            if (errRel) console.warn("Aviso al guardar insumo_proveedores:", errRel);
+        }
+
+        // Insertar en histórico solo si hay cambios reales detectados
+        if (registrosHistoricos.length > 0) {
+            await window.supabaseClient
+                .from('insumo_precios_historicos')
+                .insert(registrosHistoricos);
+        }
+
+        await obtenerProveedoresSupabase();
+        window.verDetalleProveedor(proveedorIdReal);
     } catch (err) {
-        console.error("Error crítico guardando proveedor:", err);
-        alert("Ocurrió un error al guardar el proveedor. Revisa la consola.");
+        console.error("Error al procesar proveedor:", err);
+        alert("Ocurrió un error al guardar el proveedor en Supabase. Revisa la consola.");
     }
 }
 
-window.eliminarProveedor = async function(id) {
-    if (!confirm("¿Estás seguro de que deseas eliminar este proveedor? Esta acción no se puede deshacer.")) {
-        return;
-    }
+window.cargarHistoricoProveedor = async function(proveedorId) {
+    const cuerpoHist = document.getElementById('tabla-historico-proveedor');
+    if (!cuerpoHist) return;
+
+    cuerpoHist.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-500 font-mono text-xs">Cargando histórico...</td></tr>`;
 
     try {
         if (!window.supabaseClient) return;
+        const { data, error } = await window.supabaseClient
+            .from('insumo_precios_historicos')
+            .select('*')
+            .eq('proveedor_id', proveedorId)
+            .order('created_at', { ascending: false });
 
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            cuerpoHist.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs">No hay registros históricos de precios para este proveedor.</td></tr>`;
+            return;
+        }
+
+        cuerpoHist.innerHTML = data.map(h => {
+            const fechaFormateada = h.created_at ? new Date(h.created_at).toLocaleString('es-CL', { 
+                dateStyle: 'medium', 
+                timeStyle: 'short' 
+            }) : 'Fecha no registrada';
+
+            const insObj = listaInsumosGlobal.find(i => i.id === h.insumo_id);
+            const nombreInsumo = insObj ? insObj.nombre : `Insumo #${h.insumo_id}`;
+
+            return `
+                <tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm">
+                    <td class="py-3 px-4 font-mono text-gray-300 text-xs">${fechaFormateada}</td>
+                    <td class="py-3 px-3 font-medium text-white text-xs">${nombreInsumo}</td>
+                    <td class="py-3 px-3 text-right font-mono text-emerald-400 font-bold">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(h.precio_compra, 0) : h.precio_compra}</td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.warn("Error al cargar histórico del proveedor:", e);
+        cuerpoHist.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-red-400 text-xs">Error al cargar el histórico.</td></tr>`;
+    }
+};
+
+window.eliminarProveedor = async function(id, nombre) {
+    if (!confirm(`¿Estás seguro de eliminar el proveedor "${nombre}"?`)) return;
+
+    try {
+        if (!window.supabaseClient) return;
         const { error } = await window.supabaseClient
             .from('proveedores')
             .delete()
             .eq('id', id);
 
         if (error) throw error;
-
-        await window.inicializarModuloProveedores();
+        await obtenerProveedoresSupabase();
         window.cambiarVistaProveedores('listado');
     } catch (err) {
-        console.error("Error al eliminar el proveedor:", err);
-        alert("Ocurrió un error al intentar eliminar el proveedor.");
+        console.error("Error al eliminar proveedor:", err);
+        alert("No se pudo eliminar el proveedor.");
     }
 }
 
-window.verDetalleProveedor = function(id) {
-    const prov = listaProveedoresLocal.find(p => p.id == id);
-    if (!prov) return;
-
-    document.getElementById('detalle-proveedor-acciones').innerHTML = `
-        <button type="button" onclick="window.eliminarProveedor(${prov.id})" class="text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition border border-red-900/50">Eliminar</button>
-        <button type="button" onclick="window.prepararEdicionProveedor(${prov.id})" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition shadow">Editar</button>
-    `;
-
-    const insumosDelProveedor = listaInsumosGlobal.filter(i => prov.insumos && prov.insumos.includes(i.id));
-
-    document.getElementById('panel-proveedor-contenido').innerHTML = `
-        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
-            <div>
-                <h2 class="text-xl font-bold text-white">${prov.nombre}</h2>
-                <p class="text-xs text-gray-400 mt-1">${prov.observaciones || 'Sin observaciones registradas.'}</p>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-800">
-                <div class="bg-gray-850 p-3 rounded-xl border border-gray-800">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Contacto</span>
-                    <span class="text-xs text-white font-medium">${prov.contacto || 'N/A'}</span>
-                </div>
-                <div class="bg-gray-850 p-3 rounded-xl border border-gray-800">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Teléfono</span>
-                    <span class="text-xs text-white font-medium">${prov.telefono || 'N/A'}</span>
-                </div>
-                <div class="bg-gray-850 p-3 rounded-xl border border-gray-800">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Email</span>
-                    <span class="text-xs text-white font-medium">${prov.email || 'N/A'}</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="space-y-3">
-            <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">Insumos Suministrados (${insumosDelProveedor.length})</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                ${insumosDelProveedor.length > 0 ? insumosDelProveedor.map(i => `
-                    <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl flex items-center justify-between">
-                        <span class="text-xs text-white font-semibold">${i.nombre}</span>
-                        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">${i.unidad_medida}</span>
-                    </div>
-                `).join('') : `<div class="text-xs text-gray-500 col-span-full py-4">Este proveedor no tiene insumos asociados actualmente.</div>`}
-            </div>
-        </div>
-    `;
-
-    window.cambiarVistaProveedores('detalle');
-}
-
 window.filtrarProveedores = function() {
-    const texto = document.getElementById('buscador-proveedores').value.toLowerCase();
-    const filtrados = listaProveedoresLocal.filter(p => 
-        (p.nombre && p.nombre.toLowerCase().includes(texto)) || 
-        (p.contacto && p.contacto.toLowerCase().includes(texto)) || 
-        (p.email && p.email.toLowerCase().includes(texto))
-    );
-    window.renderizarTarjetasProveedores(filtrados);
+    const query = document.getElementById('buscador-proveedores').value.toLowerCase();
+    const filtrados = listaProveedoresLocal.filter(p => p.nombre.toLowerCase().includes(query) || (p.contacto && p.contacto.toLowerCase().includes(query)));
+    renderizarTablaProveedores(filtrados);
 }
 
-window.inicializarModuloProveedores = inicializarModuloProveedores;
-window.prepararCreacionProveedor = prepararCreacionProveedor;
-window.prepararEdicionProveedor = prepararEdicionProveedor;
-window.cambiarVistaProveedores = cambiarVistaProveedores;
-window.guardarProveedor = guardarProveedor;
-window.eliminarProveedor = eliminarProveedor;
-window.verDetalleProveedor = verDetalleProveedor;
-window.filtrarProveedores = filtrarProveedores;
-window.toggleInsumoAsociacion = toggleInsumoAsociacion;
-window.filtrarInsumosAsociacion = filtrarInsumosAsociacion;
-
-export default inicializarModuloProveedores;
+export default initProveedores;

@@ -1,60 +1,118 @@
-// src/js/modules/insumos.js
+// Módulo de Insumos y Costos (Vistas Separadas / Supabase / Proveedores / Histórico Dual)
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+if (!window.supabaseClient && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
 
 let listaInsumosLocal = [];
 let listaTiposInsumosLocal = [];
+let listaProveedoresGlobal = [];
+let proveedoresAsociadosActuales = new Map();
+let insumoSeleccionadoId = null;
 
 export async function initInsumos() {
     await cargarTiposInsumos();
+    await cargarProveedoresGlobales();
     await obtenerInsumosSupabase();
+    window.cambiarVistaInsumos('listado');
+}
 
-    const formInsumo = document.getElementById('form-insumo');
-    if (formInsumo) {
-        formInsumo.replaceWith(formInsumo.cloneNode(true));
-        document.getElementById('form-insumo').addEventListener('submit', guardarInsumo);
+window.cambiarVistaInsumos = function(vista) {
+    const vListado = document.getElementById('vista-insumos-listado');
+    const vDetalle = document.getElementById('vista-insumos-detalle');
+    const vForm = document.getElementById('vista-insumos-formulario');
+
+    if (vListado) vListado.classList.add('hidden');
+    if (vDetalle) vDetalle.classList.add('hidden');
+    if (vForm) vForm.classList.add('hidden');
+
+    if (vista === 'listado') {
+        if (vListado) vListado.classList.remove('hidden');
+        renderizarTablaInsumos(listaInsumosLocal);
+    } else if (vista === 'detalle') {
+        if (vDetalle) vDetalle.classList.remove('hidden');
+    } else if (vista === 'formulario') {
+        if (vForm) vForm.classList.remove('hidden');
     }
 }
 
 async function cargarTiposInsumos() {
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/tipos_insumos?select=*`, {
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-        });
-        if (res.ok) {
-            listaTiposInsumosLocal = await res.json();
-        }
+        if (!window.supabaseClient) return;
+        const { data, error } = await window.supabaseClient.from('tipos_insumos').select('*');
+        if (error) throw error;
+        listaTiposInsumosLocal = data || [];
     } catch (e) {
         console.warn("No se pudieron cargar los tipos de insumos:", e);
     }
 }
 
+async function cargarProveedoresGlobales() {
+    try {
+        if (!window.supabaseClient) return;
+        const { data, error } = await window.supabaseClient.from('proveedores').select('id, nombre').order('nombre', { ascending: true });
+        if (error) throw error;
+        listaProveedoresGlobal = data || [];
+    } catch (e) {
+        console.warn("No se pudieron cargar los proveedores:", e);
+    }
+}
+
 async function obtenerInsumosSupabase() {
-    const cuerpo = document.getElementById('tabla-insumos-cuerpo') || document.getElementById('lista-insumos-contenedor');
-    if (cuerpo) cuerpo.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-emerald-500 font-mono animate-pulse">Cargando insumos...</td></tr>`;
+    const cuerpo = document.getElementById('tabla-insumos-cuerpo');
+    if (cuerpo) cuerpo.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-emerald-500 font-mono animate-pulse">Cargando insumos...</td></tr>`;
 
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/insumos?select=*&order=nombre.asc`, {
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+        if (!window.supabaseClient) return;
+
+        const { data: insumos, error: errIns } = await window.supabaseClient
+            .from('insumos')
+            .select('*')
+            .order('nombre', { ascending: true });
+        
+        if (errIns) throw errIns;
+
+        const { data: rels, error: errRel } = await window.supabaseClient
+            .from('insumo_proveedores')
+            .select('*');
+
+        if (errRel) console.warn("Aviso al consultar insumo_proveedores:", errRel);
+
+        listaInsumosLocal = (insumos || []).map(insumo => {
+            const misProveedores = (rels || [])
+                .filter(r => r.insumo_id === insumo.id)
+                .map(r => {
+                    const provObj = listaProveedoresGlobal.find(p => p.id === r.proveedor_id);
+                    return {
+                        proveedor_id: r.proveedor_id,
+                        nombre: provObj ? provObj.nombre : 'Proveedor desconocido',
+                        precio_oferta: r.precio_oferta
+                    };
+                });
+
+            return {
+                ...insumo,
+                proveedores: misProveedores
+            };
         });
-        
-        if (!res.ok) throw new Error("Error HTTP al obtener insumos");
-        
-        listaInsumosLocal = await res.json();
+
         renderizarTablaInsumos(listaInsumosLocal);
     } catch (e) {
         console.error("Error crítico obteniendo insumos:", e);
         if (cuerpo) {
-            cuerpo.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-red-400 font-mono text-xs">Error al conectar con Supabase.</td></tr>`;
+            cuerpo.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-red-400 font-mono text-xs">Error al conectar con Supabase.</td></tr>`;
         }
     }
 }
 
 function renderizarTablaInsumos(datos) {
-    const cuerpo = document.getElementById('tabla-insumos-cuerpo') || document.getElementById('lista-insumos-contenedor');
+    const cuerpo = document.getElementById('tabla-insumos-cuerpo');
     if (!cuerpo) return;
 
     if (!Array.isArray(datos) || datos.length === 0) {
-        cuerpo.innerHTML = `<tr><td colspan="10" class="text-center py-8 text-gray-500 text-sm">No hay insumos registrados.</td></tr>`;
+        cuerpo.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-gray-500 text-sm">No hay insumos registrados.</td></tr>`;
         return;
     }
 
@@ -74,26 +132,288 @@ function renderizarTablaInsumos(datos) {
             `${(insumo.rendimiento_neto_porcentaje * 100).toFixed(0)}%` : '100%';
 
         return `
-            <tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm">
-                <td class="py-3.5 px-3 font-medium text-white">${insumo.nombre}</td>
+            <tr onclick="window.verDetalleInsumo(${insumo.id})" class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm cursor-pointer group">
+                <td class="py-3.5 px-4 font-medium text-white group-hover:text-emerald-400 transition">${insumo.nombre}</td>
                 <td class="py-3.5 px-3 text-gray-400 text-xs font-mono">${nombreTipo}</td>
                 <td class="py-3.5 px-3 text-center">${badgeArtesanal}</td>
                 <td class="py-3.5 px-3 text-center">${graduacionTexto}</td>
-                <td class="py-3.5 px-3 text-right font-mono text-gray-200">$${window.formatearMonedaLocal(insumo.precio_compra, 0)}</td>
+                <td class="py-3.5 px-3 text-right font-mono text-gray-200">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(insumo.precio_compra, 0) : insumo.precio_compra}</td>
                 <td class="py-3.5 px-3 text-center font-mono text-gray-300 text-xs">${insumo.formato_envase || 1}</td>
                 <td class="py-3.5 px-3 text-center font-mono text-gray-400 text-xs">${insumo.unidad_medida || 'ml'}</td>
                 <td class="py-3.5 px-3 text-center font-mono text-gray-300 text-xs">${rendimientoPorcentaje}</td>
-                <td class="py-3.5 px-3 text-right font-mono text-emerald-400 font-bold">$${window.formatearMonedaLocal(insumo.costo_unitario, 4)}</td>
-                <td class="py-3.5 px-3 text-right space-x-2 whitespace-nowrap">
-                    <button type="button" onclick="abrirModalInsumo(${insumo.id})" class="text-xs bg-gray-800 hover:bg-gray-750 text-emerald-400 px-2.5 py-1 rounded border border-emerald-500/10 transition">Editar</button>
-                    <button type="button" onclick="eliminarInsumo(${insumo.id}, '${insumo.nombre}')" class="text-xs bg-red-950/20 hover:bg-red-900/40 text-red-400 px-2.5 py-1 rounded border border-red-500/20 transition">Eliminar</button>
-                </td>
+                <td class="py-3.5 px-3 text-right font-mono text-emerald-400 font-bold">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(insumo.costo_unitario, 4) : insumo.costo_unitario}</td>
             </tr>
         `;
     }).join('');
 }
 
-// Función global para calcular el costo unitario en vivo mientras el usuario escribe en el modal
+window.verDetalleInsumo = function(id) {
+    insumoSeleccionadoId = id;
+    const insumo = listaInsumosLocal.find(i => i.id == id);
+    if (!insumo) return;
+
+    // Botones de acción en la parte superior del detalle (Editar primero, Eliminar después)
+    document.getElementById('detalle-insumo-acciones').innerHTML = `
+        <button type="button" onclick="window.prepararEdicionInsumo(${insumo.id})" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition shadow">Editar</button>
+        <button type="button" onclick="window.eliminarInsumo(${insumo.id}, '${insumo.nombre}')" class="text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition border border-red-900/50">Eliminar</button>
+    `;
+
+    const tipoObj = listaTiposInsumosLocal.find(t => t.id == insumo.tipo_id);
+    const nombreTipo = tipoObj ? tipoObj.nombre : 'General';
+    const rendimientoPorcentaje = insumo.rendimiento_neto_porcentaje ? `${(insumo.rendimiento_neto_porcentaje * 100).toFixed(0)}%` : '100%';
+
+    let mejorProvTexto = "Sin ofertas de proveedores";
+    let ofertaMin = null;
+    if (insumo.proveedores && insumo.proveedores.length > 0) {
+        insumo.proveedores.forEach(p => {
+            if (p.precio_oferta > 0 && (ofertaMin === null || p.precio_oferta < ofertaMin)) {
+                ofertaMin = p.precio_oferta;
+                mejorProvTexto = `${p.nombre} ($${window.formatearMonedaLocal ? window.formatearMonedaLocal(p.precio_oferta, 0) : p.precio_oferta})`;
+            }
+        });
+    }
+
+    document.getElementById('panel-insumo-contenido').innerHTML = `
+        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-gray-800 pb-4">
+                <div>
+                    <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full font-mono border border-emerald-500/20">${nombreTipo}</span>
+                    <h2 class="text-2xl font-bold text-white mt-2">${insumo.nombre}</h2>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Costo Unitario</span>
+                    <span class="text-xl font-mono font-bold text-emerald-400">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(insumo.costo_unitario, 4) : insumo.costo_unitario}</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Precio Compra</span>
+                    <span class="text-sm font-mono text-white font-semibold">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(insumo.precio_compra, 0) : insumo.precio_compra}</span>
+                </div>
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Formato / Envase</span>
+                    <span class="text-sm font-mono text-white font-semibold">${insumo.formato_envase} ${insumo.unidad_medida}</span>
+                </div>
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Rendimiento Neto</span>
+                    <span class="text-sm font-mono text-white font-semibold">${rendimientoPorcentaje}</span>
+                </div>
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
+                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Graduación (ABV)</span>
+                    <span class="text-sm font-mono text-amber-400 font-semibold">${insumo.graduacion_alcohol_base > 0 ? insumo.graduacion_alcohol_base + '%' : 'Sin alcohol'}</span>
+                </div>
+            </div>
+
+            <div class="bg-emerald-950/20 border border-emerald-900/40 p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-emerald-400 block">Proveedor Más Económico Sugerido</span>
+                    <span id="detalle-mejor-proveedor" class="text-xs font-semibold text-white">${mejorProvTexto}</span>
+                </div>
+                ${ofertaMin !== null ? `
+                    <button type="button" onclick="window.usarPrecioProveedorRecomendado()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg transition shadow">Aplicar Precio</button>
+                ` : ''}
+            </div>
+
+            <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 flex items-center justify-between">
+                <span class="text-xs text-gray-300 font-medium">Origen del Insumo</span>
+                <span class="text-xs font-bold font-mono ${insumo.es_artesanal ? 'text-purple-400 bg-purple-950/40 border border-purple-900/50 px-3 py-1 rounded-lg' : 'text-gray-400'}">
+                    ${insumo.es_artesanal ? 'Artesanal / Producción Propia' : 'Industrial / Comercial'}
+                </span>
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">Proveedores Asociados y Precios de Oferta</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                ${insumo.proveedores && insumo.proveedores.length > 0 ? insumo.proveedores.map(p => `
+                    <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl flex items-center justify-between">
+                        <span class="text-xs text-white font-semibold">${p.nombre}</span>
+                        <span class="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                            ${p.precio_oferta ? '$' + window.formatearMonedaLocal(p.precio_oferta, 0) : 'Sin oferta definida'}
+                        </span>
+                    </div>
+                `).join('') : `<div class="text-xs text-gray-500 col-span-full py-4">Este insumo no tiene proveedores asociados actualmente.</div>`}
+            </div>
+        </div>
+    `;
+
+    window.cargarHistoricoInsumo(id);
+    window.cambiarVistaInsumos('detalle');
+}
+
+window.prepararCreacionInsumo = async function() {
+    insumoSeleccionadoId = null;
+    document.getElementById('form-insumo-titulo').innerText = "Nuevo Insumo";
+    document.getElementById('form-insumo').reset();
+    document.getElementById('insumo-id').value = '';
+    document.getElementById('insumo-rendimiento').value = 100;
+    document.getElementById('insumo-formato-envase').value = 1;
+    
+    const checkArtesanal = document.getElementById('insumo-es-artesanal');
+    if (checkArtesanal) checkArtesanal.checked = false;
+
+    await cargarTiposInsumosParaForm();
+    await cargarProveedoresGlobales();
+    proveedoresAsociadosActuales.clear();
+    window.renderizarProveedoresInsumoForm();
+    window.calcularCostoUnitarioAutomatico();
+
+    window.cambiarVistaInsumos('formulario');
+}
+
+window.prepararEdicionInsumo = async function(id) {
+    insumoSeleccionadoId = id;
+    const insumo = listaInsumosLocal.find(x => x.id == id);
+    if (!insumo) return;
+
+    document.getElementById('form-insumo-titulo').innerText = "Editar Insumo: " + insumo.nombre;
+    document.getElementById('insumo-id').value = insumo.id;
+    document.getElementById('insumo-nombre').value = insumo.nombre;
+    document.getElementById('insumo-unidad').value = insumo.unidad_medida || 'ml';
+    document.getElementById('insumo-formato-envase').value = insumo.formato_envase || 1;
+    document.getElementById('insumo-precio-compra').value = insumo.precio_compra || 0;
+    document.getElementById('insumo-costo-unitario').value = insumo.costo_unitario || 0;
+    document.getElementById('insumo-graduacion').value = insumo.graduacion_alcohol_base || 0;
+    document.getElementById('insumo-rendimiento').value = insumo.rendimiento_neto_porcentaje ? insumo.rendimiento_neto_porcentaje * 100 : 100;
+    
+    const checkArtesanal = document.getElementById('insumo-es-artesanal');
+    if (checkArtesanal) checkArtesanal.checked = !!insumo.es_artesanal;
+
+    await cargarTiposInsumosParaForm();
+    const selectTipo = document.getElementById('insumo-tipo-id');
+    if (selectTipo) selectTipo.value = insumo.tipo_id || '';
+
+    await cargarProveedoresGlobales();
+    proveedoresAsociadosActuales.clear();
+    if (insumo.proveedores && Array.isArray(insumo.proveedores)) {
+        insumo.proveedores.forEach(prov => {
+            proveedoresAsociadosActuales.set(prov.proveedor_id, prov.precio_oferta);
+        });
+    }
+
+    window.renderizarProveedoresInsumoForm();
+    window.calcularCostoUnitarioAutomatico();
+    window.cambiarVistaInsumos('formulario');
+}
+
+async function cargarTiposInsumosParaForm() {
+    const selectTipo = document.getElementById('insumo-tipo-id');
+    if (!selectTipo) return;
+    selectTipo.innerHTML = listaTiposInsumosLocal.length > 0 ? 
+        listaTiposInsumosLocal.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('') :
+        `<option value="">Sin tipos registrados</option>`;
+}
+
+window.renderizarProveedoresInsumoForm = function() {
+    const contenedor = document.getElementById('contenedor-proveedores-insumo');
+    if (!contenedor) return;
+
+    if (listaProveedoresGlobal.length === 0) {
+        contenedor.innerHTML = `<div class="text-xs text-gray-500 text-center py-2">No hay proveedores registrados.</div>`;
+        return;
+    }
+
+    contenedor.innerHTML = listaProveedoresGlobal.map(p => {
+        const isChecked = proveedoresAsociadosActuales.has(p.id);
+        const precioOfertaVal = isChecked ? (proveedoresAsociadosActuales.get(p.id) ?? '') : '';
+
+        return `
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-gray-900 border border-gray-800 gap-3">
+                <label class="flex items-center gap-2.5 cursor-pointer flex-1">
+                    <input type="checkbox" value="${p.id}" ${isChecked ? 'checked' : ''} onchange="window.toggleProveedorInsumo(${p.id}, this.checked)" class="w-4 h-4 rounded bg-gray-850 border-gray-700 text-emerald-600 focus:ring-emerald-500">
+                    <span class="text-xs text-white font-medium">${p.nombre}</span>
+                </label>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-[10px] text-gray-400 font-mono">Oferta $:</span>
+                    <input type="number" step="0.01" id="precio-oferta-${p.id}" value="${precioOfertaVal}" ${!isChecked ? 'disabled' : ''} oninput="window.actualizarPrecioOferta(${p.id}, this.value)" placeholder="Ej: 14500" class="w-32 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono transition shadow-inner">
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.toggleProveedorInsumo = function(proveedorId, isChecked) {
+    const inputPrecio = document.getElementById(`precio-oferta-${proveedorId}`);
+    if (isChecked) {
+        proveedoresAsociadosActuales.set(proveedorId, null);
+        if (inputPrecio) {
+            inputPrecio.disabled = false;
+            inputPrecio.focus();
+        }
+    } else {
+        proveedoresAsociadosActuales.delete(proveedorId);
+        if (inputPrecio) {
+            inputPrecio.value = '';
+            inputPrecio.disabled = true;
+        }
+    }
+}
+
+window.actualizarPrecioOferta = function(proveedorId, valor) {
+    const num = valor === '' ? null : parseFloat(valor);
+    if (proveedoresAsociadosActuales.has(proveedorId)) {
+        proveedoresAsociadosActuales.set(proveedorId, isNaN(num) ? null : num);
+    }
+}
+
+window.obtenerMejorOfertaActual = function() {
+    if (proveedoresAsociadosActuales.size === 0) return null;
+    let mejorPrecio = null;
+    let mejorProveedorId = null;
+
+    for (let [provId, oferta] of proveedoresAsociadosActuales.entries()) {
+        if (oferta !== null && !isNaN(oferta) && oferta > 0) {
+            if (mejorPrecio === null || oferta < mejorPrecio) {
+                mejorPrecio = oferta;
+                mejorProveedorId = provId;
+            }
+        }
+    }
+    return mejorPrecio !== null ? { proveedorId: mejorProveedorId, precio: mejorPrecio } : null;
+};
+
+window.aplicarMejorPrecioOferta = function() {
+    const mejor = window.obtenerMejorOfertaActual();
+    if (!mejor) {
+        alert("Ninguno de los proveedores seleccionados tiene un precio de oferta válido definido.");
+        return;
+    }
+
+    const inputPrecioCompra = document.getElementById('insumo-precio-compra');
+    if (inputPrecioCompra) {
+        inputPrecioCompra.value = mejor.precio;
+        window.calcularCostoUnitarioAutomatico();
+    }
+};
+
+window.usarPrecioProveedorRecomendado = function() {
+    if (!insumoSeleccionadoId) return;
+    const insumo = listaInsumosLocal.find(i => i.id == insumoSeleccionadoId);
+    if (!insumo || !insumo.proveedores || insumo.proveedores.length === 0) return;
+
+    let ofertaMinima = null;
+    insumo.proveedores.forEach(p => {
+        if (p.precio_oferta > 0 && (ofertaMinima === null || p.precio_oferta < ofertaMinima)) {
+            ofertaMinima = p.precio_oferta;
+        }
+    });
+
+    if (ofertaMinima === null) {
+        alert("Este insumo no tiene precios de oferta registrados en sus proveedores.");
+        return;
+    }
+
+    window.prepararEdicionInsumo(insumo.id);
+    setTimeout(() => {
+        const inputPrecio = document.getElementById('insumo-precio-compra');
+        if (inputPrecio) {
+            inputPrecio.value = ofertaMinima;
+            window.calcularCostoUnitarioAutomatico();
+        }
+    }, 100);
+};
+
 window.calcularCostoUnitarioAutomatico = function() {
     const precioCompra = parseFloat(document.getElementById('insumo-precio-compra')?.value) || 0;
     const formatoEnvase = parseFloat(document.getElementById('insumo-formato-envase')?.value) || 1;
@@ -101,64 +421,13 @@ window.calcularCostoUnitarioAutomatico = function() {
 
     if (formatoEnvase <= 0) return;
 
-    // Fórmula: Costo por unidad base = (Precio Compra / Formato Envase) / Rendimiento
     const costoCalculado = (precioCompra / formatoEnvase) / (rendimiento > 0 ? rendimiento : 1);
 
     const labelCosto = document.getElementById('label-costo-calculado');
     const inputCosto = document.getElementById('insumo-costo-unitario');
     
-    if (labelCosto) labelCosto.textContent = `$${formatearMonedaLocal(costoCalculado, 4)}`;
+    if (labelCosto) labelCosto.textContent = `$${window.formatearMonedaLocal ? window.formatearMonedaLocal(costoCalculado, 4) : costoCalculado.toFixed(4)}`;
     if (inputCosto) inputCosto.value = costoCalculado.toFixed(4);
-}
-
-window.abrirModalInsumo = async function(id = null) {
-    const modal = document.getElementById('modal-insumo');
-    const titulo = document.getElementById('modal-insumo-titulo');
-    if (!modal) return;
-
-    await cargarTiposInsumos();
-
-    const selectTipo = document.getElementById('insumo-tipo-id');
-    if (selectTipo) {
-        selectTipo.innerHTML = listaTiposInsumosLocal.length > 0 ? 
-            listaTiposInsumosLocal.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('') :
-            `<option value="">Sin tipos registrados</option>`;
-    }
-
-    modal.classList.remove('hidden');
-
-    if (id) {
-        const insumo = listaInsumosLocal.find(x => x.id === id);
-        if (!insumo) return;
-        titulo.textContent = "Editar Insumo";
-        document.getElementById('insumo-id').value = id;
-        document.getElementById('insumo-nombre').value = insumo.nombre;
-        if (selectTipo) selectTipo.value = insumo.tipo_id || '';
-        document.getElementById('insumo-unidad').value = insumo.unidad_medida || 'ml';
-        document.getElementById('insumo-formato-envase').value = insumo.formato_envase || 1;
-        document.getElementById('insumo-precio-compra').value = insumo.precio_compra || 0;
-        document.getElementById('insumo-costo-unitario').value = insumo.costo_unitario || 0;
-        document.getElementById('insumo-graduacion').value = insumo.graduacion_alcohol_base || 0;
-        document.getElementById('insumo-rendimiento').value = insumo.rendimiento_neto_porcentaje ? insumo.rendimiento_neto_porcentaje * 100 : 100;
-        
-        const checkArtesanal = document.getElementById('insumo-es-artesanal');
-        if (checkArtesanal) checkArtesanal.checked = !!insumo.es_artesanal;
-
-        window.calcularCostoUnitarioAutomatico();
-    } else {
-        titulo.textContent = "Nuevo Insumo";
-        document.getElementById('insumo-id').value = '';
-        document.getElementById('form-insumo').reset();
-        document.getElementById('insumo-rendimiento').value = 100;
-        document.getElementById('insumo-formato-envase').value = 1;
-        const checkArtesanal = document.getElementById('insumo-es-artesanal');
-        if (checkArtesanal) checkArtesanal.checked = false;
-        window.calcularCostoUnitarioAutomatico();
-    }
-}
-
-window.cerrarModalInsumo = function() {
-    document.getElementById('modal-insumo').classList.add('hidden');
 }
 
 async function generarSlugUnico(nombre, idActual = null) {
@@ -177,9 +446,7 @@ async function generarSlugUnico(nombre, idActual = null) {
 
     while (true) {
         let urlCheck = `${SUPABASE_URL}/rest/v1/insumos?slug=eq.${slugFinal}&select=id`;
-        if (idActual) {
-            urlCheck += `&id=neq.${idActual}`;
-        }
+        if (idActual) urlCheck += `&id=neq.${idActual}`;
 
         try {
             const res = await fetch(urlCheck, {
@@ -196,8 +463,10 @@ async function generarSlugUnico(nombre, idActual = null) {
     return slugFinal;
 }
 
-async function guardarInsumo(e) {
+window.guardarInsumo = async function(e) {
     e.preventDefault();
+    if (!window.supabaseClient) return;
+
     const idInput = document.getElementById('insumo-id').value;
     const esEdicion = idInput !== '';
 
@@ -222,72 +491,152 @@ async function guardarInsumo(e) {
         es_artesanal: document.getElementById('insumo-es-artesanal')?.checked || false
     };
 
-    const url = esEdicion ? 
-        `${SUPABASE_URL}/rest/v1/insumos?id=eq.${idInput}` : 
-        `${SUPABASE_URL}/rest/v1/insumos`;
-
     try {
-        let costoAnterior = null;
+        let insumoIdReal = idInput;
+
         if (esEdicion) {
-            const insumoActual = listaInsumosLocal.find(x => x.id == idInput);
-            if (insumoActual) costoAnterior = insumoActual.costo_unitario;
+            const { error: errUpd } = await window.supabaseClient
+                .from('insumos')
+                .update(insumoPayload)
+                .eq('id', idInput);
+            if (errUpd) throw errUpd;
+        } else {
+            const { data: dataIns, error: errIns } = await window.supabaseClient
+                .from('insumos')
+                .insert([insumoPayload])
+                .select();
+            if (errIns) throw errIns;
+            if (dataIns && dataIns.length > 0) {
+                insumoIdReal = dataIns[0].id;
+            }
         }
 
-        const res = await fetch(url, {
-            method: esEdicion ? 'PATCH' : 'POST',
-            headers: { 
-                'apikey': SUPABASE_ANON_KEY, 
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 
-                'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
-            },
-            body: JSON.stringify(insumoPayload)
+        if (esEdicion) {
+            await window.supabaseClient
+                .from('insumo_proveedores')
+                .delete()
+                .eq('insumo_id', insumoIdReal);
+        }
+
+        let registrosHistoricos = [];
+
+        // 1. Registrar el precio general de compra del insumo (proveedor_id: null)
+        registrosHistoricos.push({
+            insumo_id: parseInt(insumoIdReal),
+            proveedor_id: null,
+            precio_compra: precioCompra,
+            costo_unitario: costoUnitarioCalculado
         });
 
-        if (!res.ok) {
-            const errorBody = await res.text();
-            throw new Error(`Error al guardar: ${errorBody}`);
-        }
+        if (proveedoresAsociadosActuales.size > 0) {
+            const nuevasRelaciones = Array.from(proveedoresAsociadosActuales.entries()).map(([provId, oferta]) => {
+                const precioOfertaVal = oferta !== null && !isNaN(oferta) ? oferta : null;
 
-        const dataGuardada = await res.json();
-        const insumoIdReal = esEdicion ? idInput : dataGuardada[0].id;
+                // 2. Si el proveedor tiene oferta definida, también la agregamos al histórico dual
+                if (precioOfertaVal !== null) {
+                    registrosHistoricos.push({
+                        insumo_id: parseInt(insumoIdReal),
+                        proveedor_id: parseInt(provId),
+                        precio_compra: precioOfertaVal,
+                        costo_unitario: (precioOfertaVal / formatoEnvase) / (rendimiento > 0 ? rendimiento : 1)
+                    });
+                }
 
-        // Registrar en histórico de precios si cambió el costo
-        if (!esEdicion || costoAnterior !== costoUnitarioCalculado) {
-            await fetch(`${SUPABASE_URL}/rest/v1/insumo_precios_historicos`, {
-                method: 'POST',
-                headers: { 
-                    'apikey': SUPABASE_ANON_KEY, 
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 
-                    'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify({
-                    insumo_id: insumoIdReal,
-                    precio: costoUnitarioCalculado,
-                    fecha_vigencia: new Date().toISOString()
-                })
+                return {
+                    insumo_id: parseInt(insumoIdReal),
+                    proveedor_id: parseInt(provId),
+                    precio_oferta: precioOfertaVal
+                };
             });
+
+            const { error: errRel } = await window.supabaseClient
+                .from('insumo_proveedores')
+                .insert(nuevasRelaciones);
+
+            if (errRel) console.warn("Aviso al guardar insumo_proveedores:", errRel);
         }
 
-        window.cerrarModalInsumo();
-        await initInsumos();
+        // Insertar todos los registros históricos recolectados (general + ofertas de proveedores)
+        const { error: errHist } = await window.supabaseClient
+            .from('insumo_precios_historicos')
+            .insert(registrosHistoricos);
+
+        if (errHist) console.warn("Aviso al guardar histórico de precios:", errHist);
+
+        await obtenerInsumosSupabase();
+        window.verDetalleInsumo(insumoIdReal);
     } catch (err) {
         console.error("Error al procesar insumo:", err);
         alert("Ocurrió un error al guardar el insumo en Supabase. Revisa la consola.");
     }
 }
 
+window.cargarHistoricoInsumo = async function(insumoId) {
+    const cuerpoHist = document.getElementById('tabla-historico-insumo');
+    if (!cuerpoHist) return;
+
+    cuerpoHist.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-500 font-mono text-xs">Cargando histórico...</td></tr>`;
+
+    try {
+        if (!window.supabaseClient) return;
+        const { data, error } = await window.supabaseClient
+            .from('insumo_precios_historicos')
+            .select('*')
+            .eq('insumo_id', insumoId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            cuerpoHist.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-gray-500 text-xs">No hay registros históricos para este insumo.</td></tr>`;
+            return;
+        }
+
+        cuerpoHist.innerHTML = data.map(h => {
+            const fechaFormateada = h.created_at ? new Date(h.created_at).toLocaleString('es-CL', { 
+                dateStyle: 'medium', 
+                timeStyle: 'short' 
+            }) : 'Fecha no registrada';
+
+            // Identificar si el registro histórico pertenece a un proveedor específico o es general
+            let etiquetaOrigen = `<span class="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded font-mono border border-emerald-500/20">General / Estándar</span>`;
+            if (h.proveedor_id) {
+                const provObj = listaProveedoresGlobal.find(p => p.id === h.proveedor_id);
+                const nombreProv = provObj ? provObj.nombre : `Proveedor #${h.proveedor_id}`;
+                etiquetaOrigen = `<span class="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded font-mono border border-blue-500/20">Oferta: ${nombreProv}</span>`;
+            }
+
+            return `
+                <tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm">
+                    <td class="py-3 px-4">
+                        <div class="font-mono text-gray-300 text-xs">${fechaFormateada}</div>
+                        <div class="mt-1">${etiquetaOrigen}</div>
+                    </td>
+                    <td class="py-3 px-3 text-right font-mono text-white">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(h.precio_compra, 0) : h.precio_compra}</td>
+                    <td class="py-3 px-3 text-right font-mono text-emerald-400 font-bold">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(h.costo_unitario, 4) : h.costo_unitario}</td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (e) {
+        console.warn("Error al cargar histórico de precios:", e);
+        cuerpoHist.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-red-400 text-xs">Error al cargar el histórico.</td></tr>`;
+    }
+};
+
 window.eliminarInsumo = async function(id, nombre) {
     if (!confirm(`¿Estás seguro de eliminar el insumo "${nombre}"?`)) return;
 
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/insumos?id=eq.${id}`, {
-            method: 'DELETE',
-            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-        });
+        if (!window.supabaseClient) return;
+        const { error } = await window.supabaseClient
+            .from('insumos')
+            .delete()
+            .eq('id', id);
 
-        if (!res.ok) throw new Error("No se pudo eliminar");
-        await initInsumos();
+        if (error) throw error;
+        await obtenerInsumosSupabase();
+        window.cambiarVistaInsumos('listado');
     } catch (err) {
         console.error("Error al eliminar insumo:", err);
         alert("No se pudo eliminar el insumo.");
@@ -299,3 +648,5 @@ window.filtrarInsumos = function() {
     const filtrados = listaInsumosLocal.filter(i => i.nombre.toLowerCase().includes(query));
     renderizarTablaInsumos(filtrados);
 }
+
+export default initInsumos;
