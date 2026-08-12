@@ -15,7 +15,7 @@ let insumoSeleccionadoId = null;
 // Variables para el paginador y buscador de la sub-pantalla de histórico
 let historicoInsumoActualData = [];
 let paginaActualHistorico = 1;
-const registrosPorPaginaHistorico = 10;
+let registrosPorPaginaHistorico = 10;
 let insumoActualNombreCache = '';
 
 // Variables para el paginador, buscador y ordenamiento del listado principal de insumos
@@ -23,6 +23,10 @@ let paginaActualInsumos = 1;
 let registrosPorPaginaInsumos = 10;
 let columnaOrdenInsumos = 'nombre';
 let direccionOrdenInsumos = 'asc';
+
+// Variables para la paginación y buscador de proveedores en el formulario de insumos
+let paginaActualProvForm = 1;
+let registrosPorPaginaProvForm = 5;
 
 export async function initInsumos() {
     await cargarTiposInsumos();
@@ -429,7 +433,7 @@ async function cargarDatosHistoricoCompleto(insumoId) {
 
 window.renderizarTablaHistoricoPaginada = function() {
     const cuerpo = document.getElementById('tabla-historico-insumo-completo');
-    const infoPaginador = document.getElementById('paginador-info');
+    const infoPaginador = document.getElementById('paginador-info-historico-insumo');
     if (!cuerpo) return;
 
     const query = (document.getElementById('buscador-historico-insumo')?.value || '').toLowerCase();
@@ -488,8 +492,14 @@ window.filtrarHistoricoInsumoLocal = function() {
     renderizarTablaHistoricoPaginada();
 }
 
-window.cambiarPaginaHistorico = function(delta) {
+window.cambiarPaginaHistoricoInsumo = function(delta) {
     paginaActualHistorico += delta;
+    renderizarTablaHistoricoPaginada();
+}
+
+window.cambiarRegistrosPorPaginaHistoricoInsumo = function(selectElem) {
+    registrosPorPaginaHistorico = parseInt(selectElem.value) || 10;
+    paginaActualHistorico = 1;
     renderizarTablaHistoricoPaginada();
 }
 
@@ -506,7 +516,10 @@ window.prepararCreacionInsumo = async function() {
     document.getElementById('insumo-formato-envase').value = 1;
     
     const checkArtesanal = document.getElementById('insumo-es-artesanal');
-    if (checkArtesanal) checkArtesanal.checked = false;
+    if (checkArtesanal){
+        checkArtesanal.checked = false;
+        checkArtesanal.disabled = false;
+    }
 
     await cargarTiposInsumosParaForm();
     await cargarProveedoresGlobales();
@@ -515,6 +528,13 @@ window.prepararCreacionInsumo = async function() {
     window.calcularCostoUnitarioAutomatico();
 
     window.cambiarVistaInsumos('formulario');
+
+    // Asegurar el estado inicial del checkbox (desmarcado por defecto)
+    const checkboxArtesanal = document.getElementById('insumo-es-artesanal');
+    if (checkboxArtesanal) checkboxArtesanal.checked = false;
+
+    // Disparar la lógica visual para mostrar proveedores
+    window.toggleInsumoArtesanal();
 }
 
 window.prepararEdicionInsumo = async function(id) {
@@ -533,7 +553,11 @@ window.prepararEdicionInsumo = async function(id) {
     document.getElementById('insumo-rendimiento').value = insumo.rendimiento_neto_porcentaje ? insumo.rendimiento_neto_porcentaje * 100 : 100;
     
     const checkArtesanal = document.getElementById('insumo-es-artesanal');
-    if (checkArtesanal) checkArtesanal.checked = !!insumo.es_artesanal;
+    if (checkArtesanal) {
+        checkArtesanal.checked = !!insumo.es_artesanal;
+        checkArtesanal.disabled = true; // REGLA: Inmutable al editar
+        checkArtesanal.classList.add('opacity-50', 'cursor-not-allowed');
+    }
 
     await cargarTiposInsumosParaForm();
     const selectTipo = document.getElementById('insumo-tipo-id');
@@ -550,6 +574,15 @@ window.prepararEdicionInsumo = async function(id) {
     window.renderizarProveedoresInsumoForm();
     window.calcularCostoUnitarioAutomatico();
     window.cambiarVistaInsumos('formulario');
+
+    // Supongamos que tu objeto insumo tiene la propiedad 'es_artesanal' o similar:
+    const checkboxArtesanal = document.getElementById('insumo-es-artesanal');
+    if (checkboxArtesanal) {
+        checkboxArtesanal.checked = !!insumo.es_artesanal; // true o false según la BD
+    }
+
+    // Disparar la lógica visual para ocultar/mostrar proveedores según sea artesanal o no
+    window.toggleInsumoArtesanal();
 }
 
 async function cargarTiposInsumosParaForm() {
@@ -560,30 +593,80 @@ async function cargarTiposInsumosParaForm() {
         `<option value="">Sin tipos registrados</option>`;
 }
 
-window.renderizarProveedoresInsumoForm = function() {
-    const contenedor = document.getElementById('contenedor-proveedores-insumo');
-    if (!contenedor) return;
+window.cambiarRegistrosPorPaginaProvForm = function(selectElem) {
+    registrosPorPaginaProvForm = parseInt(selectElem.value) || 5;
+    paginaActualProvForm = 1;
+    window.renderizarProveedoresInsumoForm();
+}
 
-    if (listaProveedoresGlobal.length === 0) {
-        contenedor.innerHTML = `<div class="text-xs text-gray-500 text-center py-2">No hay proveedores registrados.</div>`;
+window.cambiarPaginaProvForm = function(delta) {
+    paginaActualProvForm += delta;
+    window.renderizarProveedoresInsumoForm();
+}
+
+window.filtrarProveedoresFormLocal = function() {
+    paginaActualProvForm = 1;
+    window.renderizarProveedoresInsumoForm();
+}
+
+window.renderizarProveedoresInsumoForm = function() {
+    const cuerpo = document.getElementById('contenedor-proveedores-insumo');
+    const infoPaginador = document.getElementById('paginador-info-proveedores-form');
+    const esArtesanal = document.getElementById('insumo-es-artesanal')?.checked;
+
+    if (!cuerpo) return;
+
+    if (esArtesanal) {
+        if (typeof proveedoresAsociadosActuales !== 'undefined') {
+            proveedoresAsociadosActuales.clear();
+        }
+        cuerpo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-emerald-400/80 font-mono text-xs">Insumo artesanal: No requiere asociación a proveedores comerciales.</td></tr>`;
+        if (infoPaginador) infoPaginador.innerText = "No aplica";
         return;
     }
 
-    contenedor.innerHTML = listaProveedoresGlobal.map(p => {
+    const query = (document.getElementById('buscador-proveedores-form')?.value || '').toLowerCase();
+    
+    // Filtrar proveedores
+    const filtrados = listaProveedoresGlobal.filter(p => p.nombre.toLowerCase().includes(query));
+
+    const totalRegistros = filtrados.length;
+    const totalPaginas = Math.ceil(totalRegistros / registrosPorPaginaProvForm) || 1;
+
+    if (paginaActualProvForm > totalPaginas) paginaActualProvForm = totalPaginas;
+    if (paginaActualProvForm < 1) paginaActualProvForm = 1;
+
+    const inicio = (paginaActualProvForm - 1) * registrosPorPaginaProvForm;
+    const fin = inicio + registrosPorPaginaProvForm;
+    const registrosPagina = filtrados.slice(inicio, fin);
+
+    if (infoPaginador) {
+        infoPaginador.innerText = `Mostrando página ${paginaActualProvForm} de ${totalPaginas} (${totalRegistros} registros totales)`;
+    }
+
+    if (registrosPagina.length === 0) {
+        cuerpo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-gray-500 text-xs">No se encontraron proveedores.</td></tr>`;
+        return;
+    }
+
+    cuerpo.innerHTML = registrosPagina.map(p => {
         const isChecked = proveedoresAsociadosActuales.has(p.id);
         const precioOfertaVal = isChecked ? (proveedoresAsociadosActuales.get(p.id) ?? '') : '';
 
         return `
-            <div class="flex items-center justify-between p-2.5 rounded-xl bg-gray-900 border border-gray-800 gap-3">
-                <label class="flex items-center gap-2.5 cursor-pointer flex-1">
-                    <input type="checkbox" value="${p.id}" ${isChecked ? 'checked' : ''} onchange="window.toggleProveedorInsumo(${p.id}, this.checked)" class="w-4 h-4 rounded bg-gray-850 border-gray-700 text-emerald-600 focus:ring-emerald-500">
-                    <span class="text-xs text-white font-medium">${p.nombre}</span>
-                </label>
-                <div class="flex items-center gap-1.5">
-                    <span class="text-[10px] text-gray-400 font-mono">Oferta $:</span>
-                    <input type="number" step="0.01" id="precio-oferta-${p.id}" value="${precioOfertaVal}" ${!isChecked ? 'disabled' : ''} oninput="window.actualizarPrecioOfertaInsumo(${p.id}, this.value)" placeholder="Ej: 14500" class="w-32 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono transition shadow-inner">
-                </div>
-            </div>
+            <tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm">
+                <td class="py-3 px-4 text-center">
+                    <label class="relative inline-flex items-center cursor-pointer justify-center">
+                        <input type="checkbox" value="${p.id}" ${isChecked ? 'checked' : ''} onchange="window.toggleProveedorInsumo(${p.id}, this.checked)" class="sr-only peer">
+                        
+                        <div class="w-11 h-6 bg-gray-800 border border-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 peer-checked:border-emerald-500 shadow-inner"></div>
+                    </label>
+                </td>
+                <td class="py-3 px-4 font-medium text-white text-xs">${p.nombre}</td>
+                <td class="py-3 px-4 text-right">
+                    <input type="number" step="0.01" id="precio-oferta-${p.id}" value="${precioOfertaVal}" ${!isChecked ? 'disabled' : ''} oninput="window.actualizarPrecioOfertaInsumo(${p.id}, this.value)" placeholder="Ej: 14500" class="w-32 bg-gray-900 border border-gray-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono transition shadow-inner text-right">
+                </td>
+            </tr>
         `;
     }).join('');
 }
@@ -737,6 +820,15 @@ window.guardarInsumo = async function(e) {
     const rendimiento = (parseFloat(document.getElementById('insumo-rendimiento').value) || 100) / 100;
     const costoUnitarioCalculado = (precioCompra / formatoEnvase) / (rendimiento > 0 ? rendimiento : 1);
 
+    // REGLA: Si es edición, mantenemos estrictamente el valor original de la BD para asegurar inmutabilidad
+    let esArtesanal = false;
+    if (esEdicion) {
+        const insumoOriginal = listaInsumosLocal.find(x => x.id == idInput);
+        esArtesanal = insumoOriginal ? !!insumoOriginal.es_artesanal : false;
+    } else {
+        esArtesanal = document.getElementById('insumo-es-artesanal')?.checked || false;
+    }
+
     const insumoPayload = {
         nombre: nombreInsumo,
         slug: slugUnico,
@@ -747,13 +839,12 @@ window.guardarInsumo = async function(e) {
         costo_unitario: costoUnitarioCalculado,
         graduacion_alcohol_base: parseFloat(document.getElementById('insumo-graduacion').value) || 0.00,
         rendimiento_neto_porcentaje: rendimiento,
-        es_artesanal: document.getElementById('insumo-es-artesanal')?.checked || false
+        es_artesanal: esArtesanal
     };
 
     try {
         let insumoIdReal = idInput;
 
-        // 1. Obtener precios de oferta previos de los proveedores antes de borrarlos (para auditoría real)
         let preciosProveedoresAnteriores = new Map();
         if (esEdicion) {
             const { data: relsAnteriores } = await window.supabaseClient
@@ -768,7 +859,7 @@ window.guardarInsumo = async function(e) {
             }
         }
 
-        // 2. Guardar o actualizar el insumo principal
+        // 1. Guardar o actualizar el insumo principal
         if (esEdicion) {
             const { error: errUpd } = await window.supabaseClient
                 .from('insumos')
@@ -786,7 +877,7 @@ window.guardarInsumo = async function(e) {
             }
         }
 
-        // 3. Limpiar relaciones anteriores de proveedores
+        // 2. Limpiar relaciones anteriores de proveedores en la base de datos (aplica para ambos casos)
         if (esEdicion) {
             await window.supabaseClient
                 .from('insumo_proveedores')
@@ -796,7 +887,7 @@ window.guardarInsumo = async function(e) {
 
         let registrosHistoricos = [];
 
-        // El histórico general del insumo siempre registra el cambio de precio de compra principal
+        // El histórico general del insumo siempre registra su costo principal
         registrosHistoricos.push({
             insumo_id: parseInt(insumoIdReal),
             proveedor_id: null,
@@ -804,13 +895,12 @@ window.guardarInsumo = async function(e) {
             costo_unitario: costoUnitarioCalculado
         });
 
-        // 4. Procesar proveedores y registrar en el histórico SOLO si el precio de oferta cambió o es nuevo
-        if (proveedoresAsociadosActuales.size > 0) {
+        // 3. PROCESAR PROVEEDORES SOLO SI NO ES ARTESANAL
+        if (!esArtesanal && typeof proveedoresAsociadosActuales !== 'undefined' && proveedoresAsociadosActuales.size > 0) {
             const nuevasRelaciones = Array.from(proveedoresAsociadosActuales.entries()).map(([provId, oferta]) => {
                 const precioOfertaVal = oferta !== null && !isNaN(oferta) ? oferta : null;
                 const precioAnterior = preciosProveedoresAnteriores.get(parseInt(provId));
 
-                // Condición de auditoría: Registrar en el histórico solo si el precio cambió o es un proveedor nuevo
                 const precioCambio = precioAnterior !== precioOfertaVal;
 
                 if (precioOfertaVal !== null && precioCambio) {
@@ -836,7 +926,7 @@ window.guardarInsumo = async function(e) {
             if (errRel) console.warn("Aviso al guardar insumo_proveedores:", errRel);
         }
 
-        // 5. Insertar los registros históricos filtrados
+        // 4. Insertar los registros históricos
         const { error: errHist } = await window.supabaseClient
             .from('insumo_precios_historicos')
             .insert(registrosHistoricos);
@@ -869,5 +959,48 @@ window.eliminarInsumo = async function(id, nombre) {
         alert("No se pudo eliminar el insumo.");
     }
 }
+
+export function toggleInsumoArtesanal() {
+    const esArtesanal = document.getElementById('insumo-es-artesanal')?.checked;
+    const seccionProveedores = document.getElementById('seccion-proveedores-insumo');
+    
+    if (!seccionProveedores) return;
+
+    if (esArtesanal) {
+        // 1. Ocultar visualmente la sección
+        seccionProveedores.classList.add('hidden');
+        
+        // 2. Limpiar la estructura interna que almacena los proveedores seleccionados
+        if (typeof proveedoresAsociadosActuales !== 'undefined' && proveedoresAsociadosActuales instanceof Map) {
+            proveedoresAsociadosActuales.clear();
+        }
+
+        // 3. Blanquear/vaciar todos los inputs de precios de oferta
+        const inputsOferta = document.querySelectorAll('#contenedor-proveedores-insumo input[type="number"]');
+        inputsOferta.forEach(input => {
+            input.value = '';
+        });
+
+        // 4. Refrescar el formulario usando tu función real para mostrar el mensaje de que no aplica
+        if (typeof renderizarProveedoresInsumoForm === 'function') {
+            renderizarProveedoresInsumoForm();
+        }
+    } else {
+        // Mostrar la sección de proveedores nuevamente si se desmarca
+        seccionProveedores.classList.remove('hidden');
+        
+        // Volver a cargar la lista normal de proveedores
+        if (typeof renderizarProveedoresInsumoForm === 'function') {
+            renderizarProveedoresInsumoForm();
+        }
+    }
+}
+
+// Agrega esta línea junto a tus otras asignaciones de window al final del archivo JS
+window.toggleInsumoArtesanal = toggleInsumoArtesanal;
+
+window.cambiarRegistrosPorPaginaProvForm = cambiarRegistrosPorPaginaProvForm;
+window.cambiarPaginaProvForm = cambiarPaginaProvForm;
+window.filtrarProveedoresFormLocal = filtrarProveedoresFormLocal;
 
 export default initInsumos;

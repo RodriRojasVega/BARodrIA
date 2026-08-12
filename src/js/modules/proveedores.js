@@ -1,615 +1,357 @@
-// Módulo de Proveedores y Catálogo de Precios Avanzado (Supabase / Módulos ES)
+// src/modules/proveedores.js
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 if (!window.supabaseClient && SUPABASE_URL && SUPABASE_ANON_KEY) {
     window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
+const supabase = window.supabaseClient;
 
-let listaProveedoresLocal = [];
-let listaInsumosGlobal = [];
-let insumosProveedorActual = new Map();
-let proveedorSeleccionadoId = null;
-
-let historicoProveedorActualData = [];
-let paginaActualHistoricoProv = 1;
-const registrosPorPaginaProv = 10;
-let proveedorActualNombreCache = '';
+// --- ÚNICA FUENTE DE VERDAD ---
+let state = {
+    proveedores: [],
+    insumosGlobales: [],
+    provActivo: null,
+    historicoProvActual: [],
+    insumosTempo: [], // Array de { insumo_id, precio_oferta } para el form dual
+    tableParams: { search: '', page: 1, limit: 25, sortCol: 'nombre', sortAsc: true },
+    filterInsumoDisp: ''
+};
 
 export async function initProveedores() {
-    await cargarInsumosGlobales();
-    await obtenerProveedoresSupabase();
-    cambiarVistaProveedores('listado');
+    console.log("Inicializando Módulo Escalable: Proveedores");
 
-    // Delegación de clics nativa infalible para las filas
-    document.addEventListener('click', function(e) {
-        const fila = e.target.closest('.fila-proveedor');
-        if (fila) {
-            const id = fila.getAttribute('data-id');
-            if (id) {
-                verDetalleProveedor(id);
-            }
+    const dom = {
+        vistas: {
+            listado: document.getElementById('proveedores-listado'),
+            detalle: document.getElementById('proveedores-detalle'),
+            formulario: document.getElementById('proveedores-formulario')
+        },
+        tabla: {
+            body: document.getElementById('tabla-prov-body'),
+            buscador: document.getElementById('buscador-prov'),
+            limite: document.getElementById('paginado-limite-prov'),
+            infoPagi: document.getElementById('info-paginacion-prov'),
+            btnPrev: document.getElementById('btn-pagi-prev-prov'),
+            btnNext: document.getElementById('btn-pagi-next-prov'),
+            numPagi: document.getElementById('num-pagina-actual-prov'),
+            thNombre: document.getElementById('th-nombre-prov')
+        },
+        detalle: {
+            nombre: document.getElementById('det-prov-nombre'),
+            contacto: document.getElementById('det-prov-contacto'),
+            telefono: document.getElementById('det-prov-telefono'),
+            email: document.getElementById('det-prov-email'),
+            tablaCatalogo: document.getElementById('det-tabla-catalogo-body'),
+            tablaHistorico: document.getElementById('det-tabla-hist-prov-body')
+        },
+        form: {
+            elemento: document.getElementById('form-prov'),
+            id: document.getElementById('prov-id'),
+            nombre: document.getElementById('prov-nombre'),
+            contacto: document.getElementById('prov-contacto'),
+            telefono: document.getElementById('prov-telefono'),
+            email: document.getElementById('prov-email'),
+            obs: document.getElementById('prov-obs'),
+            titulo: document.getElementById('titulo-form-prov'),
+            listaDisp: document.getElementById('lista-insumos-prov-disp'),
+            listaAsig: document.getElementById('lista-insumos-prov-asig'),
+            contAsig: document.getElementById('contador-insumos-prov-asig'),
+            buscarDisp: document.getElementById('buscar-insumo-prov-disp')
+        },
+        botones: {
+            nuevo: document.getElementById('btn-nuevo-prov'),
+            volver: document.getElementById('btn-volver-listado-prov'),
+            editar: document.getElementById('btn-editar-prov-act'),
+            eliminar: document.getElementById('btn-eliminar-prov-act'),
+            cancelarTop: document.getElementById('btn-cancelar-form-prov-top'),
+            cancelarMid: document.getElementById('btn-cancelar-form-prov'),
+            cancelarBot: document.getElementById('btn-cancelar-form-prov-bot')
         }
-    });
-}
-
-export function cambiarVistaProveedores(vista) {
-    const vListado = document.getElementById('vista-proveedores-listado');
-    const vDetalle = document.getElementById('vista-proveedores-detalle');
-    const vForm = document.getElementById('vista-proveedores-formulario');
-    const vHistorico = document.getElementById('vista-proveedores-historico');
-
-    if (vListado) vListado.classList.add('hidden');
-    if (vDetalle) vDetalle.classList.add('hidden');
-    if (vForm) vForm.classList.add('hidden');
-    if (vHistorico) vHistorico.classList.add('hidden');
-
-    if (vista === 'listado') {
-        if (vListado) vListado.classList.remove('hidden');
-        renderizarTablaProveedores(listaProveedoresLocal);
-    } else if (vista === 'detalle') {
-        if (vDetalle) vDetalle.classList.remove('hidden');
-    } else if (vista === 'formulario') {
-        if (vForm) vForm.classList.remove('hidden');
-    } else if (vista === 'historico') {
-        if (vHistorico) vHistorico.classList.remove('hidden');
-    }
-}
-
-async function cargarInsumosGlobales() {
-    try {
-        if (!window.supabaseClient) return;
-        const { data, error } = await window.supabaseClient
-            .from('insumos')
-            .select('id, nombre, unidad_medida, precio_compra, formato_envase, rendimiento_neto_porcentaje')
-            .order('nombre', { ascending: true });
-        
-        if (error) throw error;
-        listaInsumosGlobal = data || [];
-    } catch (e) {
-        console.warn("No se pudieron cargar los insumos globales:", e);
-    }
-}
-
-async function obtenerProveedoresSupabase() {
-    const cuerpo = document.getElementById('tabla-proveedores-cuerpo');
-    if (cuerpo) cuerpo.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-emerald-500 font-mono animate-pulse">Cargando proveedores...</td></tr>`;
-
-    try {
-        if (!window.supabaseClient) return;
-
-        const { data: proveedores, error: errProv } = await window.supabaseClient
-            .from('proveedores')
-            .select('*')
-            .order('nombre', { ascending: true });
-        
-        if (errProv) throw errProv;
-
-        const { data: rels, error: errRel } = await window.supabaseClient
-            .from('insumo_proveedores')
-            .select('*');
-
-        if (errRel) console.warn("Aviso al consultar insumo_proveedores:", errRel);
-
-        listaProveedoresLocal = (proveedores || []).map(prov => {
-            const misInsumos = (rels || [])
-                .filter(r => r.proveedor_id === prov.id)
-                .map(r => {
-                    const insObj = listaInsumosGlobal.find(i => i.id === r.insumo_id);
-                    return {
-                        insumo_id: r.insumo_id,
-                        nombre: insObj ? insObj.nombre : 'Insumo desconocido',
-                        precio_oferta: r.precio_oferta,
-                        unidad_medida: insObj ? insObj.unidad_medida : 'ml'
-                    };
-                });
-
-            return {
-                ...prov,
-                insumos: misInsumos
-            };
-        });
-
-        renderizarTablaProveedores(listaProveedoresLocal);
-    } catch (e) {
-        console.error("Error crítico obteniendo proveedores:", e);
-        if (cuerpo) {
-            cuerpo.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-red-400 font-mono text-xs">Error al conectar con Supabase.</td></tr>`;
-        }
-    }
-}
-
-function renderizarTablaProveedores(datos) {
-    const cuerpo = document.getElementById('tabla-proveedores-cuerpo');
-    if (!cuerpo) return;
-
-    if (!Array.isArray(datos) || datos.length === 0) {
-        cuerpo.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500 text-sm">No hay proveedores registrados.</td></tr>`;
-        return;
-    }
-
-    cuerpo.innerHTML = datos.map(prov => {
-        const totalInsumos = prov.insumos ? prov.insumos.length : 0;
-
-        return `
-            <tr data-id="${prov.id}" class="fila-proveedor hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm cursor-pointer group">
-                <td class="py-3.5 px-4 font-medium text-white group-hover:text-emerald-400 transition">${prov.nombre}</td>
-                <td class="py-3.5 px-3 text-gray-300 text-xs">${prov.contacto || 'Sin contacto'}</td>
-                <td class="py-3.5 px-3 text-gray-400 text-xs font-mono">${prov.telefono || 'Sin teléfono'}</td>
-                <td class="py-3.5 px-3 text-gray-400 text-xs">${prov.email || 'Sin email'}</td>
-                <td class="py-3.5 px-3 text-center font-mono text-emerald-400 font-bold">${totalInsumos} insumos</td>
-            </tr>
-        `;
-    }).join('');
-}
-
-export function verDetalleProveedor(id) {
-    proveedorSeleccionadoId = id;
-    const prov = listaProveedoresLocal.find(p => p.id == id);
-    if (!prov) return;
-
-    proveedorActualNombreCache = prov.nombre;
-
-    document.getElementById('detalle-proveedor-acciones').innerHTML = `
-        <button type="button" onclick="window.prepararEdicionProveedor(${prov.id})" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition shadow">Editar</button>
-        <button type="button" onclick="window.eliminarProveedor(${prov.id}, '${prov.nombre}')" class="text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition border border-red-900/50">Eliminar</button>
-    `;
-
-    document.getElementById('panel-proveedor-contenido').innerHTML = `
-        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-6">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-gray-800 pb-4">
-                <div>
-                    <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full font-mono border border-emerald-500/20">Distribuidor Autorizado</span>
-                    <h2 class="text-2xl font-bold text-white mt-2">${prov.nombre}</h2>
-                </div>
-                <div class="text-right">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Total Insumos Suministrados</span>
-                    <span class="text-xl font-mono font-bold text-emerald-400">${prov.insumos ? prov.insumos.length : 0} productos</span>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Contacto Comercial</span>
-                    <span class="text-sm text-white font-semibold">${prov.contacto || 'No especificado'}</span>
-                </div>
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Teléfono</span>
-                    <span class="text-sm font-mono text-gray-300 font-semibold">${prov.telefono || 'No especificado'}</span>
-                </div>
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block">Correo Electrónico</span>
-                    <span class="text-sm text-gray-300 font-semibold">${prov.email || 'No especificado'}</span>
-                </div>
-            </div>
-
-            ${prov.observaciones ? `
-                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800">
-                    <span class="text-[10px] uppercase font-bold text-gray-400 block mb-1">Observaciones / Notas</span>
-                    <p class="text-xs text-gray-300">${prov.observaciones}</p>
-                </div>
-            ` : ''}
-        </div>
-
-        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-4">
-            <div class="flex justify-between items-center">
-                <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">Catálogo de Precios y Ofertas del Proveedor</h3>
-                <span class="text-[10px] text-gray-400 font-mono">Listado oficial de insumos surtidos</span>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-950 border-b border-gray-800 text-[10px] uppercase font-mono tracking-wider text-gray-400">
-                            <th class="py-3 px-4 font-semibold">Insumo</th>
-                            <th class="py-3 px-3 font-semibold">Unidad</th>
-                            <th class="py-3 px-3 font-semibold text-right">Precio de Oferta Actual</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-800/50 text-sm">
-                        ${prov.insumos && prov.insumos.length > 0 ? prov.insumos.map(i => `
-                            <tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40">
-                                <td class="py-3 px-4 font-medium text-white text-xs">${i.nombre}</td>
-                                <td class="py-3 px-3 text-gray-400 text-xs font-mono">${i.unidad_medida}</td>
-                                <td class="py-3 px-3 text-right font-mono text-emerald-400 font-bold text-xs">
-                                    ${i.precio_oferta ? '$' + window.formatearMonedaLocal(i.precio_oferta, 0) : 'Sin precio definido'}
-                                </td>
-                            </tr>
-                        `).join('') : `<tr><td colspan="3" class="text-center py-6 text-gray-500 text-xs">Este proveedor no tiene insumos asociados en su catálogo actualmente.</td></tr>`}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl flex items-center justify-between shadow-xl">
-            <div>
-                <span class="text-xs font-bold text-white block uppercase tracking-wider font-mono text-emerald-400">Histórico de Auditoría de Tarifas</span>
-                <p class="text-[11px] text-gray-400 mt-0.5">Consulta todos los registros de auditoría y cambios de precios con buscador y paginación.</p>
-            </div>
-            <button type="button" onclick="window.abrirVistaHistoricoProveedor(${prov.id}, '${prov.nombre.replace(/'/g, "\\'")}')" class="text-xs bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 px-4 py-2.5 rounded-xl border border-emerald-500/30 font-bold transition flex items-center gap-1.5 shadow">
-                <span>Ver Histórico Completo</span>
-                <span>→</span>
-            </button>
-        </div>
-    `;
-
-    cambiarVistaProveedores('detalle');
-}
-
-export async function abrirVistaHistoricoProveedor(proveedorId, nombreProveedor) {
-    proveedorSeleccionadoId = proveedorId;
-    proveedorActualNombreCache = nombreProveedor;
-    
-    const titulo = document.getElementById('titulo-historico-proveedor');
-    if (titulo) titulo.innerText = `Histórico de Auditoría: ${nombreProveedor}`;
-
-    const inputBuscador = document.getElementById('buscador-historico-proveedor');
-    if (inputBuscador) inputBuscador.value = '';
-
-    paginaActualHistoricoProv = 1;
-    cambiarVistaProveedores('historico');
-    await cargarDatosHistoricoProveedorCompleto(proveedorId);
-}
-
-export function volverDesdeHistoricoProveedor() {
-    if (proveedorSeleccionadoId) {
-        verDetalleProveedor(proveedorSeleccionadoId);
-    } else {
-        cambiarVistaProveedores('listado');
-    }
-}
-
-async function cargarDatosHistoricoProveedorCompleto(proveedorId) {
-    const cuerpo = document.getElementById('tabla-historico-proveedor-completo');
-    if (!cuerpo) return;
-
-    cuerpo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-gray-500 font-mono text-xs">Cargando registros...</td></tr>`;
-
-    try {
-        if (!window.supabaseClient) return;
-        const { data, error } = await window.supabaseClient
-            .from('insumo_precios_historicos')
-            .select('*')
-            .eq('proveedor_id', proveedorId)
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        historicoProveedorActualData = data || [];
-        renderizarTablaHistoricoProveedorPaginada();
-    } catch (e) {
-        console.warn("Error al cargar histórico completo del proveedor:", e);
-        cuerpo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-red-400 text-xs">Error al conectar con el servidor.</td></tr>`;
-    }
-}
-
-export function renderizarTablaHistoricoProveedorPaginada() {
-    const cuerpo = document.getElementById('tabla-historico-proveedor-completo');
-    const infoPaginador = document.getElementById('paginador-info-proveedor');
-    if (!cuerpo) return;
-
-    const query = (document.getElementById('buscador-historico-proveedor')?.value || '').toLowerCase();
-    
-    const filtrados = historicoProveedorActualData.filter(h => {
-        const fechaStr = h.created_at ? new Date(h.created_at).toLocaleString('es-CL').toLowerCase() : '';
-        const precioStr = h.precio_compra ? h.precio_compra.toString() : '';
-        const insObj = listaInsumosGlobal.find(i => i.id === h.insumo_id);
-        const nombreInsumo = insObj ? insObj.nombre.toLowerCase() : '';
-        return fechaStr.includes(query) || precioStr.includes(query) || nombreInsumo.includes(query);
-    });
-
-    const totalRegistros = filtrados.length;
-    const totalPaginas = Math.ceil(totalRegistros / registrosPorPaginaProv) || 1;
-
-    if (paginaActualHistoricoProv > totalPaginas) paginaActualHistoricoProv = totalPaginas;
-    if (paginaActualHistoricoProv < 1) paginaActualHistoricoProv = 1;
-
-    const inicio = (paginaActualHistoricoProv - 1) * registrosPorPaginaProv;
-    const fin = inicio + registrosPorPaginaProv;
-    const registrosPagina = filtrados.slice(inicio, fin);
-
-    if (infoPaginador) {
-        infoPaginador.innerText = `Mostrando página ${paginaActualHistoricoProv} de ${totalPaginas} (${totalRegistros} registros totales)`;
-    }
-
-    if (registrosPagina.length === 0) {
-        cuerpo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-gray-500 text-xs">No se encontraron registros históricos.</td></tr>`;
-        return;
-    }
-
-    cuerpo.innerHTML = registrosPagina.map(h => {
-        const fechaFormateada = h.created_at ? new Date(h.created_at).toLocaleString('es-CL', { 
-            dateStyle: 'medium', 
-            timeStyle: 'short' 
-        }) : 'Fecha no registrada';
-
-        const insObj = listaInsumosGlobal.find(i => i.id === h.insumo_id);
-        const nombreInsumo = insObj ? insObj.nombre : `Insumo #${h.insumo_id}`;
-
-        return `
-            <tr class="hover:bg-gray-800/40 transition border-b border-gray-800/40 text-sm">
-                <td class="py-3 px-4 font-mono text-gray-300 text-xs">${fechaFormateada}</td>
-                <td class="py-3 px-3 font-medium text-white text-xs">${nombreInsumo}</td>
-                <td class="py-3 px-3 text-right font-mono text-emerald-400 font-bold">$${window.formatearMonedaLocal ? window.formatearMonedaLocal(h.precio_compra, 0) : h.precio_compra}</td>
-            </tr>
-        `;
-    }).join('');
-}
-
-export function filtrarHistoricoProveedorLocal() {
-    paginaActualHistoricoProv = 1;
-    renderizarTablaHistoricoProveedorPaginada();
-}
-
-export function cambiarPaginaHistoricoProveedor(delta) {
-    paginaActualHistoricoProv += delta;
-    renderizarTablaHistoricoProveedorPaginada();
-}
-
-export function prepararCreacionProveedor() {
-    proveedorSeleccionadoId = null;
-    cambiarVistaProveedores('formulario');
-
-    const tituloForm = document.getElementById('form-proveedor-titulo');
-    if (tituloForm) tituloForm.innerText = "Nuevo Proveedor";
-
-    const formEl = document.getElementById('form-proveedor');
-    if (formEl) formEl.reset();
-
-    const inputId = document.getElementById('proveedor-id');
-    if (inputId) inputId.value = '';
-
-    insumosProveedorActual.clear();
-    renderizarListadosEdicionProveedor();
-}
-
-export function prepararEdicionProveedor(id) {
-    proveedorSeleccionadoId = id;
-    const prov = listaProveedoresLocal.find(x => x.id == id);
-    if (!prov) return;
-
-    cambiarVistaProveedores('formulario');
-
-    const tituloForm = document.getElementById('form-proveedor-titulo');
-    if (tituloForm) tituloForm.innerText = "Editar Proveedor: " + (prov.nombre || '');
-
-    const inputId = document.getElementById('proveedor-id');
-    if (inputId) inputId.value = prov.id || '';
-
-    const inputNombre = document.getElementById('proveedor-nombre');
-    if (inputNombre) inputNombre.value = prov.nombre || '';
-
-    const inputContacto = document.getElementById('proveedor-contacto');
-    if (inputContacto) inputContacto.value = prov.contacto || '';
-
-    const inputTelefono = document.getElementById('proveedor-telefono');
-    if (inputTelefono) inputTelefono.value = prov.telefono || '';
-
-    const inputEmail = document.getElementById('proveedor-email');
-    if (inputEmail) inputEmail.value = prov.email || '';
-
-    const inputObs = document.getElementById('proveedor-observaciones');
-    if (inputObs) inputObs.value = prov.observaciones || '';
-
-    insumosProveedorActual.clear();
-    if (prov.insumos && Array.isArray(prov.insumos)) {
-        prov.insumos.forEach(ins => {
-            insumosProveedorActual.set(ins.insumo_id, ins.precio_oferta);
-        });
-    }
-
-    renderizarListadosEdicionProveedor();
-}
-
-export function renderizarListadosEdicionProveedor() {
-    const contenedorAsociados = document.getElementById('lista-insumos-asociados');
-    const contenedorDisponibles = document.getElementById('lista-insumos-disponibles');
-    if (!contenedorAsociados || !contenedorDisponibles) return;
-
-    const insumosAsociadosArr = listaInsumosGlobal.filter(ins => insumosProveedorActual.has(ins.id));
-    const insumosDisponiblesArr = listaInsumosGlobal.filter(ins => !insumosProveedorActual.has(ins.id));
-
-    if (insumosAsociadosArr.length === 0) {
-        contenedorAsociados.innerHTML = `<div class="text-xs text-gray-500 py-3 text-center">No hay insumos asignados a este proveedor. Agrega algunos desde el listado derecho.</div>`;
-    } else {
-        contenedorAsociados.innerHTML = insumosAsociadosArr.map(ins => {
-            const precioActual = insumosProveedorActual.get(ins.id);
-            const precioFormateado = precioActual !== null && precioActual !== undefined ? precioActual : '';
-
-            return `
-                <div class="flex items-center justify-between p-3 rounded-xl bg-gray-950 border border-gray-800 gap-3">
-                    <div class="flex-1">
-                        <span class="text-xs text-white font-semibold block">${ins.nombre}</span>
-                        <span class="text-[10px] text-gray-400 font-mono">Unidad: ${ins.unidad_medida}</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[10px] text-gray-400 font-mono">Oferta $:</span>
-                            <input type="number" step="0.01" id="input-oferta-${ins.id}" value="${precioFormateado}" oninput="window.actualizarPrecioOferta(${ins.id}, this.value)" placeholder="0" class="w-28 bg-gray-900 border border-gray-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono">
-                        </div>
-                        <button type="button" onclick="window.removerInsumoDeProveedor(${ins.id})" class="text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 px-2.5 py-1.5 rounded-lg border border-red-900/50 transition font-bold" title="Quitar insumo">✕</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    if (insumosDisponiblesArr.length === 0) {
-        contenedorDisponibles.innerHTML = `<div class="text-xs text-gray-500 py-3 text-center">Todos los insumos globales ya están asociados a este proveedor.</div>`;
-    } else {
-        contenedorDisponibles.innerHTML = insumosDisponiblesArr.map(ins => `
-            <div class="flex items-center justify-between p-2.5 rounded-xl bg-gray-950/60 border border-gray-800/60 gap-3">
-                <div>
-                    <span class="text-xs text-gray-300 font-medium block">${ins.nombre}</span>
-                    <span class="text-[10px] text-gray-500 font-mono">Unidad: ${ins.unidad_medida}</span>
-                </div>
-                <button type="button" onclick="window.agregarInsumoAProveedor(${ins.id})" class="text-xs bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 px-3 py-1.5 rounded-lg border border-emerald-500/30 transition font-bold flex items-center gap-1">
-                    <span>+ Agregar</span>
-                </button>
-            </div>
-        `).join('');
-    }
-}
-
-export function agregarInsumoAProveedor(insumoId) {
-    insumosProveedorActual.set(insumoId, 0);
-    renderizarListadosEdicionProveedor();
-}
-
-export function removerInsumoDeProveedor(insumoId) {
-    insumosProveedorActual.delete(insumoId);
-    renderizarListadosEdicionProveedor();
-}
-
-export function actualizarPrecioOferta(insumoId, valor) {
-    const num = valor === '' ? null : parseFloat(valor);
-    insumosProveedorActual.set(insumoId, isNaN(num) ? null : num);
-}
-
-export async function guardarProveedor(e) {
-    e.preventDefault();
-    if (!window.supabaseClient) return;
-
-    const idInput = document.getElementById('proveedor-id').value;
-    const esEdicion = idInput !== '';
-
-    const proveedorPayload = {
-        nombre: document.getElementById('proveedor-nombre').value,
-        contacto: document.getElementById('proveedor-contacto').value,
-        telefono: document.getElementById('proveedor-telefono').value,
-        email: document.getElementById('proveedor-email').value,
-        observaciones: document.getElementById('proveedor-observaciones').value
     };
 
-    try {
-        let proveedorIdReal = idInput;
+    const cambiarVista = (target) => {
+        Object.values(dom.vistas).forEach(v => v.classList.add('hidden'));
+        dom.vistas[target].classList.remove('hidden');
+    };
 
-        if (esEdicion) {
-            const { error: errUpd } = await window.supabaseClient
-                .from('proveedores')
-                .update(proveedorPayload)
-                .eq('id', idInput);
-            if (errUpd) throw errUpd;
-        } else {
-            const { data: dataProv, error: errProv } = await window.supabaseClient
-                .from('proveedores')
-                .insert([proveedorPayload])
-                .select();
-            if (errProv) throw errProv;
-            if (dataProv && dataProv.length > 0) {
-                proveedorIdReal = dataProv[0].id;
-            }
-        }
+    const cargarMaestros = async () => {
+        try {
+            const [pData, iData, relData] = await Promise.all([
+                supabase.from('proveedores').select('*').order('nombre'),
+                supabase.from('insumos').select('id, nombre, unidad_medida, formato_envase, precio_compra, es_artesanal').order('nombre'),
+                supabase.from('insumo_proveedores').select('*')
+            ]);
 
-        let relacionesAnterioresMap = new Map();
-        if (esEdicion) {
-            const { data: relsViejas } = await window.supabaseClient
-                .from('insumo_proveedores')
-                .select('*')
-                .eq('proveedor_id', proveedorIdReal);
+            state.insumosGlobales = (iData.data || []).filter(i => !i.es_artesanal); // No mostramos artesanales a proveedores externos
             
-            if (relsViejas) {
-                relsViejas.forEach(r => relacionesAnterioresMap.set(r.insumo_id, r.precio_oferta));
-            }
+            // Unimos los proveedores con sus insumos asignados
+            state.proveedores = (pData.data || []).map(prov => {
+                const misInsumos = (relData.data || []).filter(r => r.proveedor_id === prov.id);
+                return { ...prov, insumos: misInsumos };
+            });
 
-            await window.supabaseClient
-                .from('insumo_proveedores')
-                .delete()
-                .eq('proveedor_id', proveedorIdReal);
+            renderizarTablaPrincipal();
+        } catch (error) {
+            console.error("Error al cargar maestros:", error);
+        }
+    };
+
+    // --- 1. TABLA PRINCIPAL ---
+    const renderizarTablaPrincipal = () => {
+        const { search, page, limit, sortCol, sortAsc } = state.tableParams;
+        let filtrados = state.proveedores.filter(p => {
+            const n = p.nombre ? p.nombre.toLowerCase() : '';
+            const c = p.contacto ? p.contacto.toLowerCase() : '';
+            const e = p.email ? p.email.toLowerCase() : '';
+            return n.includes(search) || c.includes(search) || e.includes(search);
+        });
+
+        filtrados.sort((a, b) => {
+            let valA = a[sortCol] || ''; let valB = b[sortCol] || '';
+            if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+            return sortAsc ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+        });
+
+        const total = filtrados.length;
+        const totalPages = Math.ceil(total / limit) || 1;
+        const currentPage = Math.min(page, totalPages);
+        const start = (currentPage - 1) * limit;
+        const paginados = filtrados.slice(start, start + limit);
+
+        dom.tabla.body.innerHTML = '';
+        if (paginados.length === 0) {
+            dom.tabla.body.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500 mono-font">No se encontraron proveedores.</td></tr>`;
+        } else {
+            paginados.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-800/40 cursor-pointer transition border-b border-gray-800/60';
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-bold text-white group-hover:text-emerald-400">${p.nombre}</td>
+                    <td class="py-3 px-4 text-xs text-gray-300">${p.contacto || '-'}</td>
+                    <td class="py-3 px-4 text-xs font-mono text-gray-400">${p.telefono || '-'}</td>
+                    <td class="py-3 px-4 text-center text-xs font-mono text-emerald-400 font-bold">${p.insumos.length} insumos</td>
+                    <td class="py-3 px-4 text-center"><button class="text-xs bg-gray-800 hover:bg-emerald-950 text-gray-300 px-2.5 py-1 rounded border border-gray-700 transition">Ver</button></td>
+                `;
+                tr.addEventListener('click', () => abrirDetalle(p));
+                dom.tabla.body.appendChild(tr);
+            });
+        }
+        dom.tabla.infoPagi.textContent = `Mostrando ${total === 0 ? 0 : start + 1} - ${Math.min(start + limit, total)} de ${total}`;
+        dom.tabla.numPagi.textContent = `Pág ${currentPage} de ${totalPages}`;
+        dom.tabla.btnPrev.disabled = currentPage === 1;
+        dom.tabla.btnNext.disabled = currentPage === totalPages;
+    };
+
+    // --- 2. DETALLE ---
+    const abrirDetalle = async (prov) => {
+        state.provActivo = prov;
+        dom.detalle.nombre.textContent = prov.nombre;
+        dom.detalle.contacto.innerHTML = `👤 ${prov.contacto || 'Sin definir'}`;
+        dom.detalle.telefono.innerHTML = `📱 ${prov.telefono || 'Sin definir'}`;
+        dom.detalle.email.innerHTML = `✉️ ${prov.email || 'Sin definir'}`;
+
+        // Llenar Catálogo
+        dom.detalle.tablaCatalogo.innerHTML = '';
+        if (prov.insumos.length === 0) {
+            dom.detalle.tablaCatalogo.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-gray-500 font-mono text-xs">Sin insumos asignados.</td></tr>`;
+        } else {
+            prov.insumos.forEach(rel => {
+                const ins = state.insumosGlobales.find(i => i.id === rel.insumo_id);
+                if (!ins) return;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-2 font-medium text-gray-200 text-xs">${ins.nombre}</td>
+                    <td class="py-2 text-center text-xs text-gray-400 font-mono">${ins.formato_envase} ${ins.unidad_medida}</td>
+                    <td class="py-2 text-right font-mono text-emerald-400 font-bold text-xs">$${window.formatearMonedaLocal(rel.precio_oferta, 0)}</td>
+                `;
+                dom.detalle.tablaCatalogo.appendChild(tr);
+            });
         }
 
-        let nuevasRelaciones = [];
-        let registrosHistoricos = [];
+        // Llenar Histórico de este proveedor
+        const { data: hist } = await supabase.from('insumo_precios_historicos').select('*').eq('proveedor_id', prov.id).order('created_at', { ascending: false });
+        dom.detalle.tablaHistorico.innerHTML = '';
+        if (!hist || hist.length === 0) {
+            dom.detalle.tablaHistorico.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-gray-500 font-mono text-xs">Sin cambios registrados.</td></tr>`;
+        } else {
+            hist.forEach(h => {
+                const ins = state.insumosGlobales.find(i => i.id === h.insumo_id);
+                const fecha = new Date(h.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' });
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-2 text-gray-400 text-xs">${fecha}</td>
+                    <td class="py-2 text-gray-200 text-xs">${ins ? ins.nombre : 'Insumo Eliminado'}</td>
+                    <td class="py-2 text-right font-mono text-pink-400 text-xs">$${window.formatearMonedaLocal(h.precio_compra, 0)}</td>
+                `;
+                dom.detalle.tablaHistorico.appendChild(tr);
+            });
+        }
+        cambiarVista('detalle');
+    };
 
-        if (insumosProveedorActual.size > 0) {
-            insumosProveedorActual.forEach((precioOferta, insumoId) => {
-                const precioOfertaVal = precioOferta !== null && !isNaN(precioOferta) ? precioOferta : null;
+    // --- 3. FORMULARIO Y SELECTOR DUAL ---
+    const abrirFormulario = (editando = false) => {
+        if (editando && state.provActivo) {
+            const p = state.provActivo;
+            dom.form.titulo.textContent = "Editar Proveedor";
+            dom.form.id.value = p.id;
+            dom.form.nombre.value = p.nombre;
+            dom.form.contacto.value = p.contacto || '';
+            dom.form.telefono.value = p.telefono || '';
+            dom.form.email.value = p.email || '';
+            dom.form.obs.value = p.observaciones || '';
+            
+            // Clonamos los insumos asociados al array temporal
+            state.insumosTempo = p.insumos.map(r => ({ insumo_id: r.insumo_id, precio_oferta: r.precio_oferta || 0 }));
+        } else {
+            dom.form.titulo.textContent = "Nuevo Proveedor";
+            dom.form.elemento.reset();
+            dom.form.id.value = '';
+            state.insumosTempo = [];
+        }
+        renderizarDualInsumos();
+        cambiarVista('formulario');
+    };
 
-                nuevasRelaciones.push({
-                    insumo_id: parseInt(insumoId),
-                    proveedor_id: parseInt(proveedorIdReal),
-                    precio_oferta: precioOfertaVal
-                });
+    const renderizarDualInsumos = () => {
+        const query = state.filterInsumoDisp;
+        const seleccionadosIds = state.insumosTempo.map(i => i.insumo_id);
 
-                const precioAnterior = relacionesAnterioresMap.has(parseInt(insumoId)) ? relacionesAnterioresMap.get(parseInt(insumoId)) : -1;
-                
-                if (precioOfertaVal !== null && precioOfertaVal !== precioAnterior) {
-                    const insObj = listaInsumosGlobal.find(i => i.id === parseInt(insumoId));
+        const disponibles = state.insumosGlobales.filter(ins => !seleccionadosIds.includes(ins.id) && ins.nombre.toLowerCase().includes(query));
+
+        dom.form.listaDisp.innerHTML = '';
+        if (disponibles.length === 0) dom.form.listaDisp.innerHTML = `<div class="text-xs text-gray-600 text-center py-4">No hay resultados.</div>`;
+        
+        disponibles.forEach(ins => {
+            const div = document.createElement('div');
+            div.className = 'flex justify-between items-center bg-gray-900 p-2 rounded border border-gray-800 hover:border-emerald-500/30 transition';
+            div.innerHTML = `
+                <div><p class="text-xs text-gray-200 font-medium">${ins.nombre}</p><p class="text-[10px] text-gray-500 font-mono">Ref: $${window.formatearMonedaLocal(ins.precio_compra, 0)}</p></div>
+                <button type="button" class="btn-add text-emerald-500 hover:text-white bg-emerald-950/40 px-2 py-1 rounded font-bold">+</button>`;
+            div.querySelector('.btn-add').addEventListener('click', () => {
+                state.insumosTempo.push({ insumo_id: ins.id, precio_oferta: ins.precio_compra }); // Por defecto el precio global
+                renderizarDualInsumos();
+            });
+            dom.form.listaDisp.appendChild(div);
+        });
+
+        dom.form.contAsig.textContent = state.insumosTempo.length;
+        dom.form.listaAsig.innerHTML = '';
+        if (state.insumosTempo.length === 0) dom.form.listaAsig.innerHTML = `<div class="text-xs text-gray-600 text-center py-10">Sin insumos distribuidos.</div>`;
+        
+        state.insumosTempo.forEach((item, index) => {
+            const ins = state.insumosGlobales.find(x => x.id === item.insumo_id);
+            if (!ins) return;
+            const div = document.createElement('div');
+            div.className = 'flex items-center justify-between gap-2 bg-emerald-950/20 p-2 rounded border border-emerald-900/30';
+            div.innerHTML = `
+                <div class="flex-1 min-w-0"><p class="text-xs text-emerald-400 font-bold truncate">${ins.nombre}</p></div>
+                <div class="flex items-center gap-1 shrink-0">
+                    <span class="text-[10px] text-gray-400 font-mono">$</span>
+                    <input type="number" step="1" value="${item.precio_oferta}" class="inp-precio w-20 bg-gray-900 border border-gray-800 text-right rounded px-1.5 py-1 text-xs text-white font-mono outline-none">
+                </div>
+                <button type="button" class="btn-del text-red-400 hover:bg-red-950 px-1.5 py-0.5 rounded font-bold">✕</button>
+            `;
+            div.querySelector('.inp-precio').addEventListener('input', (e) => item.precio_oferta = parseFloat(e.target.value) || 0);
+            div.querySelector('.btn-del').addEventListener('click', () => { state.insumosTempo.splice(index, 1); renderizarDualInsumos(); });
+            dom.form.listaAsig.appendChild(div);
+        });
+    };
+
+    // --- 4. GUARDAR ---
+    dom.form.elemento.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const idProv = dom.form.id.value;
+        const payload = {
+            nombre: dom.form.nombre.value.trim(),
+            contacto: dom.form.contacto.value.trim(),
+            telefono: dom.form.telefono.value.trim(),
+            email: dom.form.email.value.trim(),
+            observaciones: dom.form.obs.value.trim()
+        };
+
+        try {
+            let provIdReal;
+            if (idProv) {
+                const { data, error } = await supabase.from('proveedores').update(payload).eq('id', idProv).select().single();
+                if (error) throw error; provIdReal = data.id;
+            } else {
+                const { data, error } = await supabase.from('proveedores').insert([payload]).select().single();
+                if (error) throw error; provIdReal = data.id;
+            }
+
+            // 1. Obtener relaciones antiguas para saber si cambió el precio (para el histórico)
+            const { data: relsAnteriores } = await supabase.from('insumo_proveedores').select('*').eq('proveedor_id', provIdReal);
+            const mapaViejos = new Map((relsAnteriores || []).map(r => [r.insumo_id, r.precio_oferta]));
+
+            // 2. Limpiar e Insertar nuevo catálogo de ofertas
+            await supabase.from('insumo_proveedores').delete().eq('proveedor_id', provIdReal);
+            if (state.insumosTempo.length > 0) {
+                const arrInsert = state.insumosTempo.map(i => ({ proveedor_id: provIdReal, insumo_id: i.insumo_id, precio_oferta: i.precio_oferta }));
+                await supabase.from('insumo_proveedores').insert(arrInsert);
+            }
+
+            // 3. Auditoría de Histórico
+            let registrosHist = [];
+            state.insumosTempo.forEach(i => {
+                const viejoPrecio = mapaViejos.get(i.insumo_id);
+                if (viejoPrecio !== i.precio_oferta) {
+                    const insObj = state.insumosGlobales.find(x => x.id === i.insumo_id);
+                    const formato = insObj ? parseFloat(insObj.formato_envase) || 1 : 1;
+                    const rend = insObj ? parseFloat(insObj.rendimiento_neto_porcentaje) || 1 : 1;
+                    const nuevoCosto = (i.precio_oferta / formato) / rend;
                     
-                    const formatoEnvase = insObj && insObj.formato_envase && parseFloat(insObj.formato_envase) > 0 ? parseFloat(insObj.formato_envase) : 1;
-                    const rendimientoBruto = insObj && insObj.rendimiento_neto_porcentaje !== null && insObj.rendimiento_neto_porcentaje !== undefined ? parseFloat(insObj.rendimiento_neto_porcentaje) : 1;
-                    const rendimiento = rendimientoBruto > 1 ? rendimientoBruto / 100 : rendimientoBruto;
-
-                    const costoUnitarioCalculado = (precioOfertaVal / formatoEnvase) / (rendimiento > 0 ? rendimiento : 1);
-
-                    registrosHistoricos.push({
-                        insumo_id: parseInt(insumoId),
-                        proveedor_id: parseInt(proveedorIdReal),
-                        precio_compra: precioOfertaVal,
-                        costo_unitario: costoUnitarioCalculado
-                    });
+                    registrosHist.push({ insumo_id: i.insumo_id, proveedor_id: provIdReal, precio_compra: i.precio_oferta, costo_unitario: nuevoCosto });
                 }
             });
 
-            const { error: errRel } = await window.supabaseClient
-                .from('insumo_proveedores')
-                .insert(nuevasRelaciones);
+            if (registrosHist.length > 0) {
+                await supabase.from('insumo_precios_historicos').insert(registrosHist);
+            }
 
-            if (errRel) console.warn("Aviso al guardar insumo_proveedores:", errRel);
+            await cargarMaestros();
+            cambiarVista('listado');
+        } catch (error) {
+            console.error("Error guardando proveedor:", error);
+            alert("Error al guardar.");
         }
+    });
 
-        if (registrosHistoricos.length > 0) {
-            await window.supabaseClient
-                .from('insumo_precios_historicos')
-                .insert(registrosHistoricos);
+    // --- 5. EVENTOS ---
+    // Pestañas
+    document.querySelectorAll('.tab-prov-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.tab-prov-btn').forEach(b => { b.classList.remove('border-emerald-500', 'text-emerald-400'); b.classList.add('border-transparent', 'text-gray-400'); });
+            document.querySelectorAll('.tab-prov-content').forEach(c => c.classList.add('hidden'));
+            e.currentTarget.classList.add('border-emerald-500', 'text-emerald-400');
+            if (e.currentTarget.id === 'tab-btn-catalogo') document.getElementById('tab-content-catalogo').classList.remove('hidden');
+            if (e.currentTarget.id === 'tab-btn-hist-prov') document.getElementById('tab-content-hist-prov').classList.remove('hidden');
+        });
+    });
+
+    dom.tabla.buscador.addEventListener('input', (e) => { state.tableParams.search = e.target.value.toLowerCase(); state.tableParams.page = 1; renderizarTablaPrincipal(); });
+    dom.tabla.limite.addEventListener('change', (e) => { state.tableParams.limit = parseInt(e.target.value); state.tableParams.page = 1; renderizarTablaPrincipal(); });
+    dom.tabla.btnPrev.addEventListener('click', () => { if (state.tableParams.page > 1) { state.tableParams.page--; renderizarTablaPrincipal(); } });
+    dom.tabla.btnNext.addEventListener('click', () => { state.tableParams.page++; renderizarTablaPrincipal(); });
+    dom.tabla.thNombre.addEventListener('click', () => { state.tableParams.sortAsc = !state.tableParams.sortAsc; renderizarTablaPrincipal(); });
+    dom.form.buscarDisp.addEventListener('input', (e) => { state.filterInsumoDisp = e.target.value.toLowerCase(); renderizarDualInsumos(); });
+
+    dom.botones.nuevo.addEventListener('click', () => abrirFormulario(false));
+    dom.botones.volver.addEventListener('click', () => cambiarVista('listado'));
+    dom.botones.editar.addEventListener('click', () => abrirFormulario(true));
+    dom.botones.eliminar.addEventListener('click', async () => {
+        if (confirm(`¿Eliminar proveedor "${state.provActivo.nombre}"?`)) {
+            await supabase.from('proveedores').delete().eq('id', state.provActivo.id);
+            await cargarMaestros();
+            cambiarVista('listado');
         }
+    });
 
-        await obtenerProveedoresSupabase();
-        verDetalleProveedor(proveedorIdReal);
-    } catch (err) {
-        console.error("Error al procesar proveedor:", err);
-        alert("Ocurrió un error al guardar el proveedor en Supabase. Revisa la consola.");
-    }
+    const cerrarForm = () => state.provActivo ? cambiarVista('detalle') : cambiarVista('listado');
+    dom.botones.cancelarTop.addEventListener('click', cerrarForm);
+    dom.botones.cancelarMid.addEventListener('click', cerrarForm);
+    dom.botones.cancelarBot.addEventListener('click', cerrarForm);
+
+    await cargarMaestros();
 }
-
-export async function eliminarProveedor(id, nombre) {
-    if (!confirm(`¿Estás seguro de eliminar el proveedor "${nombre}"?`)) return;
-
-    try {
-        if (!window.supabaseClient) return;
-        const { error } = await window.supabaseClient
-            .from('proveedores')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-        await obtenerProveedoresSupabase();
-        cambiarVistaProveedores('listado');
-    } catch (err) {
-        console.error("Error al eliminar proveedor:", err);
-        alert("No se pudo eliminar el proveedor.");
-    }
-}
-
-export function filtrarProveedores() {
-    const query = document.getElementById('buscador-proveedores').value.toLowerCase();
-    const filtrados = listaProveedoresLocal.filter(p => p.nombre.toLowerCase().includes(query) || (p.contacto && p.contacto.toLowerCase().includes(query)));
-    renderizarTablaProveedores(filtrados);
-}
-
-// Vinculación segura de seguridad para que el enrutador global y HTML las reconozcan sin excepciones
-window.prepararEdicionProveedor = prepararEdicionProveedor;
-window.prepararCreacionProveedor = prepararCreacionProveedor;
-window.eliminarProveedor = eliminarProveedor;
-window.verDetalleProveedor = verDetalleProveedor;
-window.cambiarVistaProveedores = cambiarVistaProveedores;
-window.abrirVistaHistoricoProveedor = abrirVistaHistoricoProveedor;
-window.volverDesdeHistoricoProveedor = volverDesdeHistoricoProveedor;
-window.filtrarProveedores = filtrarProveedores;
-window.filtrarHistoricoProveedorLocal = filtrarHistoricoProveedorLocal;
-window.cambiarPaginaHistoricoProveedor = cambiarPaginaHistoricoProveedor;
-window.agregarInsumoAProveedor = agregarInsumoAProveedor;
-window.removerInsumoDeProveedor = removerInsumoDeProveedor;
-window.actualizarPrecioOferta = actualizarPrecioOferta;
-window.guardarProveedor = guardarProveedor;
-
-export default initProveedores;

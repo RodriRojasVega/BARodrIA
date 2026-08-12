@@ -1,159 +1,195 @@
-<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
-
-    <div id="vista-proveedores-listado" class="space-y-6">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-900 p-6 rounded-2xl border border-gray-800 shadow-xl">
+<div class="space-y-6 fade-in h-full flex flex-col">
+    
+    <div id="proveedores-listado" class="space-y-6 flex-1">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-900 border border-gray-800 p-6 rounded-xl">
             <div>
-                <span class="text-xs uppercase font-bold tracking-wider text-emerald-400 font-mono">Gestión de Distribuidores</span>
-                <h1 class="text-2xl font-bold text-white tracking-wide">Directorio de Proveedores y Ofertas</h1>
-                <p class="text-xs text-gray-400 mt-1">Administra tus distribuidores, catálogos de productos y tarifas de compra.</p>
+                <h2 class="text-2xl font-bold text-gray-100 tracking-wide">Directorio de Proveedores</h2>
+                <p class="text-sm text-gray-400 mt-1">Gestión de distribuidores, catálogos de ofertas y auditoría de precios.</p>
             </div>
-            <button type="button" onclick="window.prepararCreacionProveedor()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2">
-                + Nuevo Proveedor
+            <button id="btn-nuevo-prov" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold tracking-wide px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2">
+                <span>+</span> Nuevo Proveedor
             </button>
         </div>
 
-        <div class="relative">
-            <input type="text" id="buscador-proveedores" oninput="window.filtrarProveedores()" placeholder="Buscar proveedor por nombre, contacto o email..." 
-                class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+        <div class="flex flex-col sm:flex-row gap-4 justify-between items-center bg-gray-900 border border-gray-800 p-4 rounded-xl">
+            <div class="relative flex-1 w-full">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">🔍</span>
+                <input type="text" id="buscador-prov" placeholder="Buscar proveedor, contacto o email..." 
+                    class="w-full bg-gray-950 border border-gray-800 rounded-lg pl-11 pr-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+            </div>
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <span class="text-xs text-gray-400 font-mono">Mostrar:</span>
+                <select id="paginado-limite-prov" class="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-100 outline-none mono-font cursor-pointer">
+                    <option value="10">10 por pág</option>
+                    <option value="25" selected>25 por pág</option>
+                    <option value="50">50 por pág</option>
+                </select>
+            </div>
         </div>
 
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl shadow-xl overflow-hidden">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-xl">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-950/80 border-b border-gray-800 text-[10px] uppercase font-mono tracking-wider text-gray-400">
-                            <th class="py-3.5 px-4 font-semibold">Proveedor</th>
-                            <th class="py-3.5 px-3 font-semibold">Contacto</th>
-                            <th class="py-3.5 px-3 font-semibold">Teléfono</th>
-                            <th class="py-3.5 px-3 font-semibold">Email</th>
-                            <th class="py-3.5 px-3 font-semibold text-center">Catálogo</th>
+                <table class="w-full text-left text-sm text-gray-300">
+                    <thead class="bg-gray-950 text-xs uppercase font-semibold text-gray-400 border-b border-gray-800 font-mono">
+                        <tr>
+                            <th class="py-3.5 px-4 cursor-pointer hover:text-emerald-400 transition" id="th-nombre-prov">Nombre ⇳</th>
+                            <th class="py-3.5 px-4">Contacto</th>
+                            <th class="py-3.5 px-4">Teléfono</th>
+                            <th class="py-3.5 px-4 text-center">Insumos Asociados</th>
+                            <th class="py-3.5 px-4 text-center">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-proveedores-cuerpo" class="divide-y divide-gray-800/50">
+                    <tbody id="tabla-prov-body" class="divide-y divide-gray-800/60 font-sans">
+                        <tr><td colspan="5" class="text-center py-12 text-gray-500 mono-font animate-pulse">Cargando proveedores...</td></tr>
                     </tbody>
                 </table>
             </div>
-        </div>
-    </div>
-
-    <div id="vista-proveedores-detalle" class="hidden space-y-6">
-        <div class="flex items-center justify-between bg-gray-900 p-4 rounded-xl border border-gray-800">
-            <button type="button" onclick="window.cambiarVistaProveedores('listado')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold px-4 py-2 rounded-xl transition flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                Volver al listado
-            </button>
-            <div id="detalle-proveedor-acciones" class="flex items-center gap-2">
-            </div>
-        </div>
-
-        <div id="panel-proveedor-contenido" class="space-y-6">
-        </div>
-    </div>
-
-    <div id="vista-proveedores-historico" class="hidden space-y-6">
-        <div class="flex items-center justify-between bg-gray-900 p-4 rounded-xl border border-gray-800">
-            <button type="button" onclick="window.volverDesdeHistoricoProveedor()" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold px-4 py-2 rounded-xl transition flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                Volver al detalle del proveedor
-            </button>
-            <span id="titulo-historico-proveedor" class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Histórico de Auditoría</span>
-        </div>
-
-        <div class="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-xl flex items-center gap-4">
-            <div class="relative flex-1">
-                <input type="text" id="buscador-historico-proveedor" oninput="window.filtrarHistoricoProveedorLocal()" placeholder="Buscar por fecha, insumo o precio..." 
-                    class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
-            </div>
-        </div>
-
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-950 border-b border-gray-800 text-[10px] uppercase font-mono tracking-wider text-gray-400">
-                            <th class="py-3 px-4 font-semibold">Fecha y Hora</th>
-                            <th class="py-3 px-3 font-semibold">Insumo</th>
-                            <th class="py-3 px-3 font-semibold text-right">Precio Registrado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-historico-proveedor-completo" class="divide-y divide-gray-800/50 text-sm">
-                        <tr><td colspan="3" class="text-center py-6 text-gray-500 text-xs">Cargando registros...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="flex items-center justify-between bg-gray-900 border border-gray-800 px-6 py-4 rounded-xl">
-            <span id="paginador-info-proveedor" class="text-xs font-mono text-gray-400">Mostrando página 1</span>
-            <div class="flex gap-2">
-                <button type="button" onclick="window.cambiarPaginaHistoricoProveedor(-1)" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-lg transition font-mono">Anterior</button>
-                <button type="button" onclick="window.cambiarPaginaHistoricoProveedor(1)" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-lg transition font-mono">Siguiente</button>
+            <div class="p-4 bg-gray-950 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gray-400 font-mono" id="footer-paginado-prov">
+                <span id="info-paginacion-prov">Mostrando 0 - 0 de 0</span>
+                <div class="flex items-center gap-2">
+                    <button id="btn-pagi-prev-prov" class="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded hover:bg-gray-800 text-gray-300 disabled:opacity-30">← Anterior</button>
+                    <span id="num-pagina-actual-prov" class="px-2 font-bold text-emerald-400">Pág 1</span>
+                    <button id="btn-pagi-next-prov" class="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded hover:bg-gray-800 text-gray-300 disabled:opacity-30">Siguiente →</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="vista-proveedores-formulario" class="hidden space-y-6">
-        <div class="flex items-center justify-between bg-gray-900 p-4 rounded-xl border border-gray-800 shadow-xl">
-            <button type="button" onclick="window.cambiarVistaProveedores('listado')" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold px-4 py-2 rounded-xl transition flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                Cancelar
-            </button>
-            <span id="form-proveedor-titulo" class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Nuevo Proveedor</span>
+    <div id="proveedores-detalle" class="hidden space-y-6 flex-1">
+        <div class="bg-gray-900 border border-gray-800 p-6 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <button type="button" id="btn-volver-listado-prov" class="text-xs font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1 transition-colors">
+                    ← Volver al Directorio
+                </button>
+                <div class="flex items-center gap-3">
+                    <h2 id="det-prov-nombre" class="text-3xl font-bold text-gray-100 tracking-wide">Nombre Proveedor</h2>
+                    <span class="bg-emerald-950 text-emerald-400 border border-emerald-900/30 text-[10px] px-2.5 py-1 rounded font-bold mono-font uppercase">Distribuidor</span>
+                </div>
+                <div class="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                    <span id="det-prov-contacto" class="flex items-center gap-1">👤 Contacto</span>
+                    <span class="text-gray-600">|</span>
+                    <span id="det-prov-telefono" class="flex items-center gap-1 font-mono">📱 Teléfono</span>
+                    <span class="text-gray-600">|</span>
+                    <span id="det-prov-email" class="flex items-center gap-1">✉️ Email</span>
+                </div>
+            </div>
+            <div class="flex gap-3 shrink-0">
+                <button id="btn-editar-prov-act" class="bg-gray-800 hover:bg-gray-700 text-gray-100 border border-gray-700 text-sm font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+                    <span>✏️</span> Editar
+                </button>
+                <button id="btn-eliminar-prov-act" class="bg-red-950/50 hover:bg-red-900 border border-red-900/50 text-red-400 text-sm font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+                    <span>🗑️</span> Eliminar
+                </button>
+            </div>
         </div>
 
-        <form id="form-proveedor" onsubmit="window.guardarProveedor(event)" class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-6">
-            <input type="hidden" id="proveedor-id">
+        <div class="flex border-b border-gray-800 bg-gray-900 rounded-t-xl px-4 pt-2 gap-2">
+            <button id="tab-btn-catalogo" class="tab-prov-btn active py-3 px-5 text-xs font-bold uppercase tracking-wider border-b-2 border-emerald-500 text-emerald-400 transition-all">
+                📋 Catálogo & Ofertas
+            </button>
+            <button id="tab-btn-hist-prov" class="tab-prov-btn py-3 px-5 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-gray-400 hover:text-gray-200 transition-all">
+                📈 Histórico de Auditoría
+            </button>
+        </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="space-y-1.5">
-                    <label class="text-[10px] uppercase font-bold text-gray-400 font-mono">Nombre del Proveedor / Empresa *</label>
-                    <input type="text" id="proveedor-nombre" required placeholder="Ej: Liquidos.cl o Comercializadora SPA" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium transition">
-                </div>
-                <div class="space-y-1.5">
-                    <label class="text-[10px] uppercase font-bold text-gray-400 font-mono">Contacto Comercial</label>
-                    <input type="text" id="proveedor-contacto" placeholder="Ej: Juan Pérez (Ejecutivo)" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium transition">
+        <div class="bg-gray-900 border-x border-b border-gray-800 rounded-b-xl p-6 space-y-6">
+            
+            <div id="tab-content-catalogo" class="tab-prov-content space-y-4">
+                <h4 class="font-bold text-xs text-gray-400 uppercase tracking-widest mb-2">Insumos Asociados y Precios</h4>
+                <div class="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                    <table class="w-full text-left text-xs text-gray-300">
+                        <thead class="bg-gray-900 text-gray-400 font-mono uppercase border-b border-gray-800">
+                            <tr>
+                                <th class="py-3 px-4">Insumo</th>
+                                <th class="py-3 px-4 text-center">Formato / Unidad</th>
+                                <th class="py-3 px-4 text-right">Precio de Oferta</th>
+                            </tr>
+                        </thead>
+                        <tbody id="det-tabla-catalogo-body" class="divide-y divide-gray-800/60 font-sans">
+                            </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="space-y-1.5">
-                    <label class="text-[10px] uppercase font-bold text-gray-400 font-mono">Teléfono</label>
-                    <input type="text" id="proveedor-telefono" placeholder="Ej: +56912345678" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono transition">
-                </div>
-                <div class="space-y-1.5">
-                    <label class="text-[10px] uppercase font-bold text-gray-400 font-mono">Correo Electrónico</label>
-                    <input type="email" id="proveedor-email" placeholder="Ej: ventas@proveedor.cl" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium transition">
+            <div id="tab-content-hist-prov" class="tab-prov-content hidden space-y-4">
+                <h4 class="font-bold text-xs text-gray-400 uppercase tracking-widest mb-2">Registro de Cambios de Tarifas</h4>
+                <div class="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                    <table class="w-full text-left text-xs text-gray-300">
+                        <thead class="bg-gray-900 text-gray-400 font-mono uppercase border-b border-gray-800">
+                            <tr>
+                                <th class="py-3 px-4">Fecha y Hora</th>
+                                <th class="py-3 px-4">Insumo Modificado</th>
+                                <th class="py-3 px-4 text-right">Precio Registrado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="det-tabla-hist-prov-body" class="divide-y divide-gray-800/60 font-mono">
+                            </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="space-y-1.5">
-                <label class="text-[10px] uppercase font-bold text-gray-400 font-mono">Observaciones / Notas</label>
-                <textarea id="proveedor-observaciones" rows="2" placeholder="Días de despacho, condiciones de pago, etc." class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium transition resize-none"></textarea>
-            </div>
+        </div>
+    </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-800">
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider font-mono">Insumos que Suministra</h3>
-                        <span class="text-[10px] text-gray-400">Precios de oferta editables</span>
+    <div id="proveedores-formulario" class="hidden bg-gray-900 border border-gray-800 rounded-xl p-6 md:p-8 shadow-2xl space-y-8 flex-1">
+        <div class="flex justify-between items-center border-b border-gray-800 pb-4">
+            <div>
+                <button type="button" id="btn-cancelar-form-prov-top" class="text-xs font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-wider mb-1 flex items-center gap-1 transition-colors">← Volver</button>
+                <h2 id="titulo-form-prov" class="text-2xl font-bold text-gray-100 tracking-wide">Nuevo Proveedor</h2>
+            </div>
+            <div class="flex gap-3">
+                <button type="button" id="btn-cancelar-form-prov" class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:text-gray-100 transition-colors">Cancelar</button>
+                <button type="submit" form="form-prov" class="bg-emerald-600 hover:bg-emerald-500 px-6 py-2 rounded-lg text-sm font-bold text-white tracking-wide transition-colors shadow-lg">Guardar Proveedor</button>
+            </div>
+        </div>
+
+        <form id="form-prov" class="space-y-8">
+            <input type="hidden" id="prov-id">
+
+            <div class="space-y-4">
+                <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider font-mono">1. Datos Comerciales</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="block text-xs font-semibold text-gray-400 uppercase">Razón Social / Nombre <span class="text-emerald-500">*</span></label>
+                        <input type="text" id="prov-nombre" required class="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 focus:border-emerald-500 outline-none">
                     </div>
-                    <div id="lista-insumos-asociados" class="space-y-2.5 max-h-80 overflow-y-auto pr-1 bg-gray-950/40 p-3 rounded-xl border border-gray-800/80">
+                    <div class="space-y-1">
+                        <label class="block text-xs font-semibold text-gray-400 uppercase">Contacto Comercial</label>
+                        <input type="text" id="prov-contacto" class="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 focus:border-emerald-500 outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-xs font-semibold text-gray-400 uppercase">Teléfono</label>
+                        <input type="text" id="prov-telefono" class="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 focus:border-emerald-500 outline-none font-mono">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-xs font-semibold text-gray-400 uppercase">Correo Electrónico</label>
+                        <input type="email" id="prov-email" class="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 focus:border-emerald-500 outline-none">
+                    </div>
+                    <div class="space-y-1 md:col-span-2">
+                        <label class="block text-xs font-semibold text-gray-400 uppercase">Observaciones</label>
+                        <textarea id="prov-obs" rows="2" class="w-full bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 focus:border-emerald-500 outline-none"></textarea>
                     </div>
                 </div>
+            </div>
 
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-xs font-bold text-gray-300 uppercase tracking-wider font-mono">Insumos Disponibles</h3>
-                        <span class="text-[10px] text-gray-400">Haz clic para agregar</span>
+            <div class="space-y-4 pt-6 border-t border-gray-800">
+                <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider font-mono">2. Asignación de Insumos y Precios de Oferta</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col h-[400px]">
+                        <h4 class="text-xs font-bold text-gray-300 mb-3 uppercase font-mono">📋 Catálogo General</h4>
+                        <input type="text" id="buscar-insumo-prov-disp" placeholder="Buscar insumo..." class="mb-3 w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-1.5 text-xs text-gray-100 outline-none focus:border-emerald-500">
+                        <div id="lista-insumos-prov-disp" class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar"></div>
                     </div>
-                    <div id="lista-insumos-disponibles" class="space-y-2.5 max-h-80 overflow-y-auto pr-1 bg-gray-950/40 p-3 rounded-xl border border-gray-800/80">
+                    <div class="bg-gray-950 border border-emerald-900/50 rounded-xl p-4 flex flex-col h-[400px] shadow-inner">
+                        <h4 class="text-xs font-bold text-emerald-400 mb-3 uppercase font-mono">✅ Insumos Distribuidos (<span id="contador-insumos-prov-asig">0</span>)</h4>
+                        <div id="lista-insumos-prov-asig" class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar"></div>
                     </div>
                 </div>
             </div>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-gray-800">
-                <button type="button" onclick="window.cambiarVistaProveedores('listado')" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-gray-800 hover:bg-gray-700 text-gray-300 transition">Cancelar</button>
-                <button type="submit" class="px-6 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition">Guardar Proveedor</button>
+                <button type="button" id="btn-cancelar-form-prov-bot" class="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-400 hover:text-gray-100 transition-colors">Cancelar</button>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 px-6 py-2.5 rounded-lg text-sm font-bold text-white tracking-wide transition-colors shadow-lg">Guardar Proveedor</button>
             </div>
         </form>
     </div>

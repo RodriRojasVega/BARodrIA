@@ -9,6 +9,7 @@ const MODULO_PATHS = {
     cocteles: './modules/cocteles.js',
     servicio: './modules/servicio.js',
     proveedores: './modules/proveedores.js',
+    cartas: './modules/cartas.js', // <-- NUEVA LÍNEA
 };
 
 const INIT_MODULOS = {
@@ -19,6 +20,7 @@ const INIT_MODULOS = {
     cocteles: 'initCocteles',
     servicio: 'initServicio',
     proveedores: 'initProveedores',
+    cartas: 'initCartas', // <-- NUEVA LÍNEA
 };
 
 document.addEventListener("DOMContentLoaded", () => {
