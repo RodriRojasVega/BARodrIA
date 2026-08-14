@@ -10,6 +10,7 @@ const MODULO_PATHS = {
     servicio: './modules/servicio.js',
     proveedores: './modules/proveedores.js',
     cartas: './modules/cartas.js', // <-- NUEVA LÍNEA
+    uxui: './modules/uxui.js', // <-- NUEVA RUTA
 };
 
 const INIT_MODULOS = {
@@ -21,6 +22,7 @@ const INIT_MODULOS = {
     servicio: 'initServicio',
     proveedores: 'initProveedores',
     cartas: 'initCartas', // <-- NUEVA LÍNEA
+    uxui: 'initUxUi', // <-- NUEVA FUNCIÓN INICIALIZADORA
 };
 
 document.addEventListener("DOMContentLoaded", () => {

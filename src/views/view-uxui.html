@@ -1,0 +1,72 @@
+<div class="flex flex-col h-full w-full bg-gray-950 text-gray-100 overflow-hidden font-sans">
+
+    <header class="flex items-center justify-between px-0 py-2.5 bg-gray-950 shrink-0">
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="text-lg sm:text-xl">🍸</span>
+            <h1 class="text-lg sm:text-xl font-bold text-white tracking-wide truncate">Estandarización de Cócteles</h1>
+        </div>
+
+        <button id="uxui-btn-nuevo" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shrink-0 shadow-sm">
+            <span>+</span> <span>Nuevo Cóctel</span>
+        </button>
+    </header>
+
+    <main class="flex flex-col flex-1 overflow-hidden px-0 pb-0 space-y-2">
+        
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 shrink-0">
+            <div class="relative w-full flex-1">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 text-xs">🔍</span>
+                <input type="text" id="uxui-buscador" placeholder="Filtrar registros por nombre, categoría o estado..." 
+                    class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner">
+            </div>
+            
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end font-mono text-[11px] text-gray-400 shrink-0">
+                <span>Mostrar:</span>
+                <select id="uxui-limite" class="bg-gray-900 border border-gray-800 text-white rounded-xl px-3 py-2 outline-none focus:border-emerald-500 cursor-pointer">
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                <span class="hidden md:inline text-gray-500">por pág</span>
+            </div>
+        </div>
+
+        <div class="flex-1 bg-gray-950 overflow-hidden flex flex-col min-h-0 border border-gray-900 rounded-xl shadow-2xl">
+            <div class="overflow-x-auto flex-1 custom-scrollbar">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead class="bg-gray-900 text-gray-400 text-[10px] uppercase font-mono tracking-wider border-b border-gray-800 sticky top-0 z-10 rounded-t-xl overflow-hidden">
+                        <tr>
+                            <th class="py-3 px-3 font-bold hover:text-emerald-400 transition cursor-pointer select-none" data-sort="nombre">
+                                Nombre <span class="text-gray-600">↕</span>
+                            </th>
+                            <th class="py-3 px-3 font-bold hover:text-emerald-400 transition cursor-pointer select-none" data-sort="tipo">
+                                Tipo / Categoría <span class="text-gray-600">↕</span>
+                            </th>
+                            <th class="py-3 px-3 font-bold text-center hover:text-emerald-400 transition cursor-pointer select-none" data-sort="estado">
+                                Estado <span class="text-gray-600">↕</span>
+                            </th>
+                            <th class="py-3 px-3 font-bold text-right hover:text-emerald-400 transition cursor-pointer select-none" data-sort="costo">
+                                Costo / Precio <span class="text-gray-600">↕</span>
+                            </th>
+                            <th class="py-3 px-3 font-bold text-center w-20">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="uxui-tabla-cuerpo" class="divide-y divide-gray-900 text-gray-300 font-sans">
+                        </tbody>
+                </table>
+            </div>
+
+            <div class="bg-gray-950 border-t border-gray-900 px-3 py-2.5 flex flex-col sm:flex-row justify-between items-center gap-2 text-[11px] text-gray-400 font-mono shrink-0">
+                <span id="uxui-info-paginacion">Mostrando 1 - 10 de 45 registros</span>
+                <div class="flex items-center gap-1.5">
+                    <button id="uxui-btn-prev" class="px-2.5 py-1 bg-gray-900 border border-gray-800 rounded-lg hover:bg-gray-800 text-gray-300 transition disabled:opacity-30">← Anterior</button>
+                    <span id="uxui-num-pagina" class="px-2 font-bold text-emerald-400">1 / 5</span>
+                    <button id="uxui-btn-next" class="px-2.5 py-1 bg-gray-900 border border-gray-800 rounded-lg hover:bg-gray-800 text-gray-300 transition disabled:opacity-30">Siguiente →</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+</div>

@@ -1,67 +1,87 @@
-<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+<div class="flex flex-col h-full w-full bg-gray-950 text-gray-100 overflow-hidden font-sans">
 
-    <div id="vista-insumos-listado" class="space-y-6">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl">
-            <div>
-                <span class="text-xs uppercase font-bold tracking-wider text-emerald-400 font-mono">Gestión de Insumos</span>
-                <h1 class="text-2xl font-bold text-white tracking-wide">Gestión de Insumos</h1>
-                <p class="text-xs text-gray-400 mt-1">Directorio de insumos, costos, formatos de compra y proveedores asociados.</p>
+    <div id="vista-insumos-listado" class="flex flex-col h-full w-full overflow-hidden space-y-2">
+        
+        <header class="flex items-center justify-between px-0 py-2.5 bg-gray-950 shrink-0">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="text-lg sm:text-xl">📦</span>
+                <h1 class="text-lg sm:text-xl font-bold text-white tracking-wide truncate">Gestión de Insumos</h1>
             </div>
-            <button type="button" onclick="window.prepararCreacionInsumo()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition shadow-lg flex items-center gap-2">
-                <span>+ Nuevo Insumo</span>
-            </button>
-        </div>
 
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="relative w-full">
+            <button type="button" onclick="window.prepararCreacionInsumo()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-bold px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shrink-0 shadow-sm">
+                <span>+</span> <span>Nuevo Insumo</span>
+            </button>
+        </header>
+
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1 shrink-0">
+            <div class="relative w-full flex-1">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 text-xs">🔍</span>
                 <input type="text" id="buscador-insumos" oninput="window.filtrarInsumos()" placeholder="Buscar insumo por nombre o tipo..." 
-                    class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
-                </div>
-            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <span class="text-xs text-gray-400 font-mono">Mostrar:</span>
+                    class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner">
+            </div>
+            
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end font-mono text-[11px] text-gray-400 shrink-0">
+                <span>Mostrar:</span>
                 <select id="select-registros-insumos" onchange="window.cambiarRegistrosPorPaginaInsumos(this)" 
-                    class="bg-gray-900 border border-gray-800 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono">
+                    class="bg-gray-900 border border-gray-800 text-white rounded-xl px-3 py-2 outline-none focus:border-emerald-500 cursor-pointer">
                     <option value="10" selected>10</option>
                     <option value="20">20</option>
                     <option value="50">50</option>
                     <option value="100">100</option>
                 </select>
+                <span class="hidden md:inline text-gray-500">por pág</span>
             </div>
         </div>
 
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-gray-950 text-gray-400 text-[10px] uppercase border-b border-gray-800 tracking-wider">
+        <div class="flex-1 bg-gray-950 overflow-hidden flex flex-col min-h-0 border border-gray-900 rounded-xl shadow-2xl">
+            <div class="overflow-x-auto flex-1 custom-scrollbar">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead class="bg-gray-900 text-gray-400 text-[10px] uppercase font-mono tracking-wider border-b border-gray-800 sticky top-0 z-10 rounded-t-xl overflow-hidden">
                         <tr>
-                            <th onclick="window.ordenarInsumosPorColumna('nombre')" class="py-3.5 px-4 font-bold cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="nombre">Nombre <span class="sort-indicator">↕</span></th>
-                            <th onclick="window.ordenarInsumosPorColumna('tipo_id')" class="py-3.5 px-3 font-bold cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="tipo_id">Tipo <span class="sort-indicator">↕</span></th>
-                            <th onclick="window.ordenarInsumosPorColumna('es_artesanal')" class="py-3.5 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="es_artesanal">Artesanal <span class="sort-indicator">↕</span></th>
-                            <th onclick="window.ordenarInsumosPorColumna('graduacion_alcohol_base')" class="py-3.5 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="graduacion_alcohol_base">Graduación <span class="sort-indicator">↕</span></th>
-                            <th onclick="window.ordenarInsumosPorColumna('precio_compra')" class="py-3.5 px-3 font-bold text-right cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="precio_compra">Precio Compra <span class="sort-indicator">↕</span></th>
-                            <th onclick="window.ordenarInsumosPorColumna('formato_envase')" class="py-3.5 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="formato_envase">Envase <span class="sort-indicator">↕</span></th>
-                            <th class="py-3.5 px-3 font-bold text-center">Unidad</th>
-                            <th onclick="window.ordenarInsumosPorColumna('rendimiento_neto_porcentaje')" class="py-3.5 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="rendimiento_neto_porcentaje">Rendimiento <span class="sort-indicator">↕</span></th>
-                            <th onclick="window.ordenarInsumosPorColumna('costo_unitario')" class="py-3.5 px-3 font-bold text-right cursor-pointer hover:text-emerald-400 transition th-sortable" data-col="costo_unitario">Costo Unitario <span class="sort-indicator">↕</span></th>
+                            <th onclick="window.ordenarInsumosPorColumna('nombre')" class="py-3 px-3 font-bold cursor-pointer hover:text-emerald-400 transition th-sortable select-none" data-col="nombre">
+                                Nombre <span class="sort-indicator text-gray-600">↕</span>
+                            </th>
+                            <th onclick="window.ordenarInsumosPorColumna('tipo_id')" class="py-3 px-3 font-bold cursor-pointer hover:text-emerald-400 transition th-sortable select-none" data-col="tipo_id">
+                                Tipo <span class="sort-indicator text-gray-600">↕</span>
+                            </th>
+                            <th onclick="window.ordenarInsumosPorColumna('es_artesanal')" class="py-3 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable select-none" data-col="es_artesanal">
+                                Artesanal <span class="sort-indicator text-gray-600">↕</span>
+                            </th>
+                            <th onclick="window.ordenarInsumosPorColumna('graduacion_alcohol_base')" class="py-3 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable select-none" data-col="graduacion_alcohol_base">
+                                Graduación <span class="sort-indicator text-gray-600">↕</span>
+                            </th>
+                            <th onclick="window.ordenarInsumosPorColumna('precio_compra')" class="py-3 px-3 font-bold text-right cursor-pointer hover:text-emerald-400 transition th-sortable select-none" data-col="precio_compra">
+                                Precio Compra <span class="sort-indicator text-gray-600">↕</span>
+                            </th>
+                            <th onclick="window.ordenarInsumosPorColumna('formato_envase')" class="py-3 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable select-none" data-col="formato_envase">
+                                Envase <span class="sort-indicator text-gray-600">↕</span>
+                            </th>
+                            <th class="py-3 px-3 font-bold text-center">Unidad</th>
+                            <th onclick="window.ordenarInsumosPorColumna('rendimiento_neto_porcentaje')" class="py-3 px-3 font-bold text-center cursor-pointer hover:text-emerald-400 transition th-sortable select-none" data-col="rendimiento_neto_porcentaje">
+                                Rendimiento <span class="sort-indicator text-gray-600">↕</span>
+                            </th>
+                            <th onclick="window.ordenarInsumosPorColumna('costo_unitario')" class="py-3 px-3 font-bold text-right cursor-pointer hover:text-emerald-400 transition th-sortable select-none" data-col="costo_unitario">
+                                Costo Unitario <span class="sort-indicator text-gray-600">↕</span>
+                            </th>
                         </tr>
                     </thead>                            
-                    <tbody id="tabla-insumos-cuerpo" class="divide-y divide-gray-800/60 text-xs">
-                    </tbody>
+                    <tbody id="tabla-insumos-cuerpo" class="divide-y divide-gray-900 text-gray-300 font-sans">
+                        </tbody>
                 </table>
             </div>
-        </div>
 
-        <div class="flex items-center justify-between bg-gray-900 border border-gray-800 px-6 py-4 rounded-xl shadow-xl">
-            <span id="paginador-insumos-info" class="text-xs font-mono text-gray-400">Mostrando página 1</span>
-            <div class="flex gap-2">
-                <button type="button" onclick="window.cambiarPaginaInsumos(-1)" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3.5 py-2 rounded-lg transition font-mono">Anterior</button>
-                <button type="button" onclick="window.cambiarPaginaInsumos(1)" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3.5 py-2 rounded-lg transition font-mono">Siguiente</button>
+            <div class="bg-gray-950 border-t border-gray-900 px-3 py-2.5 flex flex-col sm:flex-row justify-between items-center gap-2 text-[11px] text-gray-400 font-mono shrink-0">
+                <span id="paginador-insumos-info">Mostrando página 1</span>
+                <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="window.cambiarPaginaInsumos(-1)" class="px-2.5 py-1 bg-gray-900 border border-gray-800 rounded-lg hover:bg-gray-800 text-gray-300 transition font-mono">← Anterior</button>
+                    <button type="button" onclick="window.cambiarPaginaInsumos(1)" class="px-2.5 py-1 bg-gray-900 border border-gray-800 rounded-lg hover:bg-gray-800 text-gray-300 transition font-mono">Siguiente →</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="vista-insumos-detalle" class="hidden space-y-6">
-        <div class="flex items-center justify-between border-b border-gray-800 pb-4">
+    <div id="vista-insumos-detalle" class="hidden flex flex-col h-full w-full overflow-y-auto space-y-4 custom-scrollbar">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-3 shrink-0">
             <button type="button" onclick="window.cambiarVistaInsumos('listado')" class="text-xs text-emerald-400 hover:text-emerald-300 font-bold uppercase tracking-wider flex items-center gap-2 transition bg-gray-900 border border-gray-800 px-3 py-2 rounded-xl">
                 <span>← Volver al listado</span>
             </button>
@@ -69,28 +89,28 @@
             </div>
         </div>
 
-        <div id="panel-insumo-contenido" class="space-y-6">
+        <div id="panel-insumo-contenido" class="space-y-4 pb-4">
         </div>
     </div>
 
-    <div id="vista-insumos-historico" class="hidden space-y-6">
-        <div class="flex items-center justify-between bg-gray-900 p-4 rounded-xl border border-gray-800">
-            <button type="button" onclick="window.volverDesdeHistoricoInsumo()" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold px-4 py-2 rounded-xl transition flex items-center gap-2">
+    <div id="vista-insumos-historico" class="hidden flex flex-col h-full w-full overflow-y-auto space-y-4 custom-scrollbar">
+        <div class="flex items-center justify-between bg-gray-900 p-3 rounded-xl border border-gray-800 shrink-0">
+            <button type="button" onclick="window.volverDesdeHistoricoInsumo()" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                Volver al detalle del insumo
+                Volver al detalle
             </button>
             <span id="titulo-historico-insumo" class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Histórico Completo</span>
         </div>
 
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
             <div class="relative w-full">
                 <input type="text" id="buscador-historico-insumo" oninput="window.filtrarHistoricoInsumoLocal()" placeholder="Buscar por fecha, origen o precio..." 
-                    class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+                    class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner">
             </div>
             <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <span class="text-xs text-gray-400 font-mono">Mostrar:</span>
                 <select id="select-registros-historico-insumo" onchange="window.cambiarRegistrosPorPaginaHistoricoInsumo(this)" 
-                    class="bg-gray-900 border border-gray-800 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono">
+                    class="bg-gray-900 border border-gray-800 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500 font-mono">
                     <option value="10" selected>10</option>
                     <option value="20">20</option>
                     <option value="50">50</option>
@@ -99,57 +119,57 @@
             </div>
         </div>
 
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
-            <div class="overflow-x-auto">
+        <div class="bg-gray-950 border border-gray-900 rounded-xl overflow-hidden shadow-xl flex-1 flex flex-col min-h-0">
+            <div class="overflow-x-auto flex-1 custom-scrollbar">
                 <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-950 border-b border-gray-800 text-[10px] uppercase font-mono tracking-wider text-gray-400">
+                    <thead class="bg-gray-900 border-b border-gray-800 text-[10px] uppercase font-mono tracking-wider text-gray-400 sticky top-0 z-10">
+                        <tr>
                             <th class="py-3 px-4 font-semibold">Fecha y Hora</th>
                             <th class="py-3 px-3 font-semibold">Proveedor / Origen</th>
                             <th class="py-3 px-3 font-semibold text-right">Precio de Compra / Oferta</th>
                             <th class="py-3 px-3 font-semibold text-right">Costo Unitario Resultante</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-historico-insumo-completo" class="divide-y divide-gray-800/50 text-sm">
+                    <tbody id="tabla-historico-insumo-completo" class="divide-y divide-gray-900 text-xs">
                         <tr><td colspan="4" class="text-center py-6 text-gray-500 text-xs">Cargando registros...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div class="flex items-center justify-between bg-gray-900 border border-gray-800 px-6 py-4 rounded-xl">
+        <div class="flex items-center justify-between bg-gray-950 border border-gray-900 px-4 py-3 rounded-xl shrink-0">
             <span id="paginador-info-historico-insumo" class="text-xs font-mono text-gray-400">Mostrando página 1</span>
             <div class="flex gap-2">
-                <button type="button" onclick="window.cambiarPaginaHistoricoInsumo(-1)" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3.5 py-2 rounded-lg transition font-mono">Anterior</button>
-                <button type="button" onclick="window.cambiarPaginaHistoricoInsumo(1)" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3.5 py-2 rounded-lg transition font-mono">Siguiente</button>
+                <button type="button" onclick="window.cambiarPaginaHistoricoInsumo(-1)" class="bg-gray-900 hover:bg-gray-800 text-white text-xs px-3.5 py-2 rounded-lg transition font-mono">Anterior</button>
+                <button type="button" onclick="window.cambiarPaginaHistoricoInsumo(1)" class="bg-gray-900 hover:bg-gray-800 text-white text-xs px-3.5 py-2 rounded-lg transition font-mono">Siguiente</button>
             </div>
         </div>
     </div>
 
-    <div id="vista-insumos-formulario" class="hidden space-y-6 bg-gray-900 border border-gray-800 rounded-2xl p-6 sm:p-8 shadow-xl">
-        <div class="flex items-center justify-between border-b border-gray-800 pb-4">
-            <h2 id="form-insumo-titulo" class="text-xl font-bold text-white tracking-wide">Nuevo Insumo</h2>
+    <div id="vista-insumos-formulario" class="hidden flex flex-col h-full w-full overflow-y-auto space-y-6 bg-gray-950 p-2 custom-scrollbar">
+        <div class="flex items-center justify-between border-b border-gray-800 pb-3 shrink-0">
+            <h2 id="form-insumo-titulo" class="text-lg font-bold text-white tracking-wide">Nuevo Insumo</h2>
             <button type="button" onclick="window.cambiarVistaInsumos('listado')" class="text-xs text-gray-400 hover:text-white font-semibold uppercase transition">Cancelar</button>
         </div>
 
-        <form id="form-insumo" onsubmit="window.guardarInsumo(event)" class="space-y-6">
+        <form id="form-insumo" onsubmit="window.guardarInsumo(event)" class="space-y-6 pb-6">
             <input type="hidden" id="insumo-id">
             <input type="hidden" id="insumo-costo-unitario" value="0">
             
             <div class="space-y-1.5">
                 <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Nombre del Insumo</label>
-                <input type="text" id="insumo-nombre" required placeholder="Ej: Ron Blanco Superior" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+                <input type="text" id="insumo-nombre" required placeholder="Ej: Ron Blanco Superior" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner">
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="space-y-1.5">
                     <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Tipo de Insumo</label>
-                    <select id="insumo-tipo-id" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+                    <select id="insumo-tipo-id" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 transition shadow-inner">
                     </select>
                 </div>
                 <div class="space-y-1.5">
                     <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Graduación Alcohólica (% ABV)</label>
-                    <input type="number" step="0.1" id="insumo-graduacion" value="0" placeholder="Ej: 40.0" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner">
+                    <input type="number" step="0.1" id="insumo-graduacion" value="0" placeholder="Ej: 40.0" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner">
                 </div>
             </div>
 
@@ -158,7 +178,7 @@
                 <label for="insumo-es-artesanal" class="text-xs text-emerald-300 font-bold uppercase tracking-wider cursor-pointer">¿Es de origen artesanal / producción propia?</label>
             </div>
 
-            <div class="bg-gray-950 p-6 rounded-xl border border-gray-800 space-y-4">
+            <div class="bg-gray-900 p-5 rounded-xl border border-gray-800 space-y-4">
                 <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 block">Formato de Compra y Costeo Principal</span>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -167,11 +187,11 @@
                             <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Precio Total de Compra ($)</label>
                             <button type="button" onclick="window.aplicarMejorPrecioOferta()" class="text-[10px] text-emerald-400 hover:text-emerald-300 font-mono underline transition">Usar mejor oferta de proveedores</button>
                         </div>
-                        <input type="number" step="0.01" id="insumo-precio-compra" placeholder="Ej: 15000" required class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner" oninput="window.calcularCostoUnitarioAutomatico()">
+                        <input type="number" step="0.01" id="insumo-precio-compra" placeholder="Ej: 15000" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner" oninput="window.calcularCostoUnitarioAutomatico()">
                     </div>
                     <div class="space-y-1.5">
                         <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Unidad Base de Receta</label>
-                        <select id="insumo-unidad" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner" onchange="window.calcularCostoUnitarioAutomatico()">
+                        <select id="insumo-unidad" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition shadow-inner" onchange="window.calcularCostoUnitarioAutomatico()">
                             <option value="ml">Mililitros (ml)</option>
                             <option value="g">Gramos (g)</option>
                             <option value="unit">Unidades (unit)</option>
@@ -182,11 +202,11 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Contenido / Cantidad Envase</label>
-                        <input type="number" step="0.01" id="insumo-formato-envase" placeholder="Ej: 750" required class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner" oninput="window.calcularCostoUnitarioAutomatico()">
+                        <input type="number" step="0.01" id="insumo-formato-envase" placeholder="Ej: 750" required class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner" oninput="window.calcularCostoUnitarioAutomatico()">
                     </div>
                     <div class="space-y-1.5">
                         <label class="text-xs font-bold text-gray-300 uppercase tracking-wider">Rendimiento Neto (%)</label>
-                        <input type="number" step="1" id="insumo-rendimiento" value="100" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition shadow-inner" oninput="window.calcularCostoUnitarioAutomatico()">
+                        <input type="number" step="1" id="insumo-rendimiento" value="100" class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner" oninput="window.calcularCostoUnitarioAutomatico()">
                     </div>
                 </div>
 
@@ -197,14 +217,14 @@
             </div>
 
             <div id="seccion-proveedores-insumo" class="space-y-4 pt-4 border-t border-gray-800">
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div class="relative w-full">
                         <input type="text" id="buscador-proveedores-form" oninput="window.filtrarProveedoresFormLocal()" placeholder="Buscar proveedor por nombre..." 
-                            class="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                            class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition">
                     </div>
                     <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
                         <span class="text-xs text-gray-400 font-mono">Mostrar:</span>
-                        <select id="select-registros-proveedores-form" onchange="window.cambiarRegistrosPorPaginaProvForm(this)" class="bg-gray-950 border border-gray-800 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono">
+                        <select id="select-registros-proveedores-form" onchange="window.cambiarRegistrosPorPaginaProvForm(this)" class="bg-gray-900 border border-gray-800 text-white text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-emerald-500 font-mono">
                             <option value="5" selected>5</option>
                             <option value="10">10</option>
                             <option value="20">20</option>
@@ -212,35 +232,35 @@
                     </div>
                 </div>
 
-                <div class="bg-gray-950 border border-gray-800 rounded-2xl shadow-xl overflow-hidden">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl shadow-xl overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="bg-gray-950/80 border-b border-gray-800 text-[10px] uppercase font-mono tracking-wider text-gray-400">
-                                    <th class="py-3 px-4 font-semibold text-center w-16">Selección</th>
-                                    <th class="py-3 px-4 font-semibold">Proveedor</th>
-                                    <th class="py-3 px-4 font-semibold text-right">Precio de Oferta Actual</th>
+                                <tr class="bg-gray-950 border-b border-gray-800 text-[10px] uppercase font-mono tracking-wider text-gray-400">
+                                    <th class="py-2.5 px-3 font-semibold text-center w-16">Selección</th>
+                                    <th class="py-2.5 px-3 font-semibold">Proveedor</th>
+                                    <th class="py-2.5 px-3 font-semibold text-right">Precio de Oferta Actual</th>
                                 </tr>
                             </thead>
-                            <tbody id="contenedor-proveedores-insumo" class="divide-y divide-gray-800/50 text-sm">
+                            <tbody id="contenedor-proveedores-insumo" class="divide-y divide-gray-900 text-xs">
                                 <tr><td colspan="3" class="text-center py-6 text-gray-500 text-xs">Cargando proveedores...</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between bg-gray-950 border border-gray-800 px-6 py-3 rounded-xl">
+                <div class="flex items-center justify-between bg-gray-950 border border-gray-800 px-4 py-2.5 rounded-xl">
                     <span id="paginador-info-proveedores-form" class="text-xs font-mono text-gray-400">Mostrando página 1</span>
                     <div class="flex gap-2">
-                        <button type="button" onclick="window.cambiarPaginaProvForm(-1)" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-lg transition font-mono">Anterior</button>
-                        <button type="button" onclick="window.cambiarPaginaProvForm(1)" class="bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-lg transition font-mono">Siguiente</button>
+                        <button type="button" onclick="window.cambiarPaginaProvForm(-1)" class="bg-gray-900 hover:bg-gray-800 text-white text-xs px-3 py-1.5 rounded-lg transition font-mono">Anterior</button>
+                        <button type="button" onclick="window.cambiarPaginaProvForm(1)" class="bg-gray-900 hover:bg-gray-800 text-white text-xs px-3 py-1.5 rounded-lg transition font-mono">Siguiente</button>
                     </div>
                 </div>
             </div>
 
-            <div class="flex justify-end gap-3 pt-6 border-t border-gray-800">
-                <button type="button" onclick="window.cambiarVistaInsumos('listado')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold uppercase px-5 py-3 rounded-xl transition">Cancelar</button>
-                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider px-6 py-3 rounded-xl transition shadow-lg">Guardar Insumo</button>
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-800">
+                <button type="button" onclick="window.cambiarVistaInsumos('listado')" class="bg-gray-900 hover:bg-gray-800 text-gray-300 text-xs font-bold uppercase px-5 py-2.5 rounded-xl transition">Cancelar</button>
+                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl transition shadow-lg">Guardar Insumo</button>
             </div>
         </form>
     </div>
