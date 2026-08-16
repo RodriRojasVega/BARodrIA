@@ -1,3 +1,20 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Agrega aquí los estilos personalizados que tengas */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+    </style>
+</head>
+<body class="h-screen w-screen bg-gray-950">
+    
+    <!-- Aquí cargaremos tu módulo -->
+    <div id="app-container" class="h-full w-full">
+        <!-- En una app real, aquí inyectarías view-uxui.html -->
+
 <!-- ========================================== -->
 <!-- LABORATORIO UX/UI: UI KIT MAESTRO (COMPLETO) -->
 <!-- ========================================== -->
@@ -24,8 +41,9 @@
     <!-- ========================================== -->
     <div id="lab-seccion-asignador" class="hidden flex flex-col md:flex-row flex-1 overflow-hidden px-0 pb-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
         
-        <!-- COLUMNA IZQUIERDA: Insumos Distribuidos -->
+        <!-- COLUMNA IZQUIERDA: Insumos Distribuidos (Proveedor) -->
         <div class="flex flex-col flex-1 h-full overflow-hidden bg-gray-950">
+            <!-- Header de Columna con Badge de Conteo -->
             <header class="flex items-center justify-between px-4 py-2.5 shrink-0 border-b border-gray-900 bg-emerald-950/10">
                 <div class="flex items-center gap-2">
                     <span class="text-emerald-500">✅</span>
@@ -34,6 +52,7 @@
                 </div>
             </header>
 
+            <!-- Buscador Sticky para Insumos Distribuidos -->
             <div class="p-3 shrink-0 border-b border-gray-900 bg-gray-950">
                 <div class="relative w-full">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-500 text-xs">🔍</span>
@@ -42,9 +61,13 @@
                 </div>
             </div>
 
+            <!-- Lista de Asignados (Scrolleable Independiente) -->
             <div class="flex-1 overflow-y-auto custom-scrollbar p-0">
+                
+                <!-- Item Asignado 1 -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 border-b border-gray-900/50 hover:bg-gray-900/30 transition group gap-2">
                     <span class="text-xs font-bold text-emerald-100 flex-1 truncate pr-2">Agua Gasificada</span>
+                    
                     <div class="flex items-center gap-2 shrink-0">
                         <div class="relative w-24">
                             <span class="absolute inset-y-0 left-0 flex items-center pl-2 text-emerald-500/50 font-mono text-[10px]">$</span>
@@ -56,8 +79,10 @@
                     </div>
                 </div>
 
+                <!-- Item Asignado 2 -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 border-b border-gray-900/50 hover:bg-gray-900/30 transition group gap-2">
                     <span class="text-xs font-bold text-emerald-100 flex-1 truncate pr-2">Agua Purificada Filtrada</span>
+                    
                     <div class="flex items-center gap-2 shrink-0">
                         <div class="relative w-24">
                             <span class="absolute inset-y-0 left-0 flex items-center pl-2 text-emerald-500/50 font-mono text-[10px]">$</span>
@@ -69,8 +94,10 @@
                     </div>
                 </div>
 
+                <!-- Item Asignado 3 -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 border-b border-gray-900/50 hover:bg-gray-900/30 transition group gap-2">
                     <span class="text-xs font-bold text-emerald-100 flex-1 truncate pr-2">Amargo de Angostura</span>
+                    
                     <div class="flex items-center gap-2 shrink-0">
                         <div class="relative w-24">
                             <span class="absolute inset-y-0 left-0 flex items-center pl-2 text-emerald-500/50 font-mono text-[10px]">$</span>
@@ -82,8 +109,10 @@
                     </div>
                 </div>
 
+                <!-- Item Asignado 4 -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 border-b border-gray-900/50 hover:bg-gray-900/30 transition group gap-2">
                     <span class="text-xs font-bold text-emerald-100 flex-1 truncate pr-2">Pisco Waqar</span>
+                    
                     <div class="flex items-center gap-2 shrink-0">
                         <div class="relative w-24">
                             <span class="absolute inset-y-0 left-0 flex items-center pl-2 text-emerald-500/50 font-mono text-[10px]">$</span>
@@ -94,11 +123,13 @@
                         </button>
                     </div>
                 </div>
+
             </div>
         </div>
 
         <!-- COLUMNA DERECHA: Catálogo General -->
         <div class="flex flex-col flex-1 h-full overflow-hidden bg-gray-950">
+            <!-- Header de Columna -->
             <header class="flex items-center justify-between px-4 py-2.5 shrink-0 border-b border-gray-900 bg-gray-900/20">
                 <div class="flex items-center gap-2">
                     <span class="text-gray-400">📋</span>
@@ -106,6 +137,7 @@
                 </div>
             </header>
             
+            <!-- Buscador Sticky para Catálogo -->
             <div class="p-3 shrink-0 border-b border-gray-900 bg-gray-950">
                 <div class="relative w-full">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-500 text-xs">🔍</span>
@@ -114,7 +146,9 @@
                 </div>
             </div>
 
+            <!-- Lista de Elementos (Scrolleable Independiente) -->
             <div class="flex-1 overflow-y-auto custom-scrollbar p-0">
+                <!-- Item 1 -->
                 <div class="flex items-center justify-between px-4 py-3 border-b border-gray-900/50 hover:bg-gray-900/40 transition group">
                     <div class="flex flex-col">
                         <span class="text-xs font-semibold text-white group-hover:text-emerald-300 transition-colors">Azúcar Blanca Refinada</span>
@@ -124,6 +158,7 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                     </button>
                 </div>
+                <!-- Item 2 -->
                 <div class="flex items-center justify-between px-4 py-3 border-b border-gray-900/50 hover:bg-gray-900/40 transition group">
                     <div class="flex flex-col">
                         <span class="text-xs font-semibold text-white group-hover:text-emerald-300 transition-colors">Bicarbonato de Sodio</span>
@@ -133,6 +168,7 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                     </button>
                 </div>
+                <!-- Item 3 -->
                 <div class="flex items-center justify-between px-4 py-3 border-b border-gray-900/50 hover:bg-gray-900/40 transition group">
                     <div class="flex flex-col">
                         <span class="text-xs font-semibold text-white group-hover:text-emerald-300 transition-colors">Bourbon Jim Beam 40°</span>
@@ -149,7 +185,7 @@
     <!-- ========================================== -->
     <!-- SECCIÓN 1: TABLAS (Inyectadas por JS)      -->
     <!-- ========================================== -->
-    <div id="lab-seccion-tabla" class="flex flex-col flex-1 overflow-hidden px-0 pb-0 space-y-2">
+    <div id="lab-seccion-tabla" class="flex flex-col flex-1 overflow-hidden px-0 pb-0 gap-2">
         <div class="flex items-center justify-between px-0 py-1 bg-gray-950 shrink-0 border-b border-gray-900">
             <div class="flex items-center gap-2 min-w-0">
                 <span id="lab-table-icon" class="text-lg">📦</span>
@@ -200,44 +236,53 @@
         </div>
     </div>
 
+
     <!-- ========================================== -->
     <!-- SECCIÓN 2: INPUTS, SELECTORES Y CONTROLES  -->
     <!-- ========================================== -->
-    <div id="lab-seccion-inputs" class="hidden flex-col h-full overflow-y-auto space-y-4 px-0 pb-4 custom-scrollbar">
+    <div id="lab-seccion-inputs" class="hidden flex-col h-full overflow-y-auto flex flex-col gap-4 px-0 pb-4 custom-scrollbar">
         <header class="flex items-center justify-between px-0 py-2 bg-gray-950 shrink-0 border-b border-gray-900">
             <h1 class="text-base font-bold text-white tracking-wide">Catálogo de Controles de Entrada</h1>
         </header>
 
-        <div class="space-y-4 bg-gray-900/40 p-4 rounded-xl border border-gray-800/80">
+        <div class="flex flex-col gap-4 bg-gray-900/40 p-4 rounded-xl border border-gray-800/80">
             
+            <!-- 1. Campo de Texto -->
             <div class="space-y-1">
                 <label class="text-[11px] font-bold text-gray-300 uppercase tracking-wider font-mono">1. Input de Texto</label>
-                <input type="text" placeholder="Ej: Ron Diplomático Reserva Exclusiva" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner">
+                <input type="text" placeholder="Ej: Ron Diplomático Reserva Exclusiva" 
+                    class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner">
             </div>
 
+            <!-- 2. Campos Numéricos -->
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="space-y-1">
                     <label class="text-[11px] font-bold text-gray-300 uppercase tracking-wider font-mono">2a. Numérico Precio ($)</label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-400 font-mono text-xs">$</span>
-                        <input type="number" step="0.01" placeholder="15000" class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-7 pr-3 py-2 text-xs text-white font-mono placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition">
+                        <input type="number" step="0.01" placeholder="15000" 
+                            class="w-full bg-gray-900 border border-gray-800 rounded-xl pl-7 pr-3 py-2 text-xs text-white font-mono placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition">
                     </div>
                 </div>
                 <div class="space-y-1">
                     <label class="text-[11px] font-bold text-gray-300 uppercase tracking-wider font-mono">2b. Graduación (ABV %)</label>
-                    <input type="number" step="0.1" value="40.0" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 transition">
+                    <input type="number" step="0.1" value="40.0" 
+                        class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 transition">
                 </div>
                 <div class="space-y-1">
                     <label class="text-[11px] font-bold text-gray-300 uppercase tracking-wider font-mono">2c. Rendimiento (%)</label>
-                    <input type="number" step="1" value="100" class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 transition">
+                    <input type="number" step="1" value="100" 
+                        class="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 transition">
                 </div>
             </div>
 
+            <!-- 3. Checkboxes y Toggles independientes -->
             <div class="space-y-2 pt-1">
                 <label class="text-[11px] font-bold text-gray-300 uppercase tracking-wider font-mono">3. Indicadores de Estado (Formularios)</label>
                 <div class="flex flex-col sm:flex-row gap-3">
                     <div class="bg-emerald-950/20 border border-emerald-500/30 p-3 rounded-xl flex items-center gap-3 flex-1">
-                        <input type="checkbox" id="chk-artesanal" checked class="w-4 h-4 rounded bg-gray-900 border-gray-700 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                        <input type="checkbox" id="chk-artesanal" checked 
+                            class="w-4 h-4 rounded bg-gray-900 border-gray-700 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
                         <label for="chk-artesanal" class="text-xs text-emerald-300 font-bold uppercase tracking-wider cursor-pointer">Producción Artesanal Propia</label>
                     </div>
                     <div class="bg-gray-900 border border-gray-800 p-3 rounded-xl flex items-center gap-3 flex-1">
@@ -250,7 +295,10 @@
                 </div>
             </div>
 
+            <!-- 4. Selectores Estilizados -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                
+                <!-- 4A. COMBOBOX CATEGORÍA -->
                 <div class="space-y-1">
                     <label class="text-[11px] font-bold text-gray-300 uppercase tracking-wider font-mono">4a. Combobox Categoría</label>
                     <div class="relative w-full">
@@ -264,6 +312,8 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- 4B. UNIDAD BASE -->
                 <div class="space-y-1">
                     <label class="text-[11px] font-bold text-gray-300 uppercase tracking-wider font-mono">4b. Unidad Base</label>
                     <div class="relative w-full">
@@ -276,20 +326,24 @@
                         </div>
                     </div>
                 </div>
+                
             </div>
 
+            <!-- 5. Textareas -->
             <div class="space-y-1 pt-1">
                 <label class="text-[11px] font-bold text-gray-300 uppercase tracking-wider font-mono">5. Textarea (Notas)</label>
-                <textarea rows="3" placeholder="Describir método de preparación..." class="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner resize-none"></textarea>
+                <textarea rows="3" placeholder="Describir método de preparación..." 
+                    class="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition shadow-inner resize-none"></textarea>
             </div>
             
         </div>
     </div>
 
+
     <!-- ========================================== -->
     <!-- SECCIÓN 3: TARJETAS Y RESÚMENES (KPIs)     -->
     <!-- ========================================== -->
-    <div id="lab-seccion-kpi" class="hidden flex-col h-full overflow-y-auto space-y-4 px-0 pb-4 custom-scrollbar">
+    <div id="lab-seccion-kpi" class="hidden flex-col h-full overflow-y-auto flex flex-col gap-4 px-0 pb-4 custom-scrollbar">        
         <header class="flex items-center justify-between px-0 py-2.5 bg-gray-950 shrink-0 border-b border-gray-900">
             <h1 class="text-base font-bold text-white tracking-wide">Indicadores Clave Centrados</h1>
         </header>
@@ -322,15 +376,16 @@
         </div>
     </div>
 
+
     <!-- ========================================== -->
     <!-- SECCIÓN 4: BADGES Y ESTADOS                -->
     <!-- ========================================== -->
-    <div id="lab-seccion-badges" class="hidden flex-col h-full overflow-y-auto space-y-4 px-0 pb-4 custom-scrollbar">
+    <div id="lab-seccion-badges" class="hidden flex-col h-full overflow-y-auto flex flex-col gap-4 px-0 pb-4 custom-scrollbar">
         <header class="flex items-center justify-between px-0 py-2.5 bg-gray-950 shrink-0 border-b border-gray-900">
             <h1 class="text-base font-bold text-white tracking-wide">Catálogo de Badges y Etiquetas</h1>
         </header>
 
-        <div class="bg-gray-900/40 p-5 rounded-xl border border-gray-800/80 space-y-4">
+        <div class="bg-gray-900/40 p-5 rounded-xl border border-gray-800/80 flex flex-col gap-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
                 <div class="flex items-center justify-between p-3 rounded-lg bg-gray-950 border border-gray-900">
                     <span class="text-xs text-gray-300 font-mono">Estado Activo:</span>
@@ -363,12 +418,14 @@
     <!-- ========================================== -->
     <!-- SECCIÓN 5: BOTONES Y ACCIONES              -->
     <!-- ========================================== -->
-    <div id="lab-seccion-botones" class="hidden flex-col h-full overflow-y-auto space-y-4 px-0 pb-4 custom-scrollbar">
+    <div id="lab-seccion-botones" class="hidden flex-col h-full overflow-y-auto flex flex-col gap-4 px-0 pb-4 custom-scrollbar">
         <header class="flex items-center justify-between px-0 py-2.5 bg-gray-950 shrink-0 border-b border-gray-900">
             <h1 class="text-base font-bold text-white tracking-wide">Catálogo de Botones y Acciones</h1>
         </header>
 
         <div class="flex flex-col gap-4 bg-gray-900/40 p-5 rounded-xl border border-gray-800/80">
+            
+            <!-- Grupo 1: Botones Principales -->
             <div>
                 <h2 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider font-mono border-b border-gray-800 pb-2 mb-3">Botones Principales (Formularios)</h2>
                 <div class="flex flex-wrap gap-2.5">
@@ -379,18 +436,22 @@
                 </div>
             </div>
 
+            <!-- Grupo 2: Botones Compactos -->
             <div class="pt-2">
                 <h2 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider font-mono border-b border-gray-800 pb-2 mb-3">Botones en Línea (Dentro de Tablas)</h2>
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="text-xs text-gray-500 italic mr-2 font-mono">Variantes compactas (px-2 py-1)</span>
+                    
                     <button class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700 rounded text-[10px] font-bold uppercase tracking-wider px-2 py-1 transition flex items-center gap-1">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                         Editar
                     </button>
+                    
                     <button class="bg-rose-950/30 hover:bg-rose-900/50 text-rose-400 border border-rose-900/50 hover:border-rose-500/50 rounded text-[10px] font-bold uppercase tracking-wider px-2 py-1 transition flex items-center gap-1">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         Eliminar
                     </button>
+
                     <button class="bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-400 border border-emerald-900/50 hover:border-emerald-500/50 rounded text-[10px] font-bold uppercase tracking-wider px-2 py-1 transition flex items-center gap-1">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                         Ver Ficha
@@ -401,3 +462,18 @@
     </div>
 
 </div>
+
+        <!-- Para probar, pega el contenido completo de tu view-uxui.html aquí -->
+    </div>
+
+  <script type="module">
+        // Intentamos importar de forma absoluta relativa a la raíz
+        import { initUxUi } from '/src/js/modules/uxui.js'; 
+        
+        console.log("Cargando UI Kit...");
+        initUxUi();
+    </script>
+
+
+</body>
+</html>

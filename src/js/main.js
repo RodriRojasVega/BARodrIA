@@ -60,18 +60,23 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    async function cargarVista(vista) {
+   async function cargarVista(vista) {
         try {
             appContent.innerHTML = `<div class="text-center mt-20 text-emerald-500 font-mono animate-pulse">Cargando módulo ${vista}...</div>`;
 
-            // CORRECCIÓN CRÍTICA: Usar la variable ${vista} de forma dinámica, no hardcodeada
-            const response = await fetch(`./src/views/view-${vista}.html?v=${Date.now()}`);
+            // Forzamos al navegador a no usar caché local
+            const response = await fetch(`./src/views/view-${vista}.html?v=${Date.now()}`, { cache: 'no-store' });
             if (!response.ok) throw new Error(`Módulo no encontrado: view-${vista}.html`);
 
-            appContent.innerHTML = await response.text();
+            let textoHTML = await response.text();
             
-            // Damos un respiro al DOM para que pinte las etiquetas antes de inicializar el JS
-            await new Promise(resolve => setTimeout(resolve, 50));
+            // LA MAGIA: Filtramos y eliminamos el script intrusivo de Live Server si existe
+            textoHTML = textoHTML.replace(/<!-- Code injected by live-server -->[\s\S]*?<\/script>/gi, '');
+            
+            appContent.innerHTML = textoHTML; // Inyectamos el código 100% puro
+            
+            // Esperamos a que el navegador dibuje el DOM completo
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
             await cargarModulo(vista);
             actualizarMenuActivo(vista);

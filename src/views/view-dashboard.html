@@ -1,125 +1,101 @@
-<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl">
-        <div>
-            <span class="text-xs uppercase font-bold tracking-wider text-emerald-400 font-mono">Panel de Control Operativo</span>
-            <h1 class="text-2xl font-bold text-white tracking-wide">Dashboard — Indicadores y Catálogos</h1>
-            <p class="text-xs text-gray-400 mt-1">Resumen general de registros, tablas maestras y catálogos de configuración.</p>
-        </div>
-        <div class="flex items-center gap-2 bg-emerald-950/40 border border-emerald-900/50 px-3 py-1.5 rounded-xl">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="text-xs font-mono text-emerald-400 font-semibold">Supabase Conectado</span>
-        </div>
-    </div>
+<!-- ========================================== -->
+<!-- VISTA DASHBOARD: ESTÁNDAR EDGE-TO-EDGE     -->
+<!-- ========================================== -->
+<div class="flex flex-col h-full w-full bg-gray-950 text-gray-100 overflow-y-auto custom-scrollbar font-sans pb-6">
 
-    <div class="space-y-4">
-        <div class="border-b border-gray-800 pb-3">
-            <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                Métricas Operativas
-            </h2>
-            <p class="text-xs text-gray-400 mt-0.5">Volúmenes generales de registros principales del sistema.</p>
+    <!-- ========================================== -->
+    <!-- HEADER EDGE-TO-EDGE CON STATUS SUPABASE    -->
+    <!-- ========================================== -->
+    <header class="flex items-center justify-between px-3 py-3 bg-gray-950 shrink-0 border-b border-gray-900 sticky top-0 z-10">
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="text-lg sm:text-xl">📊</span>
+            <h1 class="text-base sm:text-lg font-bold text-white tracking-wide truncate">Panel de Control Operativo</h1>
         </div>
+        <div class="flex items-center gap-2 bg-emerald-950/30 border border-emerald-900/40 px-2.5 py-1.5 rounded-lg shrink-0 shadow-sm">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-[9px] font-mono text-emerald-400 font-bold uppercase tracking-wider hidden sm:inline">Supabase Conectado</span>
+            <span class="text-[9px] font-mono text-emerald-400 font-bold uppercase tracking-wider sm:hidden">Online</span>
+        </div>
+    </header>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-2">
-                <span class="text-[10px] uppercase font-mono font-bold text-gray-400 tracking-wider block">Total Insumos</span>
-                <div class="flex items-baseline justify-between">
-                    <span id="kpi-insumos" class="text-3xl font-black font-mono text-emerald-400">0</span>
-                    <span class="text-xs text-gray-500 font-mono">Registros</span>
-                </div>
+    <!-- ========================================== -->
+    <!-- SECCIÓN 1: MÉTRICAS OPERATIVAS (KPIs Color)-->
+    <!-- ========================================== -->
+    <div class="px-3 pt-5 space-y-3">
+        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider font-mono px-1">Métricas Principales</h2>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <!-- KPI Insumos (Azul) -->
+            <div class="flex flex-col items-center justify-center p-5 rounded-xl border bg-sky-950/20 border-sky-900/50 transition-all hover:bg-sky-950/40">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-sky-400 text-center">Total Insumos</span>
+                <span id="kpi-insumos" class="text-3xl sm:text-4xl font-bold text-sky-100 mt-2">0</span>
             </div>
 
-            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-2">
-                <span class="text-[10px] uppercase font-mono font-bold text-gray-400 tracking-wider block">Total Sub-recetas</span>
-                <div class="flex items-baseline justify-between">
-                    <span id="kpi-sub-recetas" class="text-3xl font-black font-mono text-emerald-400">0</span>
-                    <span class="text-xs text-gray-500 font-mono">Registros</span>
-                </div>
+            <!-- KPI Sub-recetas (Púrpura) -->
+            <div class="flex flex-col items-center justify-center p-5 rounded-xl border bg-purple-950/20 border-purple-900/50 transition-all hover:bg-purple-950/40">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-400 text-center">Sub-recetas</span>
+                <span id="kpi-sub-recetas" class="text-3xl sm:text-4xl font-bold text-purple-100 mt-2">0</span>
             </div>
 
-            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-2">
-                <span class="text-[10px] uppercase font-mono font-bold text-gray-400 tracking-wider block">Total Cócteles</span>
-                <div class="flex items-baseline justify-between">
-                    <span id="kpi-cocteles" class="text-3xl font-black font-mono text-emerald-400">0</span>
-                    <span class="text-xs text-gray-500 font-mono">Registros</span>
-                </div>
+            <!-- KPI Cócteles (Esmeralda) -->
+            <div class="flex flex-col items-center justify-center p-5 rounded-xl border bg-emerald-950/20 border-emerald-900/50 transition-all hover:bg-emerald-950/40">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400 text-center">Total Cócteles</span>
+                <span id="kpi-cocteles" class="text-3xl sm:text-4xl font-bold text-emerald-100 mt-2">0</span>
             </div>
 
-            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl space-y-2">
-                <span class="text-[10px] uppercase font-mono font-bold text-gray-400 tracking-wider block">Total Proveedores</span>
-                <div class="flex items-baseline justify-between">
-                    <span id="kpi-proveedores" class="text-3xl font-black font-mono text-emerald-400">0</span>
-                    <span class="text-xs text-gray-500 font-mono">Registros</span>
-                </div>
+            <!-- KPI Proveedores (Ámbar) -->
+            <div class="flex flex-col items-center justify-center p-5 rounded-xl border bg-amber-950/20 border-amber-900/50 transition-all hover:bg-amber-950/40">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-400 text-center">Proveedores</span>
+                <span id="kpi-proveedores" class="text-3xl sm:text-4xl font-bold text-amber-100 mt-2">0</span>
             </div>
         </div>
     </div>
 
-    <div class="space-y-4">
-        <div class="border-b border-gray-800 pb-3">
-            <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                Catálogos y Tablas Maestras
-            </h2>
-            <p class="text-xs text-gray-400 mt-0.5">Parámetros de configuración, clasificaciones y elementos base de la barra.</p>
-        </div>
+    <!-- ========================================== -->
+    <!-- SECCIÓN 2: CATÁLOGOS MAESTROS (Neutrales)  -->
+    <!-- ========================================== -->
+    <div class="px-3 pt-6 space-y-3">
+        <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider font-mono px-1">Tablas Maestras y Catálogos</h2>
 
+        <!-- Usamos una grilla de alta densidad que se adapta desde móvil hasta pantallas grandes -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-            <div class="bg-gray-900/80 border border-gray-800/80 p-4 rounded-xl shadow-lg space-y-1">
-                <span class="text-[9px] uppercase font-mono font-bold text-gray-400 tracking-wider block truncate">Categorías</span>
-                <div class="flex items-baseline justify-between">
-                    <span id="cat-categorias" class="text-2xl font-black font-mono text-emerald-400">0</span>
-                    <span class="text-[10px] text-gray-500 font-mono">Elem.</span>
-                </div>
+            
+            <div class="flex flex-col items-center justify-center p-3.5 rounded-xl border bg-gray-800/30 border-gray-700/50 transition-all hover:bg-gray-800/50">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 truncate max-w-full">Categorías</span>
+                <span id="cat-categorias" class="text-xl font-bold text-white mt-1">0</span>
             </div>
 
-            <div class="bg-gray-900/80 border border-gray-800/80 p-4 rounded-xl shadow-lg space-y-1">
-                <span class="text-[9px] uppercase font-mono font-bold text-gray-400 tracking-wider block truncate">Familias</span>
-                <div class="flex items-baseline justify-between">
-                    <span id="cat-familias" class="text-2xl font-black font-mono text-emerald-400">0</span>
-                    <span class="text-[10px] text-gray-500 font-mono">Elem.</span>
-                </div>
+            <div class="flex flex-col items-center justify-center p-3.5 rounded-xl border bg-gray-800/30 border-gray-700/50 transition-all hover:bg-gray-800/50">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 truncate max-w-full">Familias</span>
+                <span id="cat-familias" class="text-xl font-bold text-white mt-1">0</span>
             </div>
 
-            <div class="bg-gray-900/80 border border-gray-800/80 p-4 rounded-xl shadow-lg space-y-1">
-                <span class="text-[9px] uppercase font-mono font-bold text-gray-400 tracking-wider block truncate">Soportes</span>
-                <div class="flex items-baseline justify-between">
-                    <span id="cat-soportes" class="text-2xl font-black font-mono text-emerald-400">0</span>
-                    <span class="text-[10px] text-gray-500 font-mono">Elem.</span>
-                </div>
+            <div class="flex flex-col items-center justify-center p-3.5 rounded-xl border bg-gray-800/30 border-gray-700/50 transition-all hover:bg-gray-800/50">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 truncate max-w-full">Soportes</span>
+                <span id="cat-soportes" class="text-xl font-bold text-white mt-1">0</span>
             </div>
 
-            <div class="bg-gray-900/80 border border-gray-800/80 p-4 rounded-xl shadow-lg space-y-1">
-                <span class="text-[9px] uppercase font-mono font-bold text-gray-400 tracking-wider block truncate">Hielos</span>
-                <div class="flex items-baseline justify-between">
-                    <span id="cat-hielos" class="text-2xl font-black font-mono text-emerald-400">0</span>
-                    <span class="text-[10px] text-gray-500 font-mono">Elem.</span>
-                </div>
+            <div class="flex flex-col items-center justify-center p-3.5 rounded-xl border bg-gray-800/30 border-gray-700/50 transition-all hover:bg-gray-800/50">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 truncate max-w-full">Hielos</span>
+                <span id="cat-hielos" class="text-xl font-bold text-white mt-1">0</span>
             </div>
 
-            <div class="bg-gray-900/80 border border-gray-800/80 p-4 rounded-xl shadow-lg space-y-1">
-                <span class="text-[9px] uppercase font-mono font-bold text-gray-400 tracking-wider block truncate">Técnicas</span>
-                <div class="flex items-baseline justify-between">
-                    <span id="cat-tecnicas" class="text-2xl font-black font-mono text-emerald-400">0</span>
-                    <span class="text-[10px] text-gray-500 font-mono">Elem.</span>
-                </div>
+            <div class="flex flex-col items-center justify-center p-3.5 rounded-xl border bg-gray-800/30 border-gray-700/50 transition-all hover:bg-gray-800/50">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 truncate max-w-full">Técnicas</span>
+                <span id="cat-tecnicas" class="text-xl font-bold text-white mt-1">0</span>
             </div>
 
-            <div class="bg-gray-900/80 border border-gray-800/80 p-4 rounded-xl shadow-lg space-y-1">
-                <span class="text-[9px] uppercase font-mono font-bold text-gray-400 tracking-wider block truncate">Tipos Insumos</span>
-                <div class="flex items-baseline justify-between">
-                    <span id="cat-tipos-insumos" class="text-2xl font-black font-mono text-emerald-400">0</span>
-                    <span class="text-[10px] text-gray-500 font-mono">Elem.</span>
-                </div>
+            <div class="flex flex-col items-center justify-center p-3.5 rounded-xl border bg-gray-800/30 border-gray-700/50 transition-all hover:bg-gray-800/50">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 truncate max-w-full">T. Insumos</span>
+                <span id="cat-tipos-insumos" class="text-xl font-bold text-white mt-1">0</span>
             </div>
 
-            <div class="bg-gray-900/80 border border-gray-800/80 p-4 rounded-xl shadow-lg space-y-1">
-                <span class="text-[9px] uppercase font-mono font-bold text-gray-400 tracking-wider block truncate">Tipos Sub-recetas</span>
-                <div class="flex items-baseline justify-between">
-                    <span id="cat-tipos-sub-recetas" class="text-2xl font-black font-mono text-emerald-400">0</span>
-                    <span class="text-[10px] text-gray-500 font-mono">Elem.</span>
-                </div>
+            <div class="flex flex-col items-center justify-center p-3.5 rounded-xl border bg-gray-800/30 border-gray-700/50 transition-all hover:bg-gray-800/50 lg:col-span-1 col-span-2 sm:col-span-3">
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-gray-400 truncate max-w-full">T. Sub-recetas</span>
+                <span id="cat-tipos-sub-recetas" class="text-xl font-bold text-white mt-1">0</span>
             </div>
+
         </div>
     </div>
+
 </div>

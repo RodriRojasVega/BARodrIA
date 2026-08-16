@@ -1,0 +1,6 @@
+{
+    "liveServer.settings.donotVerifyTags": true,
+    "liveServer.settings.ignoreFiles": [
+        "src/views/**/*.html"
+    ]
+}

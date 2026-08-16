@@ -1,124 +1,143 @@
 // src/modules/uxui.js
 
 export function initUxUi() {
-    console.log("Módulo UX/UI Inicializado (Sin barra de prototipo)");
+    console.log("Inicializando UX/UI...");
+    
+    // VERIFICACIÓN: ¿Existen los elementos en el DOM?
+    const secciones = ['tabla', 'asignador', 'inputs', 'kpi', 'badges', 'botones'];
+    secciones.forEach(sec => {
+        const el = document.getElementById(`lab-seccion-${sec}`);
+        console.log(`Elemento lab-seccion-${sec}:`, el ? "Encontrado" : "NO ENCONTRADO");
+    });
 
-    const datosMock = [
-        { id: 1, nombre: 'Ron Blanco Superior', tipo: 'Destilado', estado: 'Activo', costo: 14500 },
-        { id: 2, nombre: 'Jarabe de Goma Artesanal', tipo: 'Sub-receta', estado: 'Producción', costo: 1200 },
-        { id: 3, nombre: 'Gin London Dry', tipo: 'Destilado', estado: 'Activo', costo: 18900 },
-        { id: 4, nombre: 'Jugo de Limón Sutil', tipo: 'Fruta Fresca', estado: 'Crítico', costo: 2500 },
-        { id: 5, nombre: 'Vermouth Rosso', tipo: 'Licor / Vino', estado: 'Activo', costo: 9800 },
-        { id: 6, nombre: 'Bitter Angostura', tipo: 'Modificador', estado: 'Activo', costo: 22000 },
-        { id: 7, nombre: 'Puré de Maracuyá', tipo: 'Sub-receta', estado: 'Producción', costo: 4500 },
-        { id: 8, nombre: 'Vodka Premium', tipo: 'Destilado', estado: 'Activo', costo: 16000 }
-    ];
+    window.cambiarTabLab = function(tabName) {
+        secciones.forEach(sec => {
+            const el = document.getElementById(`lab-seccion-${sec}`);
+            const btn = document.getElementById(`tab-btn-${sec}`);
+            if (el && btn) {
+                if (sec === tabName) {
+                    el.classList.remove('hidden');
+                    // Estilo activo (verde)
+                    btn.className = "px-2.5 py-1 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-500/30 font-bold transition whitespace-nowrap";
+                } else {
+                    el.classList.add('hidden');
+                    // Estilo inactivo (gris)
+                    btn.className = "px-2.5 py-1 rounded bg-gray-800 text-gray-300 hover:text-white transition whitespace-nowrap";
+                }
+            }
+        });
+    };
+    
+    // Inicializar estado inicial de pestañas
+    window.cambiarTabLab('tabla');
 
-    let estadoTabla = {
-        busqueda: '',
-        limite: 10,
-        pagina: 1,
-        columnaOrden: 'nombre',
-        ascendente: true
+    // 2. Definición Dinámica de Tablas
+    const mockTablas = {
+        insumos: {
+            titulo: 'Inventario y Edición en Línea (Demo de Controles)',
+            icono: '📦',
+            thead: `
+                <tr>
+                    <th class="py-3 px-3 font-bold text-center w-10">Sel</th>
+                    <th class="py-3 px-3 font-bold">Insumo ↕</th>
+                    <th class="py-3 px-3 font-bold text-center">Badge</th>
+                    <th class="py-3 px-3 font-bold text-center">Activo</th>
+                    <th class="py-3 px-3 font-bold text-center">Stock (Núm)</th>
+                    <th class="py-3 px-3 font-bold">Ubicación / Nota (Texto)</th>
+                    <th class="py-3 px-3 font-bold text-right">Acciones</th>
+                </tr>
+            `,
+            filas: `
+                <tr class="hover:bg-gray-900/80 transition">
+                    <td class="py-2 px-3 text-center"><input type="checkbox" class="w-3.5 h-3.5 rounded bg-gray-900 border-gray-700 text-emerald-600 focus:ring-emerald-500 cursor-pointer"></td>
+                    <td class="py-2 px-3 font-semibold text-white">Ron Blanco Superior</td>
+                    <td class="py-2 px-3 text-center"><span class="text-[9px] px-2 py-0.5 rounded font-bold border bg-emerald-950 text-emerald-400 border-emerald-900/40 uppercase">Activo</span></td>
+                    <td class="py-2 px-3 text-center">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer">
+                            <div class="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600 border border-gray-700"></div>
+                        </label>
+                    </td>
+                    <td class="py-2 px-3 text-center">
+                        <input type="number" value="12" class="w-16 bg-gray-950 border border-gray-800 rounded-lg px-2 py-1 text-xs text-center text-white font-mono focus:outline-none focus:border-emerald-500 transition shadow-inner">
+                    </td>
+                    <td class="py-2 px-3">
+                        <input type="text" placeholder="Ej: Barra Principal" value="Barra Piso 1" class="w-32 sm:w-40 bg-gray-950 border border-gray-800 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-emerald-500 transition shadow-inner placeholder-gray-600">
+                    </td>
+                    <td class="py-2 px-3">
+                        <div class="flex items-center justify-end gap-1.5">
+                            <button class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700 rounded text-[10px] font-bold uppercase tracking-wider px-2 py-1 transition" title="Editar">Editar</button>
+                            <button class="bg-rose-950/30 hover:bg-rose-900/50 text-rose-400 border border-rose-900/50 hover:border-rose-500/50 rounded text-[10px] font-bold uppercase tracking-wider px-2 py-1 transition" title="Eliminar">Borrar</button>
+                        </div>
+                    </td>
+                </tr>
+            `,
+            info: 'Mostrando 1 - 1 de 1 registros'
+        },
+        cocteles: {
+            titulo: 'Estandarización de Cócteles',
+            icono: '🍸',
+            thead: `
+                <tr>
+                    <th class="py-3 px-3 font-bold text-center w-10">Sel</th>
+                    <th class="py-3 px-3 font-bold">Nombre ↕</th>
+                    <th class="py-3 px-3 font-bold">Categoría ↕</th>
+                    <th class="py-3 px-3 font-bold text-center">ABV % ↕</th>
+                    <th class="py-3 px-3 font-bold text-right">COGS ↕</th>
+                    <th class="py-3 px-3 font-bold text-right">Precio Sugerido ↕</th>
+                    <th class="py-3 px-3 font-bold text-right">Acciones</th>
+                </tr>
+            `,
+            filas: `
+                <tr class="hover:bg-gray-900/80 transition">
+                    <td class="py-2.5 px-3 text-center"><input type="checkbox" class="w-3.5 h-3.5 rounded bg-gray-900 border-gray-700 text-emerald-600 focus:ring-emerald-500 cursor-pointer"></td>
+                    <td class="py-2.5 px-3 font-semibold text-white">Negroni Clásico</td>
+                    <td class="py-2.5 px-3 text-gray-400 font-mono text-[11px]">Digestivo / Ancestral</td>
+                    <td class="py-2.5 px-3 text-center font-mono text-emerald-400">26,3%</td>
+                    <td class="py-2.5 px-3 text-right font-mono text-gray-300">$1.370</td>
+                    <td class="py-2.5 px-3 text-right font-mono text-emerald-400 font-semibold">$10.960</td>
+                    <td class="py-2.5 px-3 text-right">
+                        <button class="bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-400 border border-emerald-900/50 hover:border-emerald-500/50 rounded text-[10px] font-bold uppercase tracking-wider px-2 py-1 transition flex items-center justify-end gap-1 ml-auto">
+                            Ver Ficha
+                        </button>
+                    </td>
+                </tr>
+            `,
+            info: 'Mostrando 1 - 1 de 1 cócteles'
+        }
     };
 
-    const cuerpoTabla = document.getElementById('uxui-tabla-cuerpo');
-    const infoPaginador = document.getElementById('uxui-info-paginacion');
-    const numPaginaEl = document.getElementById('uxui-num-pagina');
-    const inputBuscador = document.getElementById('uxui-buscador');
-    const selectLimite = document.getElementById('uxui-limite');
-    const btnPrev = document.getElementById('uxui-btn-prev');
-    const btnNext = document.getElementById('uxui-btn-next');
+    // 3. Conmutador Dinámico Blindado contra nulos
+    window.cambiarTipoTabla = function(tipo) {
+        const datos = mockTablas[tipo];
+        if (!datos) return;
 
-    function renderizarTabla() {
-        let filtrados = datosMock.filter(item => 
-            item.nombre.toLowerCase().includes(estadoTabla.busqueda) || 
-            item.tipo.toLowerCase().includes(estadoTabla.busqueda)
-        );
+        const iconEl = document.getElementById('lab-table-icon');
+        const titleEl = document.getElementById('lab-table-title');
+        const theadEl = document.getElementById('lab-thead-content');
+        const tbodyEl = document.getElementById('lab-tbody-content');
+        const infoEl = document.getElementById('lab-table-info');
 
-        filtrados.sort((a, b) => {
-            let valA = a[estadoTabla.columnaOrden];
-            let valB = b[estadoTabla.columnaOrden];
-            if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
-            return estadoTabla.ascendente ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
-        });
+        if (iconEl) iconEl.textContent = datos.icono;
+        if (titleEl) titleEl.textContent = datos.titulo;
+        if (theadEl) theadEl.innerHTML = datos.thead;
+        if (tbodyEl) tbodyEl.innerHTML = datos.filas;
+        if (infoEl) infoEl.textContent = datos.info;
 
-        const total = filtrados.length;
-        const totalPaginas = Math.ceil(total / estadoTabla.limite) || 1;
-        if (estadoTabla.pagina > totalPaginas) estadoTabla.pagina = totalPaginas;
-        if (estadoTabla.pagina < 1) estadoTabla.pagina = 1;
-        
-        const inicio = (estadoTabla.pagina - 1) * estadoTabla.limite;
-        const paginaItems = filtrados.slice(inicio, inicio + estadoTabla.limite);
-
-        cuerpoTabla.innerHTML = '';
-        if (paginaItems.length === 0) {
-            cuerpoTabla.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500 font-mono">No se encontraron registros.</td></tr>`;
-        } else {
-            paginaItems.forEach(item => {
-                const badgeColor = item.estado === 'Activo' ? 'bg-emerald-950 text-emerald-400 border-emerald-900/30' : 'bg-amber-950 text-amber-400 border-amber-900/30';
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-gray-900/80 transition border-b border-gray-900 cursor-pointer';
-                tr.innerHTML = `
-                    <td class="py-2.5 px-3 font-semibold text-white">${item.nombre}</td>
-                    <td class="py-2.5 px-3 text-gray-400 font-mono text-[11px]">${item.tipo}</td>
-                    <td class="py-2.5 px-3 text-center">
-                        <span class="text-[9px] px-2 py-0.5 rounded font-bold border uppercase tracking-wider ${badgeColor}">${item.estado}</span>
-                    </td>
-                    <td class="py-2.5 px-3 text-right font-mono text-emerald-400 font-semibold">$${item.costo.toLocaleString('es-CL')}</td>
-                    <td class="py-2.5 px-3 text-center">
-                        <button class="px-2 py-1 bg-gray-900 border border-gray-800 hover:bg-gray-800 text-gray-300 rounded text-[10px] font-mono transition">Ver</button>
-                    </td>
-                `;
-                cuerpoTabla.appendChild(tr);
-            });
-        }
-
-        infoPaginador.textContent = `Mostrando ${total === 0 ? 0 : inicio + 1} - ${Math.min(inicio + estadoTabla.limite, total)} de ${total}`;
-        numPaginaEl.textContent = `${estadoTabla.pagina} / ${totalPaginas}`;
-        btnPrev.disabled = estadoTabla.pagina === 1;
-        btnNext.disabled = estadoTabla.pagina === totalPaginas;
-    }
-
-    inputBuscador.addEventListener('input', (e) => {
-        estadoTabla.busqueda = e.target.value.toLowerCase();
-        estadoTabla.pagina = 1;
-        renderizarTabla();
-    });
-
-    selectLimite.addEventListener('change', (e) => {
-        estadoTabla.limite = parseInt(e.target.value);
-        estadoTabla.pagina = 1;
-        renderizarTabla();
-    });
-
-    btnPrev.addEventListener('click', () => {
-        if (estadoTabla.pagina > 1) {
-            estadoTabla.pagina--;
-            renderizarTabla();
-        }
-    });
-
-    btnNext.addEventListener('click', () => {
-        const totalPaginas = Math.ceil(datosMock.length / estadoTabla.limite) || 1;
-        if (estadoTabla.pagina < totalPaginas) {
-            estadoTabla.pagina++;
-            renderizarTabla();
-        }
-    });
-
-    document.querySelectorAll('th[data-sort]').forEach(th => {
-        th.addEventListener('click', (e) => {
-            const col = e.currentTarget.getAttribute('data-sort');
-            if (estadoTabla.columnaOrden === col) {
-                estadoTabla.ascendente = !estadoTabla.ascendente;
-            } else {
-                estadoTabla.columnaOrden = col;
-                estadoTabla.ascendente = true;
+        ['cocteles', 'insumos'].forEach(t => {
+            const b = document.getElementById(`btn-t-${t}`);
+            if (b) {
+                if (t === tipo) {
+                    b.className = "px-2.5 py-1 rounded bg-gray-800 text-emerald-400 text-xs font-mono font-bold transition";
+                } else {
+                    b.className = "px-2.5 py-1 rounded bg-gray-900 text-gray-400 text-xs font-mono hover:text-white transition";
+                }
             }
-            renderizarTabla();
         });
-    });
+    };
 
-    renderizarTabla();
+    // Inicializar mostrando la tabla de Insumos con seguridad
+    setTimeout(() => {
+        window.cambiarTipoTabla('insumos');
+    }, 10);
 }
