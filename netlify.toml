@@ -1,0 +1,12 @@
+[build]
+  # El comando para empaquetar el proyecto
+  command = "npm run build"
+  
+  # Vite por defecto guarda el código listo para producción en la carpeta 'dist'
+  publish = "dist"
+
+[[redirects]]
+  # Regla de oro para aplicaciones React/Vite
+  from = "/*"
+  to = "/index.html"
+  status = 200

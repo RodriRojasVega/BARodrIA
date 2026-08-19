@@ -83,7 +83,7 @@ export function CatalogosView() {
     }
   }
 
-  function abrirModalRegistro(nombreTabla: NombreTabla, datosExistentes: any | null = null) {
+  function abrirModalRegistro(_nombreTabla: NombreTabla, datosExistentes: any | null = null) {
     setRegistroEditando(datosExistentes);
     
     let columnas: string[] = [];

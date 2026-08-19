@@ -1,5 +1,5 @@
 // src/modules/uikit/uiKitMockData.ts
-import { Edit3, Trash2, FileText, Check, Plus, Download, Save } from 'lucide-react';
+import { Edit3, Trash2, FileText, Check, Download, Save } from 'lucide-react';
 
 export const MOCK_BADGES = [
   { label: 'Estado Activo', variant: 'success', text: 'Activo' },

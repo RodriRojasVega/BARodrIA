@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { SubReceta, TipoSubReceta } from '@/types/subrecetas';
+import type { TipoSubReceta } from '@/types/subrecetas';
 import type { SubRecetaViewItem } from '../components/SubRecetasListView';
 import { calcularCostoLoteBOM, calcularCostoSubReceta } from '@/lib/calculos';
 
