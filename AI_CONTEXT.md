@@ -41,3 +41,69 @@ Actúa como un Desarrollador Frontend Senior experto en React, TypeScript y Tail
 5. **Interacciones con Base de Datos:**
    - Usar el cliente instanciado en `import { supabase } from '@/lib/supabase'`.
    - Todas las llamadas deben manejar estado de carga (`cargando`) y bloques `try/catch` para la gestión de errores.
+
+## 🧩 Diccionario del UI Kit Maestro 2.0 (APIs de Componentes)
+
+**REGLA DE ORO ESTRICTA:** Para generar cualquier vista, NO debes utilizar etiquetas HTML nativas (`<button>`, `<table>`, `<input>`, `<select>`, `<span class="badge">`) si existe un componente equivalente en este UI Kit. Debes importar y utilizar estrictamente los siguientes componentes con sus Props exactas.
+
+### 1. Cabeceras y KPIs (Estructura de Vistas)
+*   **ModuleHeader:** Cabecera estándar para todos los módulos.
+    *   `import { ModuleHeader } from '@/components/ui/ModuleHeader';`
+    *   **Props:** `icon` (ReactNode), `title` (string), `subtitle?` (string), `showKpis?` (boolean), `onToggleKpis?` (function), `kpiButtonText?` (string), `primaryAction` (ReactNode).
+    *   **Uso:** `<ModuleHeader icon={<Icon/>} title="Módulo" primaryAction={<Button>Nuevo</Button>} />`
+
+*   **SummaryCard:** Tarjetas para mostrar KPIs debajo del header.
+    *   `import { SummaryCard } from '@/components/ui/SummaryCard';`
+    *   **Props:** `label` (string), `value` (ReactNode), `badge?` (ReactNode), `valueClassName?` (string, ej. "text-emerald-400").
+    *   **Uso:** `<SummaryCard label="Total" value="$150" valueClassName="text-emerald-400" />`
+
+### 2. Navegación Interna (Pestañas)
+*   **Tabs & TabPanel:** Sistema de pestañas con renderizado condicional.
+    *   `import { Tabs, TabPanel } from '@/components/ui/Tabs';`
+    *   **Props Tabs:** `tabs` (Array de `{id, label, icon?, activeColor?}`), `activeTab` (string), `onChangeTab` (function).
+    *   **Props TabPanel:** `id` (string), `activeTab` (string), `children` (ReactNode).
+    *   **Uso:** 
+        ```tsx
+        <Tabs 'Datos', 'border-emerald-500 'info', activeColor: activeTab="{tab}" id: label: onChangeTab="{setTab}" tabs="{[{" text-emerald-400' }]}/>
+        <TabPanel activeTab="{tab}" id="info">Contenido</TabPanel>
+        ```
+
+### 3. Formularios (Inputs y Selects)
+*   **Input:** Campo de texto minimalista (soporta `forwardRef`).
+    *   `import { Input } from '@/components/ui/Input';`
+    *   **Props:** `label?` (string), `icon?` (ReactNode), `prefix?` (string), más atributos nativos de `<input>`.
+    *   **Uso:** `<Input label="Nombre" icon={<User size={14}/>} placeholder="Ingresa..." />`
+
+*   **Select:** Menú desplegable estilizado (soporta `forwardRef`).
+    *   `import { Select } from '@/components/ui/Select';`
+    *   **Props:** `label?` (string), `children` (<option>s), más atributos nativos de `<select>`.
+    *   **Uso:** `<Select label="Categoría"><option value="1">A</option></Select>`
+
+### 4. Acciones y Estado
+*   **Button:** Botones estandarizados.
+    *   `import { Button } from '@/components/ui/Button';`
+    *   **Props:** `variant` ('primary' | 'secondary' | 'danger' | 'ghost' | 'inline' | 'inline-danger'), `size` ('sm' | 'md' | 'lg'), `icon?` (ReactNode), `children?` (ReactNode).
+    *   **Uso:** `<Button variant="primary" icon={<Save size={16}/>}>Guardar</Button>`
+
+*   **Badge:** Etiquetas de estado semánticas.
+    *   `import { Badge } from '@/components/ui/Badge';`
+    *   **Props:** `variant` ('success' | 'warning' | 'danger' | 'info' | 'purple' | 'default'), `size` ('sm' | 'md'), `children` (ReactNode).
+    *   **Uso:** `<Badge variant="success">Activo</Badge>`
+
+### 5. Sistema de Tablas (Data Display)
+*   **Composición de Tabla:** Reemplaza completamente las tablas nativas.
+    *   `import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell, TableToolbar, TablePagination } from '@/components/ui/Table';`
+    *   **Toolbar Props:** `busqueda`, `onBusquedaChange`, `limite`, `onLimiteChange`, `placeholder?`.
+    *   **Row Props:** `isClickable?` (boolean), `onClick?` (function).
+    *   **HeaderCell Props:** `align?` ('left'|'center'|'right'), `isSortable?`, `sortDirection?`, `onSort?`.
+    *   **Cell Props:** `align?` ('left'|'center'|'right').
+    *   **Pagination Props:** `paginaActual`, `totalPaginas`, `onCambiarPagina`, `elementosMostrados`, `totalElementos`.
+    *   **Estructura Base:** `<TableToolbar /> <Table><TableHead><TableRow><TableHeaderCell>...</Table>`
+
+### 6. Filas Dinámicas (Formularios Array / Recetas)
+*   **DynamicRow:** Para listas secuenciales simples (ej. Pasos).
+    *   `import { DynamicRow } from '@/components/ui/DynamicRow';`
+    *   **Props:** `children` (Inputs internos), `onRemove?` (function).
+*   **DynamicIngredientRow:** Para listas de insumos con columnas (Grid-12).
+    *   `import { DynamicIngredientRow } from '@/components/ui/DynamicIngredientRow';`
+    *   **Props:** `children` (Selects/Inputs que deben sumar 12 columnas), `onRemove` (function).
