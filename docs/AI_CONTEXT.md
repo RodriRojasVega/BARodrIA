@@ -53,9 +53,15 @@ Actúa como un Desarrollador Frontend Senior experto en React, TypeScript y Tail
    - **Tablas:** Utilizar la composición completa: `<Table>`, `<TableHead>`, `<TableBody>`, `<TableRow>`, `<TableCell>`, `<TableHeaderCell>`, `<TablePagination>`.
    - **Botones:** Utilizar `<Button variant="..." size="..." icon={...} />` (Variantes comunes: `primary`, `secondary`, `inline`, `inline-danger`).
 
-4. **Estilos y Tailwind:**
-   - No crear archivos `.css` adicionales. Todo el diseño, espaciado, animaciones (ej. `animate-fade-in`) y responsividad debe resolverse con clases utilitarias de Tailwind.
-   - Paleta principal enfocada en `slate-900` a `slate-950` para fondos, textos en `slate-100` a `slate-400`, y acentos en `emerald-400` y `emerald-500`.
+4. **Estilos y Tailwind (Diseño Semántico Desacoplado):**
+   - **PROHIBIDO** usar colores estáticos (hardcodeados) como `slate-900`, `emerald-500` o `gray-100` en las clases de Tailwind.
+   - El sistema de diseño se basa 100% en tokens semánticos definidos en `tailwind.config.js`. 
+   - **Diccionario de Tokens Visuales:**
+     - Fondos: `bg-background` (raíz), `bg-surface` (tarjetas/paneles), `bg-surface-muted` (inputs/hovers).
+     - Bordes: `border-border`, `border-border-hover`.
+     - Textos: `text-foreground` (principal), `text-muted` (secundario/iconos).
+     - Marca: `bg-primary`, `text-primary`, `border-primary` (y sus variantes `-hover`).
+     - Estados: `danger`, `success`, `warning`.
 
 5. **Interacciones con Base de Datos:**
    - Usar el cliente instanciado en `import { supabase } from '@/lib/supabase'`.
@@ -92,8 +98,8 @@ Para mantener la atomicidad y el orden a medida que la PWA escala, los módulos 
 
 *   **SummaryCard:** Tarjetas para mostrar KPIs debajo del header.
     *   `import { SummaryCard } from '@/components/ui/SummaryCard';`
-    *   **Props:** `label` (string), `value` (ReactNode), `badge?` (ReactNode), `valueClassName?` (string, ej. "text-emerald-400").
-    *   **Uso:** `<SummaryCard label="Total" value="$150" valueClassName="text-emerald-400" />`
+    *   **Props:** `label` (string), `value` (ReactNode), `badge?` (ReactNode), `valueClassName?` (string, ej. "text-primary").
+    *   **Uso:** `<SummaryCard label="Total" value="$150" valueClassName="text-success" />` 
 
 ### 2. Navegación Interna (Pestañas)
 *   **Tabs & TabPanel:** Sistema de pestañas con renderizado condicional.
@@ -102,7 +108,7 @@ Para mantener la atomicidad y el orden a medida que la PWA escala, los módulos 
     *   **Props TabPanel:** `id` (string), `activeTab` (string), `children` (ReactNode).
     *   **Uso:** 
         ```tsx
-        <Tabs 'Datos', 'border-emerald-500 'info', activeColor: activeTab="{tab}" id: label: onChangeTab="{setTab}" tabs="{[{" text-emerald-400' }]}/>
+        <Tabs 'Datos', 'border-accent 'info', activeColor: activeTab="{tab}" id: label: onChangeTab="{setTab}" tabs="{[{" text-accent' }]}/>
         <TabPanel activeTab="{tab}" id="info">Contenido</TabPanel>
         ```
 
@@ -156,3 +162,32 @@ Para mantener la atomicidad y el orden a medida que la PWA escala, los módulos 
         ```tsx
         <DualAsignador childrenDer="{...}" childrenIzq="{...}" contador="{5}" tituloDer="Insumos Disponibles" tituloIzq="Receta Activa"/>
         ```
+## 🔮 Roadmap Técnico & Servicios Futuros (Directivas de Diseño)
+
+Estas funcionalidades están planificadas para fases posteriores. El código actual debe diseñarse desacoplado, previendo la integración directa con los siguientes estándares:
+
+1. **Autenticación y Gestión de Usuarios:**
+   - **Proveedor:** Supabase Auth exclusivamente (Google OAuth + Email).
+   - **Modelo:** 
+     - Perfiles de usuario vinculados a `auth.users` mediante tabla pública `perfiles` (`user_id`, `rol`).
+     - Roles previstos: `admin` (acceso total), `bartender` (solo vista operativa/recetas) y `cliente` (solo lectura de cartas).
+   - **Regla actual:** Diseñar las consultas asumiendo que en el futuro las tablas principales llevarán una columna `user_id` o `empresa_id` protegida por RLS.
+
+2. **Gestión Multimedia y Storage:**
+   - **Proveedor:** Supabase Storage (Buckets para cartas, fichas técnicas y fotos de cócteles).
+   - **Ubicación:** Las funciones utilitarias de subida y compresión residirán en `@/lib/storage.ts`.
+   - **Regla actual:** Las entidades de base de datos solo almacenan rutas o URLs relativas (`url_archivo` en `coctel_galeria_fotos`). No embeber imágenes en Base64 dentro de la base de datos.
+
+3. **Importación y Exportación de Datos (Data Exchange):**
+   - **Formatos:** CSV, Excel (`xlsx`) y exportación a PDF.
+   - **Ubicación:** Los procesadores y parsers residirán en `@/lib/importers/` y `@/lib/exporters/`.
+   - **Regla actual:** Las tablas y listas deben mantener estructuras de datos serializables (objetos planos) para permitir su exportación directa sin transformaciones complejas en la UI.
+
+4. **Arquitectura Multi-Tenant (Modelo SaaS Futuro)**
+- **Modelo de Inquilinos:** La plataforma evolucionará de uso individual a un modelo SaaS Multi-Empresa compartido sobre una única base de datos e instancia web.
+- **Aislamiento de Datos:**
+  - Se implementará mediante la relación `empresa_id (UUID)` en todas las entidades transaccionales y de catálogo (`insumos`, `cocteles`, `cartas`, `eventos`, `proveedores`).
+  - La seguridad y partición de datos se delegará al motor de PostgreSQL mediante políticas de **Row Level Security (RLS)** vinculadas al perfil del usuario autenticado (`auth.uid() -> perfiles.empresa_id`).
+- **Directivas actuales para el código:**
+  - No hardcodear identificadores fijos ni asumir que existe una sola organización en el sistema.
+  - Diseñar interfaces y tipos en `@/types/` preparados para admitir opcionalmente campos de auditoría y pertenencia (`empresa_id?`, `created_by?`).

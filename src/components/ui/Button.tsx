@@ -24,17 +24,26 @@ export function Button({
   ...props 
 }: ButtonProps) {
   
-  const baseStyles = "inline-flex items-center justify-center font-bold tracking-wider transition-all duration-200 outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed select-none";
+  // CORRECCIÓN: focus:ring-primary en lugar de emerald
+  const baseStyles = "inline-flex items-center justify-center font-bold tracking-wider transition-all duration-200 outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed select-none";
   
   const variants = {
-    primary: "bg-emerald-600 hover:bg-emerald-500 text-white uppercase shadow-lg border border-emerald-500/20",
-    secondary: "bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 uppercase",
-    danger: "bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-900/50 uppercase",
-    ghost: "bg-transparent hover:bg-slate-900/60 text-slate-400 hover:text-slate-100 uppercase",
+    // CORRECCIÓN: bg-primary y hover:bg-primary-hover
+    primary: "bg-primary hover:bg-primary-hover text-white uppercase shadow-lg border border-primary/20",
     
-    // Variantes miniatura para las tablas y filas dinámicas
-    inline: "bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 uppercase font-mono text-[10px]",
-    'inline-danger': "bg-rose-950/30 hover:bg-rose-900/50 text-rose-400 border border-rose-900/40 hover:border-rose-800 uppercase font-mono text-[10px]"
+    // CORRECCIÓN: text-foreground en lugar de slate-200
+    secondary: "bg-surface hover:bg-surface-muted text-foreground border border-border uppercase",
+    
+    // CORRECCIÓN: bg-danger/10 y text-danger en lugar de rose-950 y rose-400
+    danger: "bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 uppercase",
+    
+    ghost: "bg-transparent hover:bg-surface/60 text-muted hover:text-foreground uppercase",
+    
+    // CORRECCIÓN: text-muted hover:text-foreground
+    inline: "bg-surface hover:bg-surface-muted text-muted hover:text-foreground border border-border uppercase font-mono text-[10px]",
+    
+    // CORRECCIÓN: danger semántico con opacidades
+    'inline-danger': "bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 hover:border-danger/40 uppercase font-mono text-[10px]"
   };
 
   const sizes = {

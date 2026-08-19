@@ -15,7 +15,7 @@ interface DynamicIngredientRowProps {
 export function DynamicIngredientRow({ children, onRemove, className }: DynamicIngredientRowProps) {
   return (
     <div className={cn(
-      "flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-slate-950/40 p-3 rounded-xl border border-slate-900 hover:border-emerald-500/30 transition", 
+      "flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-background/40 p-3 rounded-xl border border-border hover:border-primary/30 transition", 
       className
     )}>
       {/* Contenedor flexible para alinear los elementos internos (Selector, Input, etc.) */}

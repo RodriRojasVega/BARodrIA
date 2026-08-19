@@ -16,17 +16,19 @@ export function Badge({ children, variant = 'default', size = 'sm', className }:
   const baseStyles = "font-bold border uppercase tracking-wider inline-flex items-center justify-center font-mono";
 
   const variants = {
-    success: "bg-emerald-950/60 text-emerald-400 border-emerald-900/40",
+    success: "bg-emerald-950/60 text-primary border-emerald-900/40",
     warning: "bg-amber-950/60 text-amber-400 border-amber-900/40",
     danger: "bg-rose-950/60 text-rose-400 border-rose-900/40",
     info: "bg-sky-950/60 text-sky-400 border-sky-900/40",
     purple: "bg-purple-950/60 text-purple-400 border-purple-900/40",
-    default: "bg-slate-900 text-slate-400 border-slate-800"
+    default: "bg-surface text-muted border-border"
   };
 
-  const sizes = {
-    sm: "text-[9px] px-2 py-0.5 rounded",
-    md: "text-[10px] px-2.5 py-1 rounded-md"
+const sizes = {
+    // Usamos text-xs (12px) o una clase arbitraria estandarizada, 
+    // en lugar de forzar 9px que puede ser ilegible en algunas pantallas.
+    sm: "text-[10px] px-2 py-0.5 rounded",
+    md: "text-xs px-2.5 py-1 rounded-md"
   };
 
   return (

@@ -40,18 +40,18 @@ export function DualAsignador({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[450px]">
       
       {/* COLUMNA IZQUIERDA: Elementos Asignados / Distribuidos */}
-      <div className="flex flex-col h-full bg-slate-950/40 border border-slate-800/80 rounded-2xl overflow-hidden shadow-inner">
-        <header className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-slate-900 bg-emerald-950/10">
+      <div className="flex flex-col h-full bg-background/40 border border-border/80 rounded-2xl overflow-hidden shadow-inner">
+        <header className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-border bg-primary/10">
           <div className="flex items-center gap-2">
             <span>{iconoIzq}</span>
-            <h4 className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider font-mono">
-              {tituloIzq} (<span className="text-white">{contadorIzq}</span>)
+            <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider font-mono">
+              {tituloIzq} (<span className="text-foreground">{contadorIzq}</span>)
             </h4>
           </div>
         </header>
 
         {onChangeBusquedaIzq && (
-          <div className="p-3 shrink-0 border-b border-slate-900">
+          <div className="p-3 shrink-0 border-b border-border">
             <Input 
               icon={<Search size={14} />} 
               placeholder={placeholderBusquedaIzq} 
@@ -68,18 +68,18 @@ export function DualAsignador({
       </div>
 
       {/* COLUMNA DERECHA: Catálogo General / Disponibles */}
-      <div className="flex flex-col h-full bg-slate-950/40 border border-slate-800/80 rounded-2xl overflow-hidden shadow-inner">
-        <header className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-slate-900 bg-slate-900/20">
+      <div className="flex flex-col h-full bg-background/40 border border-border/80 rounded-2xl overflow-hidden shadow-inner">
+        <header className="flex items-center justify-between px-4 py-3 shrink-0 border-b border-border bg-surface/20">
           <div className="flex items-center gap-2">
             <span>{iconoDer}</span>
-            <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider font-mono">
+            <h4 className="text-[11px] font-bold text-muted uppercase tracking-wider font-mono">
               {tituloDer}
             </h4>
           </div>
         </header>
 
         {onChangeBusquedaDer && (
-          <div className="p-3 shrink-0 border-b border-slate-900">
+          <div className="p-3 shrink-0 border-b border-border">
             <Input 
               icon={<Search size={14} />} 
               placeholder={placeholderBusquedaDer} 

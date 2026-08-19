@@ -33,14 +33,14 @@ export function ModuleHeader({
     <div className={cn("flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-transparent py-2 shrink-0", className)}>
       {/* Izquierda: Icono y Títulos */}
       <div className="flex items-center gap-3">
-        <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-emerald-400 flex items-center justify-center shadow-inner">
+        <div className="p-2.5 bg-surface border border-border rounded-xl text-primary flex items-center justify-center shadow-inner">
           {icon}
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-100 tracking-wide flex items-center gap-2">
+          <h2 className="text-xl font-bold text-foreground tracking-wide flex items-center gap-2">
             {title}
           </h2>
-          {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-muted mt-0.5">{subtitle}</p>}
         </div>
       </div>
 

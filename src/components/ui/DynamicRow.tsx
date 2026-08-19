@@ -14,7 +14,7 @@ interface DynamicRowProps {
 
 export function DynamicRow({ children, onRemove, className }: DynamicRowProps) {
   return (
-    <div className={cn("flex items-center justify-between gap-3 bg-slate-900/30 p-2 rounded-lg border border-slate-800/80 hover:border-slate-700 transition group", className)}>
+    <div className={cn("flex items-center justify-between gap-3 bg-surface/30 p-2 rounded-lg border border-border/80 hover:border-border-hover transition group", className)}>
       <div className="flex-1 flex items-center gap-3 min-w-0">
         {children}
       </div>
@@ -23,7 +23,7 @@ export function DynamicRow({ children, onRemove, className }: DynamicRowProps) {
         <button 
           type="button" 
           onClick={onRemove}
-          className="shrink-0 w-7 h-7 flex items-center justify-center rounded text-slate-500 hover:bg-rose-950/50 hover:text-rose-400 transition-colors opacity-50 group-hover:opacity-100"
+          className="shrink-0 w-7 h-7 flex items-center justify-center rounded text-muted hover:bg-danger/20 hover:text-danger transition-colors opacity-50 group-hover:opacity-100"
           title="Eliminar elemento"
         >
           <X size={14} />

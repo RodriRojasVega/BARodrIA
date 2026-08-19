@@ -13,7 +13,8 @@ function cn(...inputs: ClassValue[]) {
 
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cn("bg-slate-950 border-0 rounded-t-2xl rounded-b-none overflow-hidden shadow-2xl flex-1 flex flex-col min-h-0", className)}>
+    // CORRECCIÓN: bg-background en lugar de bg-slate-950
+    <div className={cn("bg-background border-0 rounded-t-2xl rounded-b-none overflow-hidden shadow-2xl flex-1 flex flex-col min-h-0", className)}>
       <div className="overflow-x-auto flex-1 custom-scrollbar">
         <table className="w-full text-left border-collapse text-xs">
           {children}
@@ -25,14 +26,15 @@ export function Table({ children, className }: { children: ReactNode; className?
 
 export function TableHead({ children }: { children: ReactNode }) {
   return (
-    <thead className="bg-slate-900/80 backdrop-blur text-[10px] uppercase font-mono tracking-wider text-slate-400 border-b border-slate-800 sticky top-0 z-10">
+    <thead className="bg-surface/80 backdrop-blur text-[10px] uppercase font-mono tracking-wider text-muted border-b border-border sticky top-0 z-10">
       {children}
     </thead>
   );
 }
 
 export function TableBody({ children }: { children: ReactNode }) {
-  return <tbody className="divide-y divide-slate-900/40 font-sans text-slate-300">{children}</tbody>;
+  // CORRECCIÓN: divide-border y text-foreground
+  return <tbody className="divide-y divide-border font-sans text-foreground">{children}</tbody>;
 }
 
 interface TableRowProps {
@@ -47,8 +49,9 @@ export function TableRow({ children, isClickable, onClick, className }: TableRow
     <tr 
       onClick={onClick}
       className={cn(
-        "transition border-b border-slate-900/30 text-sm", 
-        isClickable ? "hover:bg-slate-900/40 cursor-pointer group" : "",
+        // CORRECCIÓN: border-border en lugar de border-slate-900/30
+        "transition border-b border-border text-sm", 
+        isClickable ? "hover:bg-surface/40 cursor-pointer group" : "",
         className
       )}
     >
@@ -91,7 +94,7 @@ export function TableHeaderCell({
       className={cn(
         "py-3.5 px-4 font-semibold font-mono", 
         `text-${align}`, 
-        isSortable ? "cursor-pointer hover:text-emerald-400 transition select-none group" : "",
+        isSortable ? "cursor-pointer hover:text-primary transition select-none group" : "",
         className
       )}
       {...props}
@@ -99,7 +102,8 @@ export function TableHeaderCell({
       <div className={cn("inline-flex items-center gap-1.5", align === 'right' && "justify-end", align === 'center' && "justify-center")}>
         <span>{children}</span>
         {isSortable && (
-          <span className="text-slate-500 group-hover:text-emerald-400 text-[10px]">
+          // CORRECCIÓN: text-muted en lugar de text-slate-500
+          <span className="text-muted group-hover:text-primary text-[10px]">
             {sortDirection === 'asc' ? '▲' : sortDirection === 'desc' ? '▼' : '↕'}
           </span>
         )}
@@ -171,9 +175,10 @@ export function TablePagination({
   totalElementos 
 }: TablePaginationProps) {
   return (
-    <div className="px-2 py-3 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-mono text-slate-400 shrink-0 bg-transparent border-t-0">
+    <div className="px-2 py-3 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-mono text-muted shrink-0 bg-transparent border-t-0">
       <div>
-        Mostrando <span className="text-white font-bold">{elementosMostrados}</span> de <span className="text-white font-bold">{totalElementos}</span> registros
+        {/* CORRECCIÓN: text-foreground en lugar de text-white */}
+        Mostrando <span className="text-foreground font-bold">{elementosMostrados}</span> de <span className="text-foreground font-bold">{totalElementos}</span> registros
       </div>
       
       <div className="flex items-center gap-2">
@@ -187,7 +192,8 @@ export function TablePagination({
           <ChevronLeft size={14} />
         </Button>
         
-        <span className="px-3 py-1 bg-slate-900/80 border border-slate-800/80 rounded-none text-white font-bold">
+        {/* CORRECCIÓN: text-foreground en lugar de text-white */}
+        <span className="px-3 py-1 bg-surface/80 border border-border/80 rounded-none text-foreground font-bold">
           {paginaActual} / {Math.max(totalPaginas, 1)}
         </span>
 
