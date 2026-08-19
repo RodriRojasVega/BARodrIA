@@ -113,3 +113,14 @@ Actúa como un Desarrollador Frontend Senior experto en React, TypeScript y Tail
 *   **DynamicIngredientRow:** Para listas de insumos con columnas (Grid-12).
     *   `import { DynamicIngredientRow } from '@/components/ui/DynamicIngredientRow';`
     *   **Props:** `children` (Selects/Inputs que deben sumar 12 columnas), `onRemove` (function).
+
+### 7. Selector Dual
+*   **DualAsignador:** Panel dual de selección (Asignados vs. Disponibles) con buscadores y contadores integrados.
+    *   `import { DualAsignador } from '@/components/ui/DualAsignador';`
+    *   **Props:** 
+        *   Izquierda: `tituloIzq` (string), `contadorIzq` (number), `iconoIzq?` (ReactNode), `placeholderBusquedaIzq?` (string), `valorBusquedaIzq?` (string), `onChangeBusquedaIzq?` (function), `childrenIzq` (ReactNode).
+        *   Derecha: `tituloDer` (string), `iconoDer?` (ReactNode), `placeholderBusquedaDer?` (string), `valorBusquedaDer?` (string), `onChangeBusquedaDer?` (function), `childrenDer` (ReactNode).
+    *   **Uso:** 
+        ```tsx
+        <DualAsignador childrenDer="{...}" childrenIzq="{...}" contador="{5}" tituloDer="Insumos Disponibles" tituloIzq="Receta Activa"/>
+        ```
