@@ -1,20 +1,21 @@
 // src/components/layout/Sidebar.tsx
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, FlaskConical, Wine, ScrollText, MonitorPlay, Settings } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Truck, FlaskConical, Wine, ScrollText, MonitorPlay, Settings, Palette } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/insumos', label: 'Insumos', icon: ShoppingCart },
+  { path: '/proveedores', label: 'Proveedores', icon: Truck }, // <-- ¡Nuevo ítem agregado!
   { path: '/subrecetas', label: 'Sub-recetas', icon: FlaskConical },
   { path: '/cocteles', label: 'Cócteles', icon: Wine },
   { path: '/cartas', label: 'Cartas', icon: ScrollText },
   { path: '/bartender', label: 'Modo Bartender', icon: MonitorPlay, special: true },
   { path: '/catalogos', label: 'Catálogos Estáticos', icon: Settings },
+  { path: '/uikit', label: 'Laboratorio UI', icon: Palette },
 ];
 
-// Utilidad para fusionar clases de Tailwind limpiamente
 function cn(...classes: (string | undefined | null | false)[]) {
   return twMerge(clsx(classes));
 }
@@ -24,7 +25,6 @@ export function Sidebar() {
 
   return (
     <aside className="w-full md:w-64 bg-slate-900 border-b md:border-b-0 md:border-r border-slate-800 flex flex-col shrink-0">
-      {/* Header del Sidebar */}
       <div className="p-6 border-b border-slate-800">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🍸</span>
@@ -35,7 +35,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Navegación */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
@@ -61,7 +60,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer del Sidebar */}
       <div className="p-4 border-t border-slate-800 text-xs text-slate-500 space-y-2">
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
