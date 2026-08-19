@@ -23,7 +23,7 @@ export function InsumosList({ insumos, tipos, cargando, onVerDetalle, onNuevo }:
   const [pagina, setPagina] = useState(1);
   const [columnaOrden, setColumnaOrden] = useState<keyof Insumo>('nombre');
   const [dirOrden, setDirOrden] = useState<'asc' | 'desc'>('asc');
-  const [showKpis, setShowKpis] = useState(true);
+  const [showKpis, setShowKpis] = useState(false);
 
   const manejarOrden = (col: keyof Insumo) => {
     if (columnaOrden === col) {

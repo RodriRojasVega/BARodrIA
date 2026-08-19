@@ -21,7 +21,7 @@ export function ProveedoresList({ proveedores, cargando, onVerDetalle, onNuevo }
   const [limite, setLimite] = useState(25);
   const [pagina, setPagina] = useState(1);
   const [sortAsc, setSortAsc] = useState(true);
-  const [showKpis, setShowKpis] = useState(true);
+  const [showKpis, setShowKpis] = useState(false);
 
   const filtrados = useMemo(() => {
     return proveedores.filter(p => {

@@ -33,7 +33,7 @@ export function CatalogosView() {
   const [tablaActiva, setTablaActiva] = useState<NombreTabla>('categorias');
   const [datos, setDatos] = useState<any[]>([]);
   const [cargando, setCargando] = useState<boolean>(false);
-  const [showKpis, setShowKpis] = useState(true);
+  const [showKpis, setShowKpis] = useState(false);
 
   // Estados de paginación y control local de tabla
   const [limite, setLimite] = useState(10);

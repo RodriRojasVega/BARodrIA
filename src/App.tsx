@@ -6,6 +6,8 @@ import { InsumosView } from './modules/insumos/InsumosView';
 import { ProveedoresView } from './modules/proveedores/ProveedoresView';
 import { CatalogosView } from './modules/catalogos/CatalogosView';
 import { SubRecetasModule } from './modules/subrecetas/SubRecetasModule';
+import { CoctelView } from './modules/coctel/CoctelView';
+import { CartaView } from './modules/carta/CartaView';
 import { UiKitView } from './modules/uikit/UiKitView';
 
 // Componente Placeholder temporal para los módulos que construiremos después
@@ -46,8 +48,8 @@ function App() {
               <Route path="/" element={<DashboardView />} />
               <Route path="/insumos" element={<InsumosView />} />
               <Route path="/subrecetas" element={<SubRecetasModule />} />
-              <Route path="/cocteles" element={<Placeholder title="🍸 Cócteles y Fichas" />} />
-              <Route path="/cartas" element={<Placeholder title="📜 Cartas y Eventos" />} />
+              <Route path="/cocteles" element={<CoctelView />} />
+              <Route path="/cartas" element={<CartaView />} />
               <Route path="/bartender" element={<Placeholder title="📱 Modo Bartender (Servicio)" />} />
               <Route path="/proveedores" element={<ProveedoresView />} />
               {/* Ruta conectada al Módulo Funcional de Catálogos */}
