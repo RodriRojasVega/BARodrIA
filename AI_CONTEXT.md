@@ -46,6 +46,12 @@ Actúa como un Desarrollador Frontend Senior experto en React, TypeScript y Tail
 
 **REGLA DE ORO ESTRICTA:** Para generar cualquier vista, NO debes utilizar etiquetas HTML nativas (`<button>`, `<table>`, `<input>`, `<select>`, `<span class="badge">`) si existe un componente equivalente en este UI Kit. Debes importar y utilizar estrictamente los siguientes componentes con sus Props exactas.
 
+### 0. Estructura de Layout (Navegación)
+*   **Sidebar:** Menú lateral de navegación basado en SPA (`react-router-dom`).
+    *   `import { Sidebar } from '@/components/layout/Sidebar';`
+    *   **Props:** Ninguna (gestiona su propia ruta activa con `useLocation` y la lista estática `NAV_ITEMS`).
+    *   **Uso:** `<Sidebar />` (Se ubica en el contenedor principal de la App).
+
 ### 1. Cabeceras y KPIs (Estructura de Vistas)
 *   **ModuleHeader:** Cabecera estándar para todos los módulos.
     *   `import { ModuleHeader } from '@/components/ui/ModuleHeader';`
