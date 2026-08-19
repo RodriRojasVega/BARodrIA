@@ -124,3 +124,15 @@ Actúa como un Desarrollador Frontend Senior experto en React, TypeScript y Tail
         ```tsx
         <DualAsignador childrenDer="{...}" childrenIzq="{...}" contador="{5}" tituloDer="Insumos Disponibles" tituloIzq="Receta Activa"/>
         ```
+## 📂 Arquitectura de Módulos y Estrategia de Tipado
+
+### 1. Estructura de Módulos Autocontenidos
+Para mantener la atomicidad y el orden a medida que la PWA escala, los módulos complejos dentro de `@/modules/[nombre]/` deben organizarse bajo la siguiente anatomía estándar:
+*   `[Nombre]View.tsx`: El componente orquestador principal (maneja vistas activas, navegación interna y estados globales del módulo).
+*   `components/`: Subcomponentes visuales específicos y exclusivos de este módulo.
+*   `hooks/`: Lógica de negocio, llamadas a Supabase y manejo de estados complejos separados de la UI.
+*   `types.ts`: Tipos o interfaces exclusivas del módulo (si aplican).
+
+### 2. Estrategia de Tipos (`Types`)
+*   **Tipos Globales (`src/types/`):** Utilízalos exclusivamente para entidades de base de datos o modelos de negocio que se comparten o relacionan en **más de un módulo** (ej. `Carta`, `Coctel`, `Insumo`, `Proveedor`).
+*   **Tipos Locales (`src/modules/[nombre]/types.ts`):** Utilízalos para estructuras de datos efímeras, estados de formularios locales, filtros de tablas o props de subcomponentes que no salen del ámbito de ese módulo.
