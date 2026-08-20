@@ -1,15 +1,15 @@
-// src/modules/subrecetas/SubRecetasModule.tsx
+// src/modules/subrecetas/SubRecetasView.tsx
 import { useState } from 'react';
-import { SubRecetasListView, type SubRecetaViewItem } from './components/SubRecetasListView';
-import { SubRecetaDetailView } from './components/SubRecetaDetailView';
-import { SubRecetaFormView } from './components/SubRecetaFormView';
+import { SubRecetasList, type SubRecetaItem } from './components/SubRecetasList';
+import { SubRecetasDetail } from './components/SubRecetasDetail';
+import { SubRecetasForm } from './components/SubRecetasForm';
 import { useSubRecetas } from './hooks/useSubRecetas';
 
 export function SubRecetasModule() {
   const { subRecetas, tipos, insumos, isLoading, guardarSubReceta, eliminarSubReceta, obtenerDetallesSubReceta } = useSubRecetas();
 
   const [vistaActiva, setVistaActiva] = useState<'list' | 'detail' | 'form'>('list');
-  const [subRecetaSeleccionada, setSubRecetaSeleccionada] = useState<SubRecetaViewItem | null>(null);
+  const [subRecetaSeleccionada, setSubRecetaSeleccionada] = useState<SubRecetaItem | null>(null);
   const [ingredientesActivos, setIngredientesActivos] = useState<any[]>([]);
   const [pasosActivos, setPasosActivos] = useState<any[]>([{ descripcion: '' }]);
 
@@ -20,7 +20,7 @@ export function SubRecetasModule() {
     setVistaActiva('form');
   };
 
-  const handleVerDetalle = async (subReceta: SubRecetaViewItem) => {
+  const handleVerDetalle = async (subReceta: SubRecetaItem) => {
     const { ingredientes, pasos } = await obtenerDetallesSubReceta(subReceta.id);
     setIngredientesActivos(ingredientes);
     setPasosActivos(pasos);
@@ -28,7 +28,7 @@ export function SubRecetasModule() {
     setVistaActiva('detail');
   };
 
-  const handleEditarSubReceta = async (subReceta: SubRecetaViewItem) => {
+  const handleEditarSubReceta = async (subReceta: SubRecetaItem) => {
     const { ingredientes, pasos } = await obtenerDetallesSubReceta(subReceta.id);
     setIngredientesActivos(ingredientes);
     setPasosActivos(pasos.length > 0 ? pasos : [{ descripcion: '' }]);
@@ -49,7 +49,7 @@ export function SubRecetasModule() {
     // Aplicamos semántica UI Kit: bg-background
     <div className="h-full w-full flex flex-col overflow-hidden bg-background">
       {vistaActiva === 'list' && (
-        <SubRecetasListView 
+        <SubRecetasList 
           data={subRecetas} 
           tipos={tipos} 
           onNuevaSubReceta={handleNuevaSubReceta} 
@@ -57,7 +57,7 @@ export function SubRecetasModule() {
         />
       )}
       {vistaActiva === 'detail' && subRecetaSeleccionada && (
-        <SubRecetaDetailView 
+        <SubRecetasDetail 
           subReceta={subRecetaSeleccionada} 
           insumosDisponibles={insumos} 
           ingredientesBase={ingredientesActivos} 
@@ -73,7 +73,7 @@ export function SubRecetasModule() {
         />
       )}
       {vistaActiva === 'form' && (
-        <SubRecetaFormView
+        <SubRecetasForm
           subRecetaBase={subRecetaSeleccionada} 
           insumosDisponibles={insumos} 
           ingredientesBase={ingredientesActivos} 

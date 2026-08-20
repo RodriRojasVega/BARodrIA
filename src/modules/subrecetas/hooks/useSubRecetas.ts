@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { TipoSubReceta } from '@/types/subrecetas';
-import type { SubRecetaViewItem } from '../components/SubRecetasListView';
+import type { SubRecetaItem } from '../components/SubRecetasList';
 import { calcularCostoLoteBOM, calcularCostoSubReceta } from '@/lib/calculos';
 
 export function useSubRecetas() {
-  const [subRecetas, setSubRecetas] = useState<SubRecetaViewItem[]>([]);
+  const [subRecetas, setSubRecetas] = useState<SubRecetaItem[]>([]);
   const [tipos, setTipos] = useState<TipoSubReceta[]>([]);
   const [insumos, setInsumos] = useState<any[]>([]); // Exportaremos esto al Formulario
   const [bomGlobal, setBomGlobal] = useState<any[]>([]);

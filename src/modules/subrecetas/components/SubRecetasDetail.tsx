@@ -12,15 +12,15 @@ import { Tabs, TabPanel, type TabItem } from '@/components/ui/Tabs';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell } from '@/components/ui/Table';
 import { StepList } from '@/components/ui/StepList'; // <-- Nuevo import
 
-import type { SubRecetaViewItem } from './SubRecetasListView';
+import type { SubRecetaItem } from './SubRecetasList';
 
 interface Props {
-  subReceta: SubRecetaViewItem;
+  subReceta: SubRecetaItem;
   insumosDisponibles: any[];
   ingredientesBase: any[];
   pasosBase: any[];
   onVolver: () => void;
-  onEditar: (s: SubRecetaViewItem) => void;
+  onEditar: (s: SubRecetaItem) => void;
   onEliminar: () => void;
 }
 
@@ -30,7 +30,7 @@ const DETAIL_TABS: TabItem[] = [
   { id: 'uso', label: 'Uso en Cócteles', icon: <LinkIcon size={14} />, activeColor: 'border-success text-success' },
 ];
 
-export function SubRecetaDetailView({ 
+export function SubRecetasDetail({ 
   subReceta, 
   insumosDisponibles, 
   ingredientesBase, 

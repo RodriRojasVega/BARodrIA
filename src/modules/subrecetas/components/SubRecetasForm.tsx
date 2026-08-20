@@ -1,4 +1,4 @@
-// src/modules/subrecetas/components/SubRecetaFormView.tsx
+// src/modules/subrecetas/components/SubRecetaForm.tsx
 import { useState, useMemo } from 'react';
 import { ArrowLeft, Save, Plus, TestTube } from 'lucide-react';
 
@@ -12,11 +12,11 @@ import { SummaryCard } from '@/components/ui/SummaryCard';
 import { DynamicRow } from '@/components/ui/DynamicRow';
 import { DynamicIngredientRow } from '@/components/ui/DynamicIngredientRow';
 
-import type { SubRecetaViewItem } from './SubRecetasListView';
+import type { SubRecetaItem } from './SubRecetasList';
 import type { TipoSubReceta } from '@/types/subrecetas';
 
 interface Props {
-  subRecetaBase?: SubRecetaViewItem | null;
+  subRecetaBase?: SubRecetaItem | null;
   insumosDisponibles: any[];
   ingredientesBase: any[];
   pasosBase: any[];
@@ -25,7 +25,7 @@ interface Props {
   onCancelar: () => void;
 }
 
-export function SubRecetaFormView({ 
+export function SubRecetasForm({ 
   subRecetaBase, 
   insumosDisponibles, 
   ingredientesBase, 

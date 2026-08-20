@@ -1,4 +1,4 @@
-// src/modules/subrecetas/components/SubRecetasListView.tsx
+// src/modules/subrecetas/components/SubRecetasList.tsx
 import { useState, useMemo } from 'react';
 import { Plus, FlaskConical } from 'lucide-react';
 
@@ -7,30 +7,30 @@ import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell, Tabl
 import { Button } from '@/components/ui/Button';
 import { SummaryCard } from '@/components/ui/SummaryCard';
 import { ModuleHeader } from '@/components/ui/ModuleHeader';
-import { Badge } from '@/components/ui/Badge'; // Nuevo import para el Badge
+import { Badge } from '@/components/ui/Badge';
 
 // Tipos basados en tu esquema
 import type { SubReceta, TipoSubReceta } from '@/types/subrecetas';
 
-export type SubRecetaViewItem = SubReceta & {
+export type SubRecetaItem = SubReceta & {
   categoria_nombre?: string;
   costo_lote_clp?: number;
   costo_unitario_clp?: number;
 };
 
-interface SubRecetasListViewProps {
-  data: SubRecetaViewItem[];
+interface SubRecetasListProps {
+  data: SubRecetaItem[];
   tipos: TipoSubReceta[];
   onNuevaSubReceta: () => void;
-  onVerDetalle: (subReceta: SubRecetaViewItem) => void;
+  onVerDetalle: (subReceta: SubRecetaItem) => void;
 }
 
-export function SubRecetasListView({ 
+export function SubRecetasList({ 
   data, 
   tipos, 
   onNuevaSubReceta, 
   onVerDetalle 
-}: SubRecetasListViewProps) {
+}: SubRecetasListProps) {
   
   // Estados de interfaz
   const [busqueda, setBusqueda] = useState('');
@@ -39,10 +39,10 @@ export function SubRecetasListView({
   const [showKpis, setShowKpis] = useState(false); // Oculto por defecto
 
   // Estados de ordenamiento
-  const [columnaOrden, setColumnaOrden] = useState<keyof SubRecetaViewItem | 'tipo'>('nombre');
+  const [columnaOrden, setColumnaOrden] = useState<keyof SubRecetaItem | 'tipo'>('nombre');
   const [ordenAsc, setOrdenAsc] = useState(true);
 
-  const manejarOrden = (col: keyof SubRecetaViewItem | 'tipo') => {
+  const manejarOrden = (col: keyof SubRecetaItem | 'tipo') => {
     if (columnaOrden === col) {
       setOrdenAsc(!ordenAsc);
     } else {

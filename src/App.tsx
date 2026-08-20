@@ -6,7 +6,7 @@ import { DashboardView } from './modules/dashboard/DashboardView';
 import { InsumosView } from './modules/insumos/InsumosView';
 import { ProveedoresView } from './modules/proveedores/ProveedoresView';
 import { CatalogosView } from './modules/catalogos/CatalogosView';
-import { SubRecetasModule } from './modules/subrecetas/SubRecetasModule';
+import { SubRecetasModule } from './modules/subrecetas/SubRecetasView';
 import { CoctelView } from './modules/coctel/CoctelView';
 import { CartaView } from './modules/carta/CartaView';
 import { UiKitView } from './modules/uikit/UiKitView';
