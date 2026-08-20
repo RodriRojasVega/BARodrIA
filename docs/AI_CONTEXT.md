@@ -162,6 +162,21 @@ Para mantener la atomicidad y el orden a medida que la PWA escala, los módulos 
         ```tsx
         <DualAsignador childrenDer="{...}" childrenIzq="{...}" contador="{5}" tituloDer="Insumos Disponibles" tituloIzq="Receta Activa"/>
         ```
+
+### 8. Tarjeta de Información
+*   **InfoCard:** Componente para mostrar información detallada en tarjetas visuales con colores temáticos y botón de copiado rápido al portapapeles.
+    *   `import { InfoCard } from '@/components/ui/InfoCard';`
+    *   **Props:**
+        *   `title` (string): Título de la tarjeta (determina el color según la variante).
+        *   `value` (string | number | null): Valor principal a mostrar.
+        *   `copyText` (string): Texto que se copiará al portapapeles (si se omite, el botón de copiado no se renderiza).
+        *   `variant` ('primary' | 'info' | 'success' | 'warning' | 'purple'): Selector de color para el título.
+        *   `children` (ReactNode): Contenido personalizado alternativo si no se usa `value`.
+    *   **Uso:**
+        ```tsx
+        <InfoCard copyText="contacto@empresa.cl" title="Correo Electrónico" value="contacto@empresa.cl" variant="warning"/>
+        ```
+
 ## 🔮 Roadmap Técnico & Servicios Futuros (Directivas de Diseño)
 
 Estas funcionalidades están planificadas para fases posteriores. El código actual debe diseñarse desacoplado, previendo la integración directa con los siguientes estándares:
@@ -191,3 +206,23 @@ Estas funcionalidades están planificadas para fases posteriores. El código act
 - **Directivas actuales para el código:**
   - No hardcodear identificadores fijos ni asumir que existe una sola organización en el sistema.
   - Diseñar interfaces y tipos en `@/types/` preparados para admitir opcionalmente campos de auditoría y pertenencia (`empresa_id?`, `created_by?`).
+
+
+  ## 🧩 Arquitectura del Sistema & UI Kit (Actualizado - Agosto 2026)
+
+### 1. Nuevos Componentes UI (`src/components/ui/`)
+* **`InfoCard.tsx`**: Tarjeta modular de información para vistas de detalle y fichas.
+  * **Características**: Títulos con colores dinámicos por categoría (variantes `primary`, `info`, `success`, `warning`, `purple`), soporte para texto multilínea o hijos personalizados, y botón integrado de copiado rápido al portapapeles con feedback visual temporal (`navigator.clipboard`).
+
+### 2. Estándar Arquitectónico de Módulos (Ej: Proveedores)
+* **Estructura de Vistas**:
+  * **Listado (`*List.tsx`)**: KPIs colapsables, barra de herramientas con búsqueda dinámica, selector de límite de paginación y soporte completo de ordenamiento por columnas.
+  * **Formularios (`*Form.tsx`)**: Integración con `ModuleHeader`, inputs numéricos seguros (previniendo el bloqueo del cero al vaciar el campo) y componente `DualAsignador`.
+  * **Detalle (`*Detail.tsx`)**: Estructurado en **3 pestañas arquitectónicas**:
+    1. *Información General*: Desplegada mediante `InfoCard`s con copiado rápido (excluyendo notas u observaciones).
+    2. *Catálogo de Productos*: Tabla filtrable, paginada y ordenable de insumos asociados.
+    3. *Histórico de Precios*: Registro cronológico de auditoría de tarifas con búsqueda y ordenamiento.
+
+### 3. Centralización de Tipos (`src/types/`)
+* Las entidades de dominio y base de datos (Supabase) residen globalmente en `src/types/` (`insumos.ts`, `proveedores.ts`, etc.) para permitir referencias cruzadas limpias entre módulos.
+* Los tipos locales dentro de los submódulos (`src/modules/.../types.ts`) se limitan estrictamente a estados de interfaz y navegación de vistas (ej. `VistaProveedor`, `VistaInsumo`).

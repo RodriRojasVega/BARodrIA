@@ -1,105 +1,302 @@
 // src/modules/insumos/components/InsumosDetail.tsx
-import { ArrowLeft, Edit3, Trash2, History } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ArrowLeft, Edit3, Trash2, Info, Truck, History, Package } from 'lucide-react';
 import type { Insumo, TipoInsumo } from '../types';
+
+// Componentes del UI Kit Maestro 2.0
+import { ModuleHeader } from '@/components/ui/ModuleHeader';
+import { Tabs, TabPanel } from '@/components/ui/Tabs';
+import { SummaryCard } from '@/components/ui/SummaryCard';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell, TableToolbar, TablePagination } from '@/components/ui/Table';
+
+export interface InsumoHistorico {
+  id: string | number;
+  fecha: string;
+  proveedor_nombre?: string;
+  precio_compra: number;
+  costo_unitario: number;
+  motivo?: string;
+}
 
 interface Props {
   insumo: Insumo;
   tipos: TipoInsumo[];
+  historialPrecios?: InsumoHistorico[];
+  cargandoHistorial?: boolean;
   onVolver: () => void;
   onEditar: () => void;
   onEliminar: (id: number, nombre: string) => void;
-  onVerHistorico: () => void;
 }
 
-export function InsumosDetail({ insumo, tipos, onVolver, onEditar, onEliminar, onVerHistorico }: Props) {
+export function InsumosDetail({ 
+  insumo, 
+  tipos, 
+  historialPrecios = [], 
+  cargandoHistorial = false,
+  onVolver, 
+  onEditar, 
+  onEliminar 
+}: Props) {
+  const [activeTab, setActiveTab] = useState('info');
+  
+  // Estados para Tabla Proveedores
+  const [busquedaProv, setBusquedaProv] = useState('');
+  const [paginaProv, setPaginaProv] = useState(1);
+  const [colProv, setColProv] = useState<'nombre' | 'precio_oferta'>('nombre');
+  const [dirProv, setDirProv] = useState<'asc' | 'desc'>('asc');
+  const [provsPorPagina, setProvsPorPagina] = useState(5);
+
+  // Estados para Tabla Historial
+  const [busquedaHist, setBusquedaHist] = useState('');
+  const [paginaHist, setPaginaHist] = useState(1);
+  const [colHist, setColHist] = useState<keyof InsumoHistorico>('fecha');
+  const [dirHist, setDirHist] = useState<'desc' | 'asc'>('desc');
+  const [histPorPagina, setHistPorPagina] = useState(10);
+
   const tipoNombre = tipos.find(t => t.id == insumo.tipo_id)?.nombre || 'General';
+  const rendimientoPct = insumo.rendimiento_neto_porcentaje ? (insumo.rendimiento_neto_porcentaje * 100).toFixed(0) : '100';
+
+  // Manejadores de Orden
+  const manejarOrdenProv = (col: 'nombre' | 'precio_oferta') => {
+    if (colProv === col) setDirProv(dirProv === 'asc' ? 'desc' : 'asc');
+    else { setColProv(col); setDirProv('asc'); }
+  };
+
+  const manejarOrdenHist = (col: keyof InsumoHistorico) => {
+    if (colHist === col) setDirHist(dirHist === 'asc' ? 'desc' : 'asc');
+    else { setColHist(col); setDirHist(col === 'fecha' ? 'desc' : 'asc'); }
+  };
+
+  // Lógica Tabla Proveedores
+  const proveedoresProcesados = useMemo(() => {
+    if (!insumo.proveedores) return [];
+    const filtrados = insumo.proveedores.filter(p => {
+      if (!busquedaProv) return true;
+      return p.nombre.toLowerCase().includes(busquedaProv.toLowerCase());
+    });
+    
+    return filtrados.sort((a, b) => {
+      let valA = a[colProv]; let valB = b[colProv];
+      if (valA == null) valA = ''; if (valB == null) valB = '';
+      if (typeof valA === 'string' && typeof valB === 'string') return dirProv === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      return dirProv === 'asc' ? (Number(valA) - Number(valB)) : (Number(valB) - Number(valA));
+    });
+  }, [insumo.proveedores, busquedaProv, colProv, dirProv]);
+  
+  const totalPaginasProv = Math.ceil(proveedoresProcesados.length / provsPorPagina) || 1;
+  const paginaProvSegura = Math.min(paginaProv, totalPaginasProv); 
+  const provsPaginados = proveedoresProcesados.slice((paginaProvSegura - 1) * provsPorPagina, paginaProvSegura * provsPorPagina);
+
+  // Lógica Tabla Historial
+  const historialProcesado = useMemo(() => {
+    const filtrados = historialPrecios.filter(h => {
+      if (!busquedaHist) return true; 
+      
+      const query = busquedaHist.toLowerCase();
+      const strMotivo = h.motivo?.toLowerCase() || '';
+      const strProveedor = h.proveedor_nombre?.toLowerCase() || 'costo base general';
+      
+      return strMotivo.includes(query) || strProveedor.includes(query);
+    });
+
+    return filtrados.sort((a, b) => {
+      let valA = a[colHist]; let valB = b[colHist];
+      if (valA == null) valA = ''; if (valB == null) valB = '';
+      if (colHist === 'fecha') {
+        const dateA = new Date(valA).getTime(); const dateB = new Date(valB).getTime();
+        return dirHist === 'asc' ? dateA - dateB : dateB - dateA;
+      }
+      if (typeof valA === 'string' && typeof valB === 'string') return dirHist === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      return dirHist === 'asc' ? (Number(valA) - Number(valB)) : (Number(valB) - Number(valA));
+    });
+  }, [historialPrecios, busquedaHist, colHist, dirHist]);
+
+  const totalPaginasHist = Math.ceil(historialProcesado.length / histPorPagina) || 1;
+  const paginaHistSegura = Math.min(paginaHist, totalPaginasHist);
+  const histPaginado = historialProcesado.slice((paginaHistSegura - 1) * histPorPagina, paginaHistSegura * histPorPagina);
 
   return (
-    <div className="flex flex-col h-full w-full overflow-y-auto space-y-4 custom-scrollbar">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
-        <button onClick={onVolver} className="text-xs text-emerald-400 hover:text-emerald-300 font-bold uppercase tracking-wider flex items-center gap-2 transition bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl">
-          <ArrowLeft size={14} /> <span>Volver al listado</span>
-        </button>
-        <div className="flex gap-2">
-          <button onClick={onEditar} className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5">
-            <Edit3 size={14} /> Editar
-          </button>
-          <button onClick={() => onEliminar(insumo.id, insumo.nombre)} className="text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition border border-red-900/50 flex items-center gap-1.5">
-            <Trash2 size={14} /> Eliminar
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-4 pb-4">
-        <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-800 pb-4">
-            <div>
-              <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-full font-mono border border-emerald-500/25">{tipoNombre}</span>
-              <h2 className="text-2xl font-bold text-white mt-2">{insumo.nombre}</h2>
-            </div>
-            <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Costo Unitario Real</span>
-              <span className="text-xl font-mono font-bold text-emerald-400">${Number(insumo.costo_unitario).toFixed(4)}</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Precio Compra</span>
-              <span className="text-sm font-mono text-white font-semibold">${insumo.precio_compra?.toLocaleString('es-CL')}</span>
-            </div>
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Formato / Envase</span>
-              <span className="text-sm font-mono text-white font-semibold">{insumo.formato_envase} {insumo.unidad_medida}</span>
-            </div>
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Rendimiento Neto</span>
-              <span className="text-sm font-mono text-white font-semibold">{(insumo.rendimiento_neto_porcentaje * 100).toFixed(0)}%</span>
-            </div>
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Graduación (ABV)</span>
-              <span className="text-sm font-mono text-amber-400 font-semibold">{insumo.graduacion_alcohol_base > 0 ? `${insumo.graduacion_alcohol_base}%` : 'Sin alcohol'}</span>
-            </div>
-          </div>
-
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
-            <span className="text-xs text-slate-300 font-medium">Origen del Insumo</span>
-            <span className={`text-xs font-bold font-mono px-3 py-1 rounded-lg ${insumo.es_artesanal ? 'text-purple-400 bg-purple-950/40 border border-purple-900/50' : 'text-slate-400'}`}>
-              {insumo.es_artesanal ? 'Artesanal / Producción Propia' : 'Industrial / Comercial'}
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider font-mono">Proveedores que Suministran este Insumo</h3>
-          <div className="space-y-2">
-            {insumo.proveedores && insumo.proveedores.length > 0 ? (
-              insumo.proveedores.map(p => (
-                <div key={p.proveedor_id} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                    <span className="text-xs text-white font-semibold">{p.nombre}</span>
-                  </div>
-                  <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
-                    {p.precio_oferta ? `$${p.precio_oferta.toLocaleString('es-CL')}` : 'Sin oferta definida'}
-                  </span>
-                </div>
-              ))
+    <div className="flex flex-col min-h-full w-full space-y-3 p-4 md:p-6 bg-background text-foreground animate-fade-in">
+      
+      {/* CABECERA MAESTRA */}
+      <ModuleHeader 
+        icon={<Package size={20} />}
+        title={insumo.nombre}
+        badges={
+          <>
+            <Badge variant="default" size="sm">{tipoNombre}</Badge>
+            {insumo.es_artesanal ? (
+              <Badge variant="purple" size="sm">Producción Propia</Badge>
             ) : (
-              <div className="text-xs text-slate-500 py-4 text-center bg-slate-900 border border-slate-800 rounded-xl">Este insumo no tiene proveedores asociados actualmente.</div>
+              <Badge variant="info" size="sm">Industrial / Comercial</Badge>
             )}
+          </>
+        }
+        primaryAction={
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" icon={<ArrowLeft size={14} />} onClick={onVolver}>
+              Volver
+            </Button>
+            <Button variant="secondary" size="sm" icon={<Edit3 size={14} />} onClick={onEditar}>
+              Editar
+            </Button>
+            <Button variant="danger" size="sm" icon={<Trash2 size={14} />} onClick={() => onEliminar(insumo.id, insumo.nombre)}>
+              Eliminar
+            </Button>
           </div>
-        </div>
+        }
+      />
 
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-xl">
-          <div>
-            <span className="text-xs font-bold text-emerald-400 block uppercase tracking-wider font-mono">Histórico de Precios y Costos</span>
-            <p className="text-[11px] text-slate-400 mt-0.5">Consulta todos los registros de auditoría y cambios con buscador y paginación.</p>
+      {/* SISTEMA DE PESTAÑAS (Espaciado reducido a space-y-2) */}
+      <div className="flex-1 flex flex-col">
+        
+        <Tabs 
+          activeTab={activeTab} 
+          onChangeTab={setActiveTab}
+          tabs={[
+            { id: 'info', label: 'Información y Costos', icon: <Info size={16}/>, activeColor: 'text-primary border-primary' },
+            { id: 'proveedores', label: 'Proveedores Asociados', icon: <Truck size={16}/>, activeColor: 'text-primary border-primary' },
+            { id: 'historico', label: 'Historial de Variaciones', icon: <History size={16}/>, activeColor: 'text-primary border-primary' }
+          ]}
+        />
+
+        {/* TAB 1: INFORMACIÓN GENERAL */}
+        <TabPanel id="info" activeTab={activeTab}>
+          <div className="animate-fade-in pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <SummaryCard label="Total Compra" value={`$${insumo.precio_compra?.toLocaleString('es-CL')}`} valueClassName="text-foreground" />
+              <SummaryCard label="Formato / Envase" value={`${insumo.formato_envase} ${insumo.unidad_medida}`} valueClassName="text-foreground font-mono" />
+              <SummaryCard label="Rendimiento Neto" value={`${rendimientoPct}%`} valueClassName={insumo.rendimiento_neto_porcentaje < 1 ? 'text-warning' : 'text-success'} />
+              <SummaryCard 
+                label="Graduación (ABV)" 
+                value={insumo.graduacion_alcohol_base > 0 ? `${insumo.graduacion_alcohol_base}%` : '0%'} 
+                valueClassName="text-amber-500 font-mono"
+                badge={insumo.graduacion_alcohol_base === 0 ? <Badge variant="default" size="sm">Sin alcohol</Badge> : undefined}
+              />
+              <SummaryCard 
+                label="Costo Unitario Real" 
+                value={`$${Number(insumo.costo_unitario).toFixed(4)}`} 
+                valueClassName="text-primary text-2xl font-bold font-mono"
+                badge={<span className="text-muted font-normal">/ {insumo.unidad_medida}</span>}
+              />
+            </div>
           </div>
-          <button onClick={onVerHistorico} className="text-xs bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 px-4 py-2.5 rounded-xl border border-emerald-500/30 font-bold transition flex items-center gap-1.5 shadow">
-            <History size={16} /> Ver Histórico Completo →
-          </button>
-        </div>
+        </TabPanel>
+
+        {/* TAB 2: PROVEEDORES */}
+        <TabPanel id="proveedores" activeTab={activeTab}>
+          <div className="flex flex-col animate-fade-in pt-1">
+            <TableToolbar 
+              busqueda={busquedaProv}
+              onBusquedaChange={(val) => { setBusquedaProv(val); setPaginaProv(1); }}
+              placeholder="Buscar proveedor asociado..."
+              limite={provsPorPagina}
+              onLimiteChange={(val) => { setProvsPorPagina(val); setPaginaProv(1); }}
+            />
+            <Table>
+              <TableHead>
+                <tr>
+                  <TableHeaderCell isSortable sortDirection={colProv === 'nombre' ? dirProv : null} onSort={() => manejarOrdenProv('nombre')}>
+                    Proveedor
+                  </TableHeaderCell>
+                  <TableHeaderCell align="right" isSortable sortDirection={colProv === 'precio_oferta' ? dirProv : null} onSort={() => manejarOrdenProv('precio_oferta')}>
+                    Precio Oferta Asignado
+                  </TableHeaderCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {provsPaginados.length === 0 ? (
+                  <TableRow><TableCell colSpan={2} align="center" className="py-6 text-muted">No hay proveedores que coincidan.</TableCell></TableRow>
+                ) : (
+                  provsPaginados.map(p => (
+                    <TableRow key={p.proveedor_id}>
+                      <TableCell className="font-bold">{p.nombre}</TableCell>
+                      <TableCell align="right" className="font-mono text-primary font-bold">
+                        {p.precio_oferta ? `$${p.precio_oferta.toLocaleString('es-CL')}` : 'Sin oferta'}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination 
+              paginaActual={paginaProvSegura} totalPaginas={totalPaginasProv} onCambiarPagina={setPaginaProv}
+              elementosMostrados={provsPaginados.length} totalElementos={proveedoresProcesados.length}
+            />
+          </div>
+        </TabPanel>
+
+        {/* TAB 3: HISTORIAL */}
+        <TabPanel id="historico" activeTab={activeTab}>
+          <div className="flex flex-col animate-fade-in pt-1">
+            <TableToolbar 
+              busqueda={busquedaHist}
+              onBusquedaChange={(val) => { setBusquedaHist(val); setPaginaHist(1); }}
+              placeholder="Buscar por motivo o proveedor..."
+              limite={histPorPagina}
+              onLimiteChange={(val) => { setHistPorPagina(val); setPaginaHist(1); }}
+            />
+            <Table>
+              <TableHead>
+                <tr>
+                  <TableHeaderCell isSortable sortDirection={colHist === 'fecha' ? dirHist : null} onSort={() => manejarOrdenHist('fecha')}>
+                    Fecha y Hora
+                  </TableHeaderCell>
+                  <TableHeaderCell isSortable sortDirection={colHist === 'motivo' ? dirHist : null} onSort={() => manejarOrdenHist('motivo')}>
+                    Motivo / Evento
+                  </TableHeaderCell>
+                  <TableHeaderCell isSortable sortDirection={colHist === 'proveedor_nombre' ? dirHist : null} onSort={() => manejarOrdenHist('proveedor_nombre')}>
+                    Proveedor (Origen)
+                  </TableHeaderCell>
+                  <TableHeaderCell align="right" isSortable sortDirection={colHist === 'precio_compra' ? dirHist : null} onSort={() => manejarOrdenHist('precio_compra')}>
+                    Precio Compra
+                  </TableHeaderCell>
+                  <TableHeaderCell align="right" isSortable sortDirection={colHist === 'costo_unitario' ? dirHist : null} onSort={() => manejarOrdenHist('costo_unitario')}>
+                    Costo Unitario
+                  </TableHeaderCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {cargandoHistorial ? (
+                  <TableRow><TableCell colSpan={5} align="center" className="py-6 text-muted animate-pulse">Cargando registros históricos...</TableCell></TableRow>
+                ) : histPaginado.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} align="center" className="py-6 text-muted">No hay registros históricos disponibles.</TableCell></TableRow>
+                ) : (
+                  histPaginado.map(h => (
+                    <TableRow key={h.id}>
+                      <TableCell className="font-mono text-xs text-muted">
+                        {new Date(h.fecha).toLocaleString('es-CL', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </TableCell>
+                      <TableCell className="text-xs">{h.motivo || 'Actualización de Insumo'}</TableCell>
+                      <TableCell className="text-xs">
+                        {h.proveedor_nombre ? (
+                          <span className="text-foreground">{h.proveedor_nombre}</span>
+                        ) : (
+                          <span className="text-primary italic font-medium">Costo Base / General</span>
+                        )}
+                      </TableCell>
+                      <TableCell align="right" className="font-mono">${h.precio_compra.toLocaleString('es-CL')}</TableCell>
+                      <TableCell align="right" className="font-mono font-bold text-primary">${Number(h.costo_unitario).toFixed(4)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination 
+              paginaActual={paginaHistSegura} totalPaginas={totalPaginasHist} onCambiarPagina={setPaginaHist}
+              elementosMostrados={histPaginado.length} totalElementos={historialProcesado.length}
+            />
+          </div>
+        </TabPanel>
+
       </div>
     </div>
   );

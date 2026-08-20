@@ -1,7 +1,15 @@
 // src/modules/proveedores/components/ProveedoresDetail.tsx
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Edit3, Trash2, ClipboardList, TrendingUp } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { ArrowLeft, Edit3, Trash2, ClipboardList, TrendingUp, Users, Info } from 'lucide-react';
 import type { Proveedor, InsumoGlobal, PrecioHistorico } from '../types';
+
+// Componentes del UI Kit Maestro 2.0
+import { ModuleHeader } from '@/components/ui/ModuleHeader';
+import { Tabs, TabPanel } from '@/components/ui/Tabs';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell, TableToolbar, TablePagination } from '@/components/ui/Table';
+import { InfoCard } from '@/components/ui/InfoCard';
 
 interface Props {
   proveedor: Proveedor;
@@ -13,15 +21,29 @@ interface Props {
 }
 
 export function ProveedoresDetail({ proveedor, insumosGlobales, obtenerHistorico, onVolver, onEditar, onEliminar }: Props) {
-  const [tab, setTab] = useState<'catalogo' | 'historico'>('catalogo');
+  const [activeTab, setActiveTab] = useState('info');
   const [historico, setHistorico] = useState<PrecioHistorico[]>([]);
   const [cargandoHist, setCargandoHist] = useState(false);
 
+  // Estados para Tabla Catálogo
+  const [busquedaCat, setBusquedaCat] = useState('');
+  const [paginaCat, setPaginaCat] = useState(1);
+  const [limiteCat, setLimiteCat] = useState(5);
+  const [colCat, setColCat] = useState<'nombre' | 'formato_envase' | 'precio_oferta'>('nombre');
+  const [dirCat, setDirCat] = useState<'asc' | 'desc'>('asc');
+
+  // Estados para Tabla Histórico
+  const [busquedaHist, setBusquedaHist] = useState('');
+  const [paginaHist, setPaginaHist] = useState(1);
+  const [limiteHist, setLimiteHist] = useState(5);
+  const [colHist, setColHist] = useState<keyof PrecioHistorico>('created_at');
+  const [dirHist, setDirHist] = useState<'asc' | 'desc'>('desc');
+
   useEffect(() => {
-    if (tab === 'historico' && historico.length === 0) {
+    if (activeTab === 'historico' && historico.length === 0) {
       cargarHist();
     }
-  }, [tab, proveedor.id]);
+  }, [activeTab, proveedor.id]);
 
   const cargarHist = async () => {
     setCargandoHist(true);
@@ -30,100 +52,224 @@ export function ProveedoresDetail({ proveedor, insumosGlobales, obtenerHistorico
     setCargandoHist(false);
   };
 
+  // Manejadores de Orden
+  const manejarOrdenCat = (col: 'nombre' | 'formato_envase' | 'precio_oferta') => {
+    if (colCat === col) setDirCat(dirCat === 'asc' ? 'desc' : 'asc');
+    else { setColCat(col); setDirCat('asc'); }
+  };
+
+  const manejarOrdenHist = (col: keyof PrecioHistorico) => {
+    if (colHist === col) setDirHist(dirHist === 'asc' ? 'desc' : 'asc');
+    else { setColHist(col); setDirHist(col === 'created_at' ? 'desc' : 'asc'); }
+  };
+
+  // Procesamiento Catálogo
+  const catalogoProcesado = useMemo(() => {
+    if (!proveedor.insumos) return [];
+    const items = proveedor.insumos.map(rel => {
+      const ins = insumosGlobales.find(i => i.id === rel.insumo_id);
+      return { ...rel, ins };
+    }).filter(x => x.ins != null);
+
+    const filtrados = items.filter(item => {
+      if (!busquedaCat) return true;
+      return item.ins?.nombre.toLowerCase().includes(busquedaCat.toLowerCase());
+    });
+
+    return filtrados.sort((a, b) => {
+      let valA: any = '';
+      let valB: any = '';
+      if (colCat === 'nombre') {
+        valA = a.ins?.nombre || '';
+        valB = b.ins?.nombre || '';
+      } else if (colCat === 'formato_envase') {
+        valA = a.ins?.formato_envase || 0;
+        valB = b.ins?.formato_envase || 0;
+      } else if (colCat === 'precio_oferta') {
+        valA = a.precio_oferta ?? -1;
+        valB = b.precio_oferta ?? -1;
+      }
+
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return dirCat === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+      return dirCat === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+    });
+  }, [proveedor.insumos, insumosGlobales, busquedaCat, colCat, dirCat]);
+
+  const totalPaginasCat = Math.ceil(catalogoProcesado.length / limiteCat) || 1;
+  const paginaCatSegura = Math.min(paginaCat, totalPaginasCat);
+  const catalogoPaginado = catalogoProcesado.slice((paginaCatSegura - 1) * limiteCat, paginaCatSegura * limiteCat);
+
+  // Procesamiento Histórico
+  const historicoProcesado = useMemo(() => {
+    const filtrados = historico.filter(h => {
+      if (!busquedaHist) return true;
+      const q = busquedaHist.toLowerCase();
+      return h.insumo_nombre?.toLowerCase().includes(q) || h.created_at?.toLowerCase().includes(q);
+    });
+
+    return filtrados.sort((a, b) => {
+      let valA = a[colHist];
+      let valB = b[colHist];
+      if (valA == null) valA = '';
+      if (valB == null) valB = '';
+
+      if (colHist === 'created_at') {
+        const dateA = new Date(valA as string).getTime();
+        const dateB = new Date(valB as string).getTime();
+        return dirHist === 'asc' ? dateA - dateB : dateB - dateA;
+      }
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return dirHist === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+      return dirHist === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+    });
+  }, [historico, busquedaHist, colHist, dirHist]);
+
+  const totalPaginasHist = Math.ceil(historicoProcesado.length / limiteHist) || 1;
+  const paginaHistSegura = Math.min(paginaHist, totalPaginasHist);
+  const historicoPaginado = historicoProcesado.slice((paginaHistSegura - 1) * limiteHist, paginaHistSegura * limiteHist);
+
   return (
-    <div className="space-y-6 flex-1 overflow-y-auto custom-scrollbar">
-      <div className="bg-slate-900 border border-slate-800 p-6 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
-        <div>
-          <button onClick={onVolver} className="text-xs font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1 transition-colors">
-            <ArrowLeft size={14} /> Volver al Directorio
-          </button>
-          <div className="flex items-center gap-3">
-            <h2 className="text-3xl font-bold text-slate-100 tracking-wide">{proveedor.nombre}</h2>
-            <span className="bg-emerald-950 text-emerald-400 border border-emerald-900/30 text-[10px] px-2.5 py-1 rounded font-bold font-mono uppercase">Distribuidor</span>
+    <div className="flex flex-col min-h-full w-full space-y-3 p-4 md:p-6 bg-background text-foreground animate-fade-in">
+      
+      {/* CABECERA MAESTRA CON BOTONES COMPACTOS (size="sm") */}
+      <ModuleHeader 
+        icon={<Users size={20} />}
+        title={proveedor.nombre}
+        badges={<Badge variant="info" size="sm">Distribuidor</Badge>}
+        primaryAction={
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" icon={<ArrowLeft size={14} />} onClick={onVolver}>
+              Volver
+            </Button>
+            <Button variant="secondary" size="sm" icon={<Edit3 size={14} />} onClick={onEditar}>
+              Editar
+            </Button>
+            <Button variant="danger" size="sm" icon={<Trash2 size={14} />} onClick={() => onEliminar(proveedor.id, proveedor.nombre)}>
+              Eliminar
+            </Button>
           </div>
-          <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-slate-400">
-            <span>👤 {proveedor.contacto || 'Sin definir'}</span>
-            <span className="text-slate-600">|</span>
-            <span className="font-mono">📱 {proveedor.telefono || 'Sin definir'}</span>
-            <span className="text-slate-600">|</span>
-            <span>✉️ {proveedor.email || 'Sin definir'}</span>
-          </div>
-        </div>
-        <div className="flex gap-3 shrink-0">
-          <button onClick={onEditar} className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 text-sm font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow">
-            <Edit3 size={14} /> Editar
-          </button>
-          <button onClick={() => onEliminar(proveedor.id, proveedor.nombre)} className="bg-red-950/50 hover:bg-red-900 border border-red-900/50 text-red-400 text-sm font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow">
-            <Trash2 size={14} /> Eliminar
-          </button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="flex border-b border-slate-800 bg-slate-900 rounded-t-xl px-4 pt-2 gap-2">
-        <button onClick={() => setTab('catalogo')} className={`py-3 px-5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${tab === 'catalogo' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
-          <ClipboardList size={14} /> Catálogo & Ofertas
-        </button>
-        <button onClick={() => setTab('historico')} className={`py-3 px-5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${tab === 'historico' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}>
-          <TrendingUp size={14} /> Histórico de Auditoría
-        </button>
-      </div>
+      {/* SISTEMA DE TABS */}
+      <div className="flex-1 flex flex-col">
+        
+        <Tabs 
+          activeTab={activeTab} 
+          onChangeTab={setActiveTab}
+          tabs={[
+            { id: 'info', label: 'Información General', icon: <Info size={16}/>, activeColor: 'text-primary border-primary' },
+            { id: 'catalogo', label: 'Catálogo de Productos', icon: <ClipboardList size={16}/>, activeColor: 'text-primary border-primary' },
+            { id: 'historico', label: 'Histórico de Precios', icon: <TrendingUp size={16}/>, activeColor: 'text-primary border-primary' }
+          ]}
+        />
 
-      <div className="bg-slate-900 border-x border-b border-slate-800 rounded-b-xl p-6 shadow-xl min-h-[400px]">
-        {tab === 'catalogo' ? (
-          <div className="space-y-4 animate-fade-in">
-            <h4 className="font-bold text-xs text-slate-400 uppercase tracking-widest mb-2">Insumos Asociados y Precios</h4>
-            <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900 text-slate-400 font-mono uppercase border-b border-slate-800">
-                  <tr><th className="py-3 px-4">Insumo</th><th className="py-3 px-4 text-center">Formato / Unidad</th><th className="py-3 px-4 text-right">Precio de Oferta</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
-                  {proveedor.insumos?.length === 0 ? (
-                    <tr><td colSpan={3} className="text-center py-8 text-slate-500 font-mono text-xs">Sin insumos asignados.</td></tr>
-                  ) : (
-                    proveedor.insumos.map(rel => {
-                      const ins = insumosGlobales.find(i => i.id === rel.insumo_id);
-                      if (!ins) return null;
-                      return (
-                        <tr key={rel.insumo_id} className="hover:bg-slate-800/40">
-                          <td className="py-3 px-4 font-medium text-slate-200 text-xs">{ins.nombre}</td>
-                          <td className="py-3 px-4 text-center text-xs text-slate-400 font-mono">{ins.formato_envase} {ins.unidad_medida}</td>
-                          <td className="py-3 px-4 text-right font-mono text-emerald-400 font-bold text-xs">${rel.precio_oferta?.toLocaleString('es-CL')}</td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+        {/* TAB 1: INFORMACIÓN GENERAL */}
+        <TabPanel id="info" activeTab={activeTab}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in pt-3">
+            <InfoCard title="Razón Social / Nombre" value={proveedor.nombre} copyText={proveedor.nombre} variant="primary" />
+            <InfoCard title="Contacto Comercial" value={proveedor.contacto || 'Sin definir'} copyText={proveedor.contacto || undefined} variant="info" />
+            <InfoCard title="Teléfono de Contacto" value={proveedor.telefono || 'Sin definir'} copyText={proveedor.telefono || undefined} variant="success" />
+            <InfoCard title="Correo Electrónico" value={proveedor.email || 'Sin definir'} copyText={proveedor.email || undefined} variant="warning" />
+            <InfoCard title="Observaciones & Notas" value={proveedor.observaciones || 'Sin notas'} variant="purple" className="md:col-span-2 lg:col-span-2" />
           </div>
-        ) : (
-          <div className="space-y-4 animate-fade-in">
-            <h4 className="font-bold text-xs text-slate-400 uppercase tracking-widest mb-2">Registro de Cambios de Tarifas</h4>
-            <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900 text-slate-400 font-mono uppercase border-b border-slate-800">
-                  <tr><th className="py-3 px-4">Fecha y Hora</th><th className="py-3 px-4">Insumo Modificado</th><th className="py-3 px-4 text-right">Precio Registrado</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {cargandoHist ? (
-                     <tr><td colSpan={3} className="text-center py-8 text-slate-500 text-xs animate-pulse">Cargando auditoría...</td></tr>
-                  ) : historico.length === 0 ? (
-                    <tr><td colSpan={3} className="text-center py-8 text-slate-500 text-xs">Sin cambios registrados.</td></tr>
-                  ) : (
-                    historico.map(h => (
-                      <tr key={h.id} className="hover:bg-slate-800/40">
-                        <td className="py-3 px-4 text-slate-400 text-xs">{new Date(h.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                        <td className="py-3 px-4 text-slate-200 text-xs font-sans">{h.insumo_nombre}</td>
-                        <td className="py-3 px-4 text-right text-pink-400 text-xs font-bold">${h.precio_compra?.toLocaleString('es-CL')}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+        </TabPanel>
+
+        {/* TAB 2: CATÁLOGO DE PRODUCTOS */}
+        <TabPanel id="catalogo" activeTab={activeTab}>
+          <div className="flex flex-col space-y-2 animate-fade-in pt-1">
+            <TableToolbar 
+              busqueda={busquedaCat}
+              onBusquedaChange={(val) => { setBusquedaCat(val); setPaginaCat(1); }}
+              placeholder="Buscar insumo en catálogo..."
+              limite={limiteCat}
+              onLimiteChange={(val) => { setLimiteCat(val); setPaginaCat(1); }}
+            />
+            <Table>
+              <TableHead>
+                <tr>
+                  <TableHeaderCell isSortable sortDirection={colCat === 'nombre' ? dirCat : null} onSort={() => manejarOrdenCat('nombre')}>Insumo</TableHeaderCell>
+                  <TableHeaderCell align="center" isSortable sortDirection={colCat === 'formato_envase' ? dirCat : null} onSort={() => manejarOrdenCat('formato_envase')}>Formato / Unidad</TableHeaderCell>
+                  <TableHeaderCell align="right" isSortable sortDirection={colCat === 'precio_oferta' ? dirCat : null} onSort={() => manejarOrdenCat('precio_oferta')}>Precio de Oferta</TableHeaderCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {catalogoPaginado.length === 0 ? (
+                  <TableRow><TableCell colSpan={3} align="center" className="py-8 text-muted">Sin insumos asignados o coincidentes.</TableCell></TableRow>
+                ) : (
+                  catalogoPaginado.map(rel => (
+                    <TableRow key={rel.insumo_id}>
+                      <TableCell className="font-bold text-foreground">{rel.ins?.nombre}</TableCell>
+                      <TableCell align="center" className="text-xs text-muted font-mono">{rel.ins?.formato_envase} {rel.ins?.unidad_medida}</TableCell>
+                      <TableCell align="right" className="font-mono text-primary font-bold">
+                        {rel.precio_oferta !== null ? `$${rel.precio_oferta.toLocaleString('es-CL')}` : 'Sin oferta'}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination 
+              paginaActual={paginaCatSegura}
+              totalPaginas={totalPaginasCat}
+              onCambiarPagina={setPaginaCat}
+              elementosMostrados={catalogoPaginado.length}
+              totalElementos={catalogoProcesado.length}
+            />
           </div>
-        )}
+        </TabPanel>
+
+        {/* TAB 3: HISTÓRICO DE PRECIOS */}
+        <TabPanel id="historico" activeTab={activeTab}>
+          <div className="flex flex-col space-y-2 animate-fade-in pt-1">
+            <TableToolbar 
+              busqueda={busquedaHist}
+              onBusquedaChange={(val) => { setBusquedaHist(val); setPaginaHist(1); }}
+              placeholder="Buscar por insumo o fecha..."
+              limite={limiteHist}
+              onLimiteChange={(val) => { setLimiteHist(val); setPaginaHist(1); }}
+            />
+            <Table>
+              <TableHead>
+                <tr>
+                  <TableHeaderCell isSortable sortDirection={colHist === 'created_at' ? dirHist : null} onSort={() => manejarOrdenHist('created_at')}>Fecha y Hora</TableHeaderCell>
+                  <TableHeaderCell isSortable sortDirection={colHist === 'insumo_nombre' ? dirHist : null} onSort={() => manejarOrdenHist('insumo_nombre')}>Insumo Modificado</TableHeaderCell>
+                  <TableHeaderCell align="right" isSortable sortDirection={colHist === 'precio_compra' ? dirHist : null} onSort={() => manejarOrdenHist('precio_compra')}>Precio Registrado</TableHeaderCell>
+                </tr>
+              </TableHead>
+              <TableBody>
+                {cargandoHist ? (
+                  <TableRow><TableCell colSpan={3} align="center" className="py-8 text-muted animate-pulse">Cargando auditoría...</TableCell></TableRow>
+                ) : historicoPaginado.length === 0 ? (
+                  <TableRow><TableCell colSpan={3} align="center" className="py-8 text-muted">Sin cambios registrados o coincidentes.</TableCell></TableRow>
+                ) : (
+                  historicoPaginado.map(h => (
+                    <TableRow key={h.id}>
+                      <TableCell className="font-mono text-xs text-muted">
+                        {new Date(h.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}
+                      </TableCell>
+                      <TableCell className="text-xs text-foreground font-medium">{h.insumo_nombre}</TableCell>
+                      <TableCell align="right" className="font-mono font-bold text-primary">
+                        ${h.precio_compra?.toLocaleString('es-CL')}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination 
+              paginaActual={paginaHistSegura}
+              totalPaginas={totalPaginasHist}
+              onCambiarPagina={setPaginaHist}
+              elementosMostrados={historicoPaginado.length}
+              totalElementos={historicoProcesado.length}
+            />
+          </div>
+        </TabPanel>
+
       </div>
     </div>
   );

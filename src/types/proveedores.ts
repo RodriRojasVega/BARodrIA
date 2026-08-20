@@ -1,4 +1,4 @@
-// src/modules/proveedores/types.ts
+// src/types/proveedores.ts
 
 export interface InsumoGlobal {
   id: number;
@@ -35,5 +35,3 @@ export interface PrecioHistorico {
   created_at: string;
   insumo_nombre?: string; // Propiedad calculada para la vista
 }
-
-export type VistaProveedor = 'listado' | 'detalle' | 'formulario';

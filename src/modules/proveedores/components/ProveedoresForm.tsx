@@ -1,7 +1,13 @@
 // src/modules/proveedores/components/ProveedoresForm.tsx
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, X } from 'lucide-react';
+import { Plus, Trash2, Users } from 'lucide-react';
 import type { Proveedor, InsumoGlobal } from '../types';
+
+// Componentes del UI Kit Maestro 2.0
+import { ModuleHeader } from '@/components/ui/ModuleHeader';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { DualAsignador } from '@/components/ui/DualAsignador';
 
 interface Props {
   provAEditar: Proveedor | null;
@@ -16,8 +22,10 @@ export function ProveedoresForm({ provAEditar, insumosGlobales, guardando, onVol
     nombre: '', contacto: '', telefono: '', email: '', observaciones: ''
   });
   
-  const [insumosTempo, setInsumosTempo] = useState<{ insumo_id: number; precio_oferta: number }[]>([]);
+  // Solución UX numérica: permitimos string temporalmente para evitar el bloqueo del 0 al borrar
+  const [insumosTempo, setInsumosTempo] = useState<{ insumo_id: number; precio_oferta: number | string }[]>([]);
   const [buscadorDisp, setBuscadorDisp] = useState('');
+  const [buscadorAsig, setBuscadorAsig] = useState('');
 
   useEffect(() => {
     if (provAEditar) {
@@ -30,116 +38,192 @@ export function ProveedoresForm({ provAEditar, insumosGlobales, guardando, onVol
       });
       setInsumosTempo(provAEditar.insumos.map(r => ({ 
         insumo_id: r.insumo_id, 
-        precio_oferta: r.precio_oferta || 0 
+        precio_oferta: r.precio_oferta !== null ? r.precio_oferta : 0 
       })));
     }
   }, [provAEditar]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onGuardar(formData, insumosTempo);
+    // Conversión final estricta a Number antes de enviar al hook
+    const payloadLimpio = insumosTempo.map(item => ({
+      insumo_id: item.insumo_id,
+      precio_oferta: item.precio_oferta === '' || isNaN(Number(item.precio_oferta)) ? 0 : Number(item.precio_oferta)
+    }));
+    onGuardar(formData, payloadLimpio);
   };
 
   const insumosDisponibles = useMemo(() => {
     const seleccionadosIds = new Set(insumosTempo.map(i => i.insumo_id));
-    return insumosGlobales.filter(ins => !seleccionadosIds.has(ins.id) && ins.nombre.toLowerCase().includes(buscadorDisp.toLowerCase()));
+    return insumosGlobales
+      .filter(ins => !seleccionadosIds.has(ins.id))
+      .filter(ins => ins.nombre.toLowerCase().includes(buscadorDisp.toLowerCase()));
   }, [insumosGlobales, insumosTempo, buscadorDisp]);
 
+  const insumosAsignadosList = useMemo(() => {
+    return insumosTempo
+      .map(item => {
+        const ins = insumosGlobales.find(x => x.id === item.insumo_id);
+        return { ...item, ins };
+      })
+      .filter(x => x.ins && x.ins.nombre.toLowerCase().includes(buscadorAsig.toLowerCase()));
+  }, [insumosGlobales, insumosTempo, buscadorAsig]);
+
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 shadow-2xl space-y-8 flex-1 overflow-y-auto custom-scrollbar">
-      <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-        <div>
-          <button onClick={onVolver} className="text-xs font-bold text-emerald-500 hover:text-emerald-400 uppercase tracking-wider mb-1 flex items-center gap-1 transition-colors">
-            <ArrowLeft size={14} /> Volver
-          </button>
-          <h2 className="text-2xl font-bold text-slate-100 tracking-wide">
-            {provAEditar ? 'Editar Proveedor' : 'Nuevo Proveedor'}
-          </h2>
-        </div>
-        <div className="flex gap-3">
-          <button type="button" onClick={onVolver} className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-400 hover:text-slate-100 transition-colors">Cancelar</button>
-          <button type="submit" form="form-prov" disabled={guardando} className="bg-emerald-600 hover:bg-emerald-500 px-6 py-2 rounded-lg text-sm font-bold text-white tracking-wide transition-colors shadow-lg disabled:opacity-50">
-            {guardando ? 'Guardando...' : 'Guardar Proveedor'}
-          </button>
-        </div>
-      </div>
+    <form onSubmit={handleSubmit} className="flex flex-col min-h-full w-full bg-background p-4 md:p-6 animate-fade-in space-y-6">
+      
+      {/* CABECERA MAESTRA UNIFICADA */}
+      <ModuleHeader 
+        icon={<Users size={20} />}
+        title={provAEditar ? `Editar Proveedor: ${provAEditar.nombre}` : 'Nuevo Proveedor'}
+        //subtitle="Configura los datos comerciales y gestiona el catálogo de ofertas."
+        primaryAction={
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={onVolver}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="primary" size="sm" disabled={guardando}>
+              {guardando ? 'Guardando...' : 'Guardar Proveedor'}
+            </Button>
+          </div>
+        }
+      />
 
-      <form id="form-prov" onSubmit={handleSubmit} className="space-y-8">
+      <div className="space-y-6 flex-1">
+        
+        {/* SECCIÓN 1: DATOS COMERCIALES */}
         <div className="space-y-4">
-          <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider font-mono">1. Datos Comerciales</h3>
+          <span className="text-xs font-bold uppercase tracking-wider text-primary block font-mono">
+            1. Datos Comerciales
+          </span>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-400 uppercase">Razón Social / Nombre <span className="text-emerald-500">*</span></label>
-              <input type="text" required value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 outline-none shadow-inner" />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-400 uppercase">Contacto Comercial</label>
-              <input type="text" value={formData.contacto} onChange={e => setFormData({...formData, contacto: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 outline-none shadow-inner" />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-400 uppercase">Teléfono</label>
-              <input type="text" value={formData.telefono} onChange={e => setFormData({...formData, telefono: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 outline-none font-mono shadow-inner" />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-400 uppercase">Correo Electrónico</label>
-              <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 outline-none shadow-inner" />
-            </div>
+            <Input 
+              label="Razón Social / Nombre"
+              type="text"
+              required
+              value={formData.nombre}
+              onChange={e => setFormData({...formData, nombre: e.target.value})}
+              placeholder="Ej. Distribuidora de Bebidas S.A."
+            />
+
+            <Input 
+              label="Contacto Comercial"
+              type="text"
+              value={formData.contacto}
+              onChange={e => setFormData({...formData, contacto: e.target.value})}
+              placeholder="Ej. Juan Pérez"
+            />
+
+            <Input 
+              label="Teléfono"
+              type="text"
+              value={formData.telefono}
+              onChange={e => setFormData({...formData, telefono: e.target.value})}
+              placeholder="Ej. +56912345678"
+            />
+
+            <Input 
+              label="Correo Electrónico"
+              type="email"
+              value={formData.email}
+              onChange={e => setFormData({...formData, email: e.target.value})}
+              placeholder="Ej. contacto@distribuidora.cl"
+            />
+
             <div className="space-y-1 md:col-span-2">
-              <label className="block text-xs font-semibold text-slate-400 uppercase">Observaciones</label>
-              <textarea rows={2} value={formData.observaciones} onChange={e => setFormData({...formData, observaciones: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-emerald-500 outline-none shadow-inner" />
+              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1">Observaciones</label>
+              <textarea 
+                rows={2} 
+                value={formData.observaciones} 
+                onChange={e => setFormData({...formData, observaciones: e.target.value})} 
+                className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:border-primary outline-none shadow-inner custom-scrollbar" 
+                placeholder="Notas adicionales, plazos de entrega, condiciones comerciales..."
+              />
             </div>
           </div>
         </div>
 
-        <div className="space-y-4 pt-6 border-t border-slate-800">
-          <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider font-mono">2. Asignación de Insumos y Precios de Oferta</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col h-[400px]">
-              <h4 className="text-xs font-bold text-slate-300 mb-3 uppercase font-mono">📋 Catálogo General</h4>
-              <input type="text" value={buscadorDisp} onChange={e => setBuscadorDisp(e.target.value)} placeholder="Buscar insumo..." className="mb-3 w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-100 outline-none focus:border-emerald-500 shadow-inner" />
-              <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                {insumosDisponibles.map(ins => (
-                  <div key={ins.id} className="flex justify-between items-center bg-slate-900 p-2 rounded border border-slate-800 hover:border-emerald-500/30 transition">
+        {/* SECCIÓN 2: ASIGNACIÓN DE INSUMOS (DUAL ASIGNADOR) */}
+        <div className="space-y-4 pt-4 border-t border-border">
+          <span className="text-xs font-bold uppercase tracking-wider text-primary block font-mono">
+            2. Asignación de Insumos y Precios de Oferta
+          </span>
+
+          <DualAsignador
+            tituloIzq="Insumos Asociados"
+            contadorIzq={insumosTempo.length}
+            placeholderBusquedaIzq="Buscar asignado..."
+            valorBusquedaIzq={buscadorAsig}
+            onChangeBusquedaIzq={setBuscadorAsig}
+
+            tituloDer="Catálogo General de Insumos"
+            placeholderBusquedaDer="Buscar en catálogo..."
+            valorBusquedaDer={buscadorDisp}
+            onChangeBusquedaDer={setBuscadorDisp}
+
+            childrenDer={
+              insumosDisponibles.length === 0 ? (
+                <div className="text-xs text-muted p-4 text-center">No hay insumos disponibles para añadir.</div>
+              ) : (
+                insumosDisponibles.map(ins => (
+                  <div key={ins.id} className="flex justify-between items-center p-2 hover:bg-surface-muted rounded-lg transition-colors border border-transparent hover:border-border">
                     <div>
-                      <p className="text-xs text-slate-200 font-medium">{ins.nombre}</p>
-                      <p className="text-[10px] text-slate-500 font-mono">Ref: ${ins.precio_compra?.toLocaleString('es-CL')}</p>
+                      <span className="text-sm font-medium text-foreground block">{ins.nombre}</span>
+                      <span className="text-[10px] text-muted font-mono">Ref: ${ins.precio_compra?.toLocaleString('es-CL')}</span>
                     </div>
-                    <button type="button" onClick={() => setInsumosTempo([...insumosTempo, { insumo_id: ins.id, precio_oferta: ins.precio_compra || 0 }])} className="text-emerald-500 hover:text-white bg-emerald-950/40 px-2 py-1 rounded font-bold text-xs">+</button>
+                    <Button 
+                      type="button" 
+                      variant="secondary" 
+                      size="sm" 
+                      icon={<Plus size={14}/>} 
+                      onClick={() => setInsumosTempo(prev => [...prev, { insumo_id: ins.id, precio_oferta: ins.precio_compra || 0 }])}
+                    >
+                      Añadir
+                    </Button>
                   </div>
-                ))}
-              </div>
-            </div>
+                ))
+              )
+            }
 
-            <div className="bg-slate-950 border border-emerald-900/50 rounded-xl p-4 flex flex-col h-[400px] shadow-inner">
-              <h4 className="text-xs font-bold text-emerald-400 mb-3 uppercase font-mono">✅ Insumos Distribuidos ({insumosTempo.length})</h4>
-              <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                {insumosTempo.length === 0 ? (
-                  <div className="text-xs text-slate-600 text-center py-20">Sin insumos distribuidos.</div>
-                ) : (
-                  insumosTempo.map((item, index) => {
-                    const ins = insumosGlobales.find(x => x.id === item.insumo_id);
-                    if (!ins) return null;
-                    return (
-                      <div key={item.insumo_id} className="flex items-center justify-between gap-2 bg-emerald-950/20 p-2 rounded border border-emerald-900/30">
-                        <div className="flex-1 min-w-0"><p className="text-xs text-emerald-400 font-bold truncate">{ins.nombre}</p></div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span className="text-[10px] text-slate-400 font-mono">$</span>
-                          <input type="number" step="any" value={item.precio_oferta} onChange={e => {
-                            const val = parseFloat(e.target.value) || 0;
-                            setInsumosTempo(prev => prev.map((t, idx) => idx === index ? { ...t, precio_oferta: val } : t));
-                          }} className="w-24 bg-slate-900 border border-slate-800 text-right rounded px-1.5 py-1 text-xs text-white font-mono outline-none shadow-inner" />
-                        </div>
-                        <button type="button" onClick={() => setInsumosTempo(prev => prev.filter((_, idx) => idx !== index))} className="text-red-400 hover:bg-red-950 p-1 rounded font-bold text-xs"><X size={14} /></button>
+            childrenIzq={
+              insumosTempo.length === 0 ? (
+                <div className="text-xs text-muted p-4 text-center">Aún no has asignado insumos a este proveedor.</div>
+              ) : (
+                insumosAsignadosList.map(item => (
+                  <div key={item.insumo_id} className="flex flex-col xl:flex-row xl:items-center gap-3 p-3 bg-background border border-border rounded-lg shadow-sm">
+                    <span className="text-sm font-medium text-foreground flex-1 truncate">{item.ins?.nombre}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-32">
+                        <Input 
+                          type="number" 
+                          step="any"
+                          placeholder="Precio oferta"
+                          value={item.precio_oferta}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setInsumosTempo(prev => prev.map(t => t.insumo_id === item.insumo_id ? { ...t, precio_oferta: val } : t));
+                          }}
+                        />
                       </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
+                      <Button 
+                        type="button" 
+                        variant="inline-danger" 
+                        size="sm" 
+                        onClick={() => setInsumosTempo(prev => prev.filter(t => t.insumo_id !== item.insumo_id))} 
+                        className="text-muted hover:text-danger"
+                      >
+                        <Trash2 size={16}/>
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )
+            }
+          />
         </div>
-      </form>
-    </div>
+
+      </div>
+    </form>
   );
 }

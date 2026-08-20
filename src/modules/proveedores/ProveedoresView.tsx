@@ -1,9 +1,11 @@
 // src/modules/proveedores/ProveedoresView.tsx
 import { useState } from 'react';
 import { useProveedores } from './hooks/useProveedores';
-import type { Proveedor, VistaProveedor } from './types';
+import type { Proveedor } from '@/types/proveedores';
+import type { VistaProveedor } from '../types';
 
-// Componentes de Presentación (Los crearemos en el Paso 2)
+
+// Componentes de Presentación
 import { ProveedoresList } from './components/ProveedoresList';
 import { ProveedoresDetail } from './components/ProveedoresDetail';
 import { ProveedoresForm } from './components/ProveedoresForm';
@@ -40,8 +42,9 @@ export function ProveedoresView() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-slate-950">
-  {vista === 'listado' && (
+    // CORRECCIÓN: Usamos bg-background en lugar de bg-slate-950 para respetar los tokens semánticos
+    <div className="h-full w-full flex flex-col overflow-hidden bg-background text-foreground">
+      {vista === 'listado' && (
         <ProveedoresList 
           proveedores={proveedores} 
           cargando={cargando} 

@@ -1,7 +1,26 @@
 // src/modules/insumos/components/InsumosForm.tsx
 import { useState, useMemo, useEffect } from 'react';
-import { calcularCostoUnitarioInsumo } from '../../../lib/calculos';
+import { Plus, Trash2, Search, Edit3 } from 'lucide-react';
+import { calcularCostoUnitarioInsumo } from '@/lib/calculos';
 import type { Insumo, TipoInsumo, Proveedor } from '../types';
+
+// Componentes del UI Kit Maestro 2.0
+import { ModuleHeader } from '@/components/ui/ModuleHeader';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
+import { DualAsignador } from '@/components/ui/DualAsignador';
+
+export interface InsumoPayload {
+  nombre: string;
+  tipo_id: string;
+  unidad_medida: string;
+  formato_envase: number;
+  precio_compra: number;
+  graduacion_alcohol_base: number;
+  rendimiento_neto_porcentaje: number;
+  es_artesanal: boolean;
+}
 
 interface Props {
   insumoAEditar: Insumo | null;
@@ -9,37 +28,74 @@ interface Props {
   proveedores: Proveedor[];
   guardando: boolean;
   onVolver: () => void;
-  onGuardar: (payload: any, provsAsociados: Map<number, number | null>) => void;
+  onGuardar: (payload: InsumoPayload, provsAsociados: Map<number, number | null>) => void;
 }
 
 export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVolver, onGuardar }: Props) {
   const [formData, setFormData] = useState({
-    nombre: '', tipo_id: tipos[0]?.id.toString() || '', unidad_medida: 'ml',
-    formato_envase: 750, precio_compra: 0, graduacion_alcohol_base: 0,
-    rendimiento_neto_porcentaje: 100, es_artesanal: false
+    nombre: '', 
+    tipo_id: tipos[0]?.id.toString() || '', 
+    unidad_medida: 'ml',
+    formato_envase: 750 as number | string, 
+    precio_compra: 0 as number | string, 
+    graduacion_alcohol_base: 0 as number | string, 
+    rendimiento_neto_porcentaje: 100 as number | string, 
+    es_artesanal: false
   });
+  
   const [proveedoresAsociados, setProveedoresAsociados] = useState<Map<number, number | null>>(new Map());
+  const [busquedaDisponibles, setBusquedaDisponibles] = useState('');
+  const [busquedaAsignados, setBusquedaAsignados] = useState('');
 
   useEffect(() => {
     if (insumoAEditar) {
       setFormData({
-        nombre: insumoAEditar.nombre, tipo_id: insumoAEditar.tipo_id?.toString() || '',
-        unidad_medida: insumoAEditar.unidad_medida || 'ml', formato_envase: insumoAEditar.formato_envase || 1,
-        precio_compra: insumoAEditar.precio_compra || 0, graduacion_alcohol_base: insumoAEditar.graduacion_alcohol_base || 0,
-        rendimiento_neto_porcentaje: insumoAEditar.rendimiento_neto_porcentaje ? insumoAEditar.rendimiento_neto_porcentaje * 100 : 100,
+        nombre: insumoAEditar.nombre, 
+        tipo_id: insumoAEditar.tipo_id?.toString() || '',
+        unidad_medida: insumoAEditar.unidad_medida || 'ml', 
+        formato_envase: insumoAEditar.formato_envase, 
+        precio_compra: insumoAEditar.precio_compra, 
+        graduacion_alcohol_base: insumoAEditar.graduacion_alcohol_base,
+        rendimiento_neto_porcentaje: insumoAEditar.rendimiento_neto_porcentaje ? Number(insumoAEditar.rendimiento_neto_porcentaje) * 100 : 100,
         es_artesanal: !!insumoAEditar.es_artesanal
       });
       const mapaProv = new Map<number, number | null>();
-      insumoAEditar.proveedores?.forEach(p => mapaProv.set(p.proveedor_id, p.precio_oferta));
+      insumoAEditar.proveedores?.forEach(p => mapaProv.set(p.proveedor_id, p.precio_oferta ? Number(p.precio_oferta) : null));
       setProveedoresAsociados(mapaProv);
     }
   }, [insumoAEditar]);
 
   const costoCalculadoActual = useMemo(() => {
-    const costoBase = calcularCostoUnitarioInsumo(formData.precio_compra, formData.formato_envase);
-    const rendimiento = (formData.rendimiento_neto_porcentaje || 100) / 100;
-    return costoBase / (rendimiento > 0 ? rendimiento : 1);
+    const pCompra = Number(formData.precio_compra) || 0;
+    const fEnvase = Number(formData.formato_envase) || 1;
+    const rPorcentaje = Number(formData.rendimiento_neto_porcentaje) || 100;
+    const costoBase = calcularCostoUnitarioInsumo(pCompra, fEnvase);
+    return costoBase / ((rPorcentaje / 100) > 0 ? (rPorcentaje / 100) : 1);
   }, [formData.precio_compra, formData.formato_envase, formData.rendimiento_neto_porcentaje]);
+
+  const proveedoresDisponibles = useMemo(() => proveedores
+      .filter(p => !proveedoresAsociados.has(p.id))
+      .filter(p => p.nombre.toLowerCase().includes(busquedaDisponibles.toLowerCase())), 
+  [proveedores, proveedoresAsociados, busquedaDisponibles]);
+
+  const proveedoresAsignados = useMemo(() => proveedores
+      .filter(p => proveedoresAsociados.has(p.id))
+      .filter(p => p.nombre.toLowerCase().includes(busquedaAsignados.toLowerCase())), 
+  [proveedores, proveedoresAsociados, busquedaAsignados]);
+
+  const agregarProveedor = (id: number) => { 
+    setProveedoresAsociados(prev => new Map(prev).set(id, null)); 
+  };
+  
+  const removerProveedor = (id: number) => { 
+    const mapa = new Map(proveedoresAsociados); 
+    mapa.delete(id); 
+    setProveedoresAsociados(mapa); 
+  };
+  
+  const actualizarPrecioProveedor = (id: number, val: string) => { 
+    setProveedoresAsociados(prev => new Map(prev).set(id, val === '' ? null : Number(val))); 
+  };
 
   const aplicarMejorOferta = () => {
     let mejorPrecio: number | null = null;
@@ -49,7 +105,7 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
       }
     });
     if (mejorPrecio === null) {
-      alert("Ninguno de los proveedores seleccionados tiene un precio de oferta válido definido.");
+      alert("Ninguno de los proveedores asignados tiene un precio válido definido.");
       return;
     }
     setFormData(prev => ({ ...prev, precio_compra: mejorPrecio! }));
@@ -57,110 +113,204 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onGuardar(formData, proveedoresAsociados);
+    onGuardar({
+      ...formData,
+      formato_envase: Number(formData.formato_envase),
+      precio_compra: Number(formData.precio_compra),
+      graduacion_alcohol_base: Number(formData.graduacion_alcohol_base),
+      rendimiento_neto_porcentaje: Number(formData.rendimiento_neto_porcentaje),
+    }, proveedoresAsociados);
   };
 
   return (
-    <div className="flex flex-col h-full w-full overflow-y-auto space-y-6 bg-slate-950 p-2 custom-scrollbar">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
-        <h2 className="text-lg font-bold text-white tracking-wide">{insumoAEditar ? `Editar Insumo: ${formData.nombre}` : 'Nuevo Insumo'}</h2>
-        <button onClick={onVolver} className="text-xs text-slate-400 hover:text-white font-semibold uppercase transition">Cancelar</button>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6 pb-6">
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Nombre del Insumo</label>
-          <input type="text" required value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-emerald-500 outline-none" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Tipo de Insumo</label>
-            <select value={formData.tipo_id} onChange={e => setFormData({...formData, tipo_id: e.target.value})} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-emerald-500 outline-none">
-              {tipos.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-            </select>
+    <form onSubmit={handleSubmit} className="flex flex-col min-h-full w-full bg-background p-4 md:p-6 animate-fade-in space-y-6">
+      
+      {/* CABECERA MAESTRA (Con el ModuleHeader y botón Volver integrado a la derecha) */}
+      <ModuleHeader 
+        icon={<Edit3 size={20} />}
+        title={insumoAEditar ? `Editar Insumo: ${insumoAEditar.nombre}` : 'Nuevo Insumo'}
+        //subtitle="Configura los detalles, formato de compra y proveedores asociados."
+        primaryAction={
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={onVolver}>
+              Volver
+            </Button>
+            <Button type="submit" variant="primary" size="sm" disabled={guardando}>
+              {guardando ? 'Guardando...' : 'Guardar Insumo'}
+            </Button>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Graduación Alcohólica (% ABV)</label>
-            <input type="number" step="0.1" value={formData.graduacion_alcohol_base} onChange={e => setFormData({...formData, graduacion_alcohol_base: parseFloat(e.target.value) || 0})} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:border-emerald-500 outline-none" />
+        }
+      />
+
+      <div className="space-y-6 flex-1">
+        
+        {/* Fila 1: Nombre */}
+        <Input 
+          label="Nombre del Insumo"
+          type="text" 
+          required 
+          value={formData.nombre} 
+          onChange={e => setFormData({...formData, nombre: e.target.value})} 
+          placeholder="Ej. Gin London Dry"
+        />
+
+        {/* Fila 2: Tipo, Graduación y Check Artesanal */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <Select 
+            label="Tipo de Insumo"
+            value={formData.tipo_id} 
+            onChange={e => setFormData({...formData, tipo_id: e.target.value})}
+          >
+            {tipos.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+          </Select>
+
+          <Input 
+            label="Graduación (% ABV)"
+            type="number" 
+            step="0.1" 
+            value={formData.graduacion_alcohol_base} 
+            onChange={e => setFormData({...formData, graduacion_alcohol_base: e.target.value})} 
+          />
+
+          <div className="bg-primary/5 border border-primary/20 px-4 rounded-xl flex items-center gap-3 h-[42px]">
+            <input 
+              type="checkbox" 
+              disabled={!!insumoAEditar} 
+              checked={formData.es_artesanal} 
+              onChange={e => setFormData({...formData, es_artesanal: e.target.checked})} 
+              className="w-4 h-4 rounded bg-surface border-border accent-primary cursor-pointer shrink-0" 
+            />
+            <label className="text-xs text-primary font-bold uppercase tracking-wider truncate">
+              ¿Producción Propia? {!!insumoAEditar && <span className="text-muted italic ml-1">(Inmutable)</span>}
+            </label>
           </div>
         </div>
-        <div className="bg-emerald-950/20 border border-emerald-500/30 p-4 rounded-xl flex items-center gap-3">
-          <input type="checkbox" disabled={!!insumoAEditar} checked={formData.es_artesanal} onChange={e => setFormData({...formData, es_artesanal: e.target.checked})} className="w-4 h-4 rounded bg-slate-900 border-slate-700 accent-emerald-500" />
-          <label className="text-xs text-emerald-300 font-bold uppercase tracking-wider">¿Es de origen artesanal / producción propia? {!!insumoAEditar && <span className="text-slate-500 italic">(Inmutable al editar)</span>}</label>
-        </div>
 
-        <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 space-y-4">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 block">Formato de Compra y Costeo Principal</span>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+        {/* Fila 3: Formato y Costeo Principal */}
+        <div className="space-y-4 pt-4 border-t border-border">
+          <span className="text-xs font-bold uppercase tracking-wider text-primary block">
+            Formato de Compra y Costeo Principal
+          </span>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Precio Total Compra ($)</label>
-                <button type="button" onClick={aplicarMejorOferta} className="text-[10px] text-emerald-400 hover:text-emerald-300 font-mono underline">Usar mejor oferta</button>
+                <label className="text-xs font-bold text-muted uppercase tracking-wider">Total Compra ($)</label>
               </div>
-              <input type="number" step="any" required value={formData.precio_compra} onChange={e => setFormData({...formData, precio_compra: parseFloat(e.target.value) || 0})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:border-emerald-500 outline-none" />
+              <Input 
+                type="number" 
+                step="any" 
+                required 
+                value={formData.precio_compra} 
+                onChange={e => setFormData({...formData, precio_compra: e.target.value})} 
+              />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Unidad Base</label>
-              <select value={formData.unidad_medida} onChange={e => setFormData({...formData, unidad_medida: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:border-emerald-500 outline-none">
-                <option value="ml">Mililitros (ml)</option><option value="g">Gramos (g)</option><option value="unit">Unidades (unit)</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Formato / Envase</label>
-              <input type="number" step="any" required value={formData.formato_envase} onChange={e => setFormData({...formData, formato_envase: parseFloat(e.target.value) || 1})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:border-emerald-500 outline-none" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">Rendimiento Neto (%)</label>
-              <input type="number" step="1" value={formData.rendimiento_neto_porcentaje} onChange={e => setFormData({...formData, rendimiento_neto_porcentaje: parseFloat(e.target.value) || 100})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:border-emerald-500 outline-none" />
-            </div>
+
+            <Select 
+              label="Unidad Base"
+              value={formData.unidad_medida} 
+              onChange={e => setFormData({...formData, unidad_medida: e.target.value})}
+            >
+              <option value="ml">Mililitros (ml)</option>
+              <option value="g">Gramos (g)</option>
+              <option value="unit">Unidades (unit)</option>
+            </Select>
+
+            <Input 
+              label="Formato / Envase"
+              type="number" 
+              step="any" 
+              required 
+              value={formData.formato_envase} 
+              onChange={e => setFormData({...formData, formato_envase: e.target.value})} 
+            />
+
+            <Input 
+              label="Rendimiento (%)"
+              type="number" 
+              step="1" 
+              value={formData.rendimiento_neto_porcentaje} 
+              onChange={e => setFormData({...formData, rendimiento_neto_porcentaje: e.target.value})} 
+            />
           </div>
-          <div className="pt-3 border-t border-slate-800 flex justify-between items-center text-xs">
-            <span className="text-slate-400 uppercase font-bold tracking-wider">Costo Unitario Resultante:</span>
-            <span className="font-mono font-bold text-emerald-400 text-sm">${costoCalculadoActual.toFixed(4)}</span>
+
+          <div className="flex justify-between items-center text-xs bg-surface p-3 rounded-lg border border-border mt-2">
+            <span className="text-muted uppercase font-bold tracking-wider">Costo Unitario Resultante:</span>
+            <span className="font-mono font-bold text-primary text-sm">${costoCalculadoActual.toFixed(4)} / {formData.unidad_medida}</span>
           </div>
         </div>
 
+        {/* Fila 4: Dual Asignador de Proveedores */}
         {!formData.es_artesanal && (
-          <div className="space-y-4 pt-4 border-t border-slate-800">
-            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider font-mono">Asociar Proveedores</span>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 border-b border-slate-800 text-[10px] uppercase font-mono text-slate-400">
-                  <tr><th className="py-2.5 px-3 text-center">Sel</th><th className="py-2.5 px-3">Proveedor</th><th className="py-2.5 px-3 text-right">Oferta</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-900">
-                  {proveedores.map(p => {
-                    const isChecked = proveedoresAsociados.has(p.id);
-                    const ofertaVal = isChecked ? (proveedoresAsociados.get(p.id) ?? '') : '';
-                    return (
-                      <tr key={p.id} className="hover:bg-slate-800/40">
-                        <td className="py-3 px-3 text-center">
-                          <input type="checkbox" checked={isChecked} onChange={e => {
-                            const mapa = new Map(proveedoresAsociados);
-                            if (e.target.checked) mapa.set(p.id, null); else mapa.delete(p.id);
-                            setProveedoresAsociados(mapa);
-                          }} className="accent-emerald-500" />
-                        </td>
-                        <td className="py-3 px-3 text-white">{p.nombre}</td>
-                        <td className="py-3 px-3 text-right">
-                          <input type="number" disabled={!isChecked} value={ofertaVal} onChange={e => {
-                            const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                            const mapa = new Map(proveedoresAsociados); mapa.set(p.id, val); setProveedoresAsociados(mapa);
-                          }} className="w-32 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-white text-right disabled:opacity-30" />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          <div className="space-y-4 pt-6 border-t border-border">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-primary uppercase tracking-wider font-mono">
+                Asignación de Proveedores y Ofertas
+              </span>
+              {proveedoresAsignados.length > 0 && (
+                <button type="button" onClick={aplicarMejorOferta} className="text-xs font-bold text-primary hover:underline transition-all">
+                  Usar mejor oferta global
+                </button>
+              )}
             </div>
+            
+            <DualAsignador
+              tituloIzq="Asignados"
+              contadorIzq={proveedoresAsignados.length}
+              iconoIzq={<Search size={14}/>}
+              placeholderBusquedaIzq="Buscar asignado..."
+              valorBusquedaIzq={busquedaAsignados}
+              onChangeBusquedaIzq={setBusquedaAsignados}
+              
+              tituloDer="Proveedores Disponibles"
+              placeholderBusquedaDer="Buscar proveedor..."
+              valorBusquedaDer={busquedaDisponibles}
+              onChangeBusquedaDer={setBusquedaDisponibles}
+              
+              childrenDer={
+                proveedoresDisponibles.length === 0 ? (
+                  <div className="text-xs text-muted p-4 text-center">No hay proveedores disponibles para añadir.</div>
+                ) : (
+                  proveedoresDisponibles.map(p => (
+                    <div key={p.id} className="flex justify-between items-center p-2 hover:bg-surface-muted rounded-lg transition-colors border border-transparent hover:border-border">
+                      <span className="text-sm font-medium text-foreground">{p.nombre}</span>
+                      <Button type="button" variant="secondary" size="sm" icon={<Plus size={14}/>} onClick={() => agregarProveedor(p.id)}>
+                        Añadir
+                      </Button>
+                    </div>
+                  ))
+                )
+              }
+              
+              childrenIzq={
+                proveedoresAsignados.length === 0 ? (
+                  <div className="text-xs text-muted p-4 text-center">Aún no has asignado proveedores.</div>
+                ) : (
+                  proveedoresAsignados.map(p => (
+                    <div key={p.id} className="flex flex-col xl:flex-row xl:items-center gap-3 p-3 bg-background border border-border rounded-lg shadow-sm">
+                      <span className="text-sm font-medium text-foreground flex-1 truncate">{p.nombre}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-32">
+                          <Input 
+                            type="number" 
+                            placeholder="Precio"
+                            value={proveedoresAsociados.get(p.id) ?? ''} 
+                            onChange={e => actualizarPrecioProveedor(p.id, e.target.value)}
+                          />
+                        </div>
+                        <Button type="button" variant="inline-danger" size="sm" onClick={() => removerProveedor(p.id)} className="text-muted hover:text-danger">
+                          <Trash2 size={16}/>
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )
+              }
+            />
           </div>
         )}
-        <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
-          <button type="button" onClick={onVolver} className="bg-slate-900 hover:bg-slate-800 px-5 py-2.5 rounded-xl text-xs font-bold uppercase text-slate-300">Cancelar</button>
-          <button type="submit" disabled={guardando} className="bg-emerald-600 hover:bg-emerald-500 px-6 py-2.5 rounded-xl text-xs font-bold uppercase text-white shadow-lg disabled:opacity-50">{guardando ? 'Guardando...' : 'Guardar'}</button>
-        </div>
-      </form>
-    </div>
+
+      </div>
+    </form>
   );
 }

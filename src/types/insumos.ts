@@ -1,14 +1,8 @@
-// src/modules/insumos/types.ts
-
+// src/types/insumos.ts
 export interface TipoInsumo {
   id: number;
   nombre: string;
   slug: string;
-}
-
-export interface Proveedor {
-  id: number;
-  nombre: string;
 }
 
 export interface InsumoProveedorRel {
@@ -41,5 +35,3 @@ export interface PrecioHistorico {
   created_at: string;
   proveedores?: { nombre: string };
 }
-
-export type VistaInsumo = 'listado' | 'detalle' | 'formulario' | 'historico';
