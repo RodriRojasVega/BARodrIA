@@ -176,6 +176,26 @@ Para mantener la atomicidad y el orden a medida que la PWA escala, los módulos 
         ```tsx
         <InfoCard copyText="contacto@empresa.cl" title="Correo Electrónico" value="contacto@empresa.cl" variant="warning"/>
         ```
+        
+### 9. Componentes de Navegación y Modales
+*   **PillNavigation:** Menú de navegación horizontal tipo "píldoras" para cambiar entre vistas o tablas sin usar Tabs pesados.
+    *   `import { PillNavigation } from '@/components/ui/PillNavigation';`
+    *   **Props:** `options` (Array de `{id, label}`), `activeId`, `onChange`.
+*   **Modal:** Ventana emergente estandarizada con fondo oscuro (backdrop blur), soporte para tecla Escape y scroll interno.
+    *   `import { Modal } from '@/components/ui/Modal';`
+    *   **Props:** `isOpen`, `onClose`, `title`, `children`.
+
+### 10. Formularios Avanzados y Listas Dinámicas
+*   **Textarea:** Versión multilinea del Input con el mismo estándar de bordes y colores semánticos.
+    *   `import { Textarea } from '@/components/ui/Textarea';`
+*   **DynamicRow / DynamicIngredientRow:** Contenedores de filas dinámicas (con botón de eliminar integrado) para construir constructores de recetas (BOM) y listas de pasos sin romper la grilla.
+    *   `import { DynamicRow } from '@/components/ui/DynamicRow';`
+*   **StepList:** Renderizador visual elegante para listas de pasos numerados secuencialmente, ideal para instrucciones de preparación.
+    *   `import { StepList } from '@/components/ui/StepList';`
+
+> ⚠️ **REGLA ARQUITECTÓNICA DE FORMULARIOS Y DETALLES:**
+> Las vistas de detalle y los formularios (`FormView`, `DetailView`) **NO DEBEN** estar envueltos en tarjetas principales con fondo (`bg-surface`) ni bordes. Deben usar un contenedor transparente (`bg-background`) y dejar que las secciones internas (como los `InfoCard`, `SummaryCard` o bloques de grilla) dibujen las cajas para mantener el diseño limpio.
+
 
 ## 🔮 Roadmap Técnico & Servicios Futuros (Directivas de Diseño)
 
