@@ -1,3 +1,4 @@
+// src/modules/subrecetas/SubRecetasModule.tsx
 import { useState } from 'react';
 import { SubRecetasListView, type SubRecetaViewItem } from './components/SubRecetasListView';
 import { SubRecetaDetailView } from './components/SubRecetaDetailView';
@@ -35,25 +36,53 @@ export function SubRecetasModule() {
     setVistaActiva('form');
   };
 
-  if (isLoading) return <div className="flex h-full items-center justify-center bg-slate-950 text-emerald-500 font-mono animate-pulse">Conectando a BARodrIA...</div>;
+  if (isLoading) {
+    // Aplicamos semántica UI Kit: bg-background y text-primary
+    return (
+      <div className="flex h-full items-center justify-center bg-background text-primary font-mono animate-pulse">
+        Conectando a BARodrIA...
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-slate-950">
+    // Aplicamos semántica UI Kit: bg-background
+    <div className="h-full w-full flex flex-col overflow-hidden bg-background">
       {vistaActiva === 'list' && (
-        <SubRecetasListView data={subRecetas} tipos={tipos} onNuevaSubReceta={handleNuevaSubReceta} onVerDetalle={handleVerDetalle} />
+        <SubRecetasListView 
+          data={subRecetas} 
+          tipos={tipos} 
+          onNuevaSubReceta={handleNuevaSubReceta} 
+          onVerDetalle={handleVerDetalle} 
+        />
       )}
       {vistaActiva === 'detail' && subRecetaSeleccionada && (
         <SubRecetaDetailView 
-          subReceta={subRecetaSeleccionada} insumosDisponibles={insumos} ingredientesBase={ingredientesActivos} pasosBase={pasosActivos}
-          onVolver={() => setVistaActiva('list')} onEditar={handleEditarSubReceta} onEliminar={async () => {
-            if (confirm("¿Eliminar sub-receta?")) { await eliminarSubReceta(subRecetaSeleccionada.id); setVistaActiva('list'); }
+          subReceta={subRecetaSeleccionada} 
+          insumosDisponibles={insumos} 
+          ingredientesBase={ingredientesActivos} 
+          pasosBase={pasosActivos}
+          onVolver={() => setVistaActiva('list')} 
+          onEditar={handleEditarSubReceta} 
+          onEliminar={async () => {
+            if (confirm("¿Eliminar sub-receta?")) { 
+              await eliminarSubReceta(subRecetaSeleccionada.id); 
+              setVistaActiva('list'); 
+            }
           }}
         />
       )}
       {vistaActiva === 'form' && (
         <SubRecetaFormView
-          subRecetaBase={subRecetaSeleccionada} insumosDisponibles={insumos} ingredientesBase={ingredientesActivos} pasosBase={pasosActivos}
-          onGuardar={async (payload, ings, pasos) => { await guardarSubReceta(payload, ings, pasos); setVistaActiva('list'); }}
+          subRecetaBase={subRecetaSeleccionada} 
+          insumosDisponibles={insumos} 
+          ingredientesBase={ingredientesActivos} 
+          pasosBase={pasosActivos}
+          tipos={tipos}
+          onGuardar={async (payload, ings, pasos) => { 
+            await guardarSubReceta(payload, ings, pasos); 
+            setVistaActiva('list'); 
+          }}
           onCancelar={() => setVistaActiva('list')}
         />
       )}

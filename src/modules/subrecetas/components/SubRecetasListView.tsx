@@ -1,12 +1,13 @@
-// src/modules/subrecetas/SubRecetasListView.tsx
+// src/modules/subrecetas/components/SubRecetasListView.tsx
 import { useState, useMemo } from 'react';
-import { Plus, Layers } from 'lucide-react';
+import { Plus, FlaskConical } from 'lucide-react';
 
 // Importamos los átomos y componentes del UI Kit
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell, TableToolbar, TablePagination } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
 import { SummaryCard } from '@/components/ui/SummaryCard';
 import { ModuleHeader } from '@/components/ui/ModuleHeader';
+import { Badge } from '@/components/ui/Badge'; // Nuevo import para el Badge
 
 // Tipos basados en tu esquema
 import type { SubReceta, TipoSubReceta } from '@/types/subrecetas';
@@ -33,28 +34,61 @@ export function SubRecetasListView({
   
   // Estados de interfaz
   const [busqueda, setBusqueda] = useState('');
-  const [limite, setLimite] = useState(25);
+  const [limite, setLimite] = useState(10); // Ajustado a 10 por defecto
   const [paginaActual, setPaginaActual] = useState(1);
+  const [showKpis, setShowKpis] = useState(false); // Oculto por defecto
+
+  // Estados de ordenamiento
+  const [columnaOrden, setColumnaOrden] = useState<keyof SubRecetaViewItem | 'tipo'>('nombre');
   const [ordenAsc, setOrdenAsc] = useState(true);
-  const [showKpis, setShowKpis] = useState(true);
+
+  const manejarOrden = (col: keyof SubRecetaViewItem | 'tipo') => {
+    if (columnaOrden === col) {
+      setOrdenAsc(!ordenAsc);
+    } else {
+      setColumnaOrden(col);
+      setOrdenAsc(true);
+    }
+  };
 
   // Filtrado y ordenamiento reactivo
   const subRecetasProcesadas = useMemo(() => {
     let filtradas = data.filter(sr => {
       const tipoObj = tipos.find(t => t.id === sr.tipo_id);
       const coincidenciaNombre = sr.nombre.toLowerCase().includes(busqueda.toLowerCase());
-      const coincidenciaTipo = tipoObj?.nombre.toLowerCase().includes(busqueda.toLowerCase());
+      const coincidenciaTipo = tipoObj?.nombre?.toLowerCase().includes(busqueda.toLowerCase());
       return coincidenciaNombre || coincidenciaTipo;
     });
 
     filtradas.sort((a, b) => {
-      const nombreA = a.nombre.toLowerCase();
-      const nombreB = b.nombre.toLowerCase();
-      return ordenAsc ? (nombreA > nombreB ? 1 : -1) : (nombreA < nombreB ? 1 : -1);
+      let valA: any = '';
+      let valB: any = '';
+
+      if (columnaOrden === 'nombre') {
+        valA = a.nombre.toLowerCase();
+        valB = b.nombre.toLowerCase();
+      } else if (columnaOrden === 'tipo') {
+        valA = tipos.find(t => t.id === a.tipo_id)?.nombre.toLowerCase() || '';
+        valB = tipos.find(t => t.id === b.tipo_id)?.nombre.toLowerCase() || '';
+      } else if (columnaOrden === 'rendimiento_batch') {
+        valA = Number(a.rendimiento_batch) || 0;
+        valB = Number(b.rendimiento_batch) || 0;
+      } else if (columnaOrden === 'costo_lote_clp') {
+        valA = a.costo_lote_clp || 0;
+        valB = b.costo_lote_clp || 0;
+      } else if (columnaOrden === 'costo_unitario_clp') {
+        valA = a.costo_unitario_clp || 0;
+        valB = b.costo_unitario_clp || 0;
+      }
+
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return ordenAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+      return ordenAsc ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
     });
 
     return filtradas;
-  }, [data, tipos, busqueda, ordenAsc]);
+  }, [data, tipos, busqueda, ordenAsc, columnaOrden]);
 
   // Cálculos de Paginación segura
   const totalRegistros = subRecetasProcesadas.length;
@@ -65,16 +99,16 @@ export function SubRecetasListView({
   const paginadas = subRecetasProcesadas.slice(inicio, inicio + limite);
 
   return (
-    <div className="flex flex-col h-full space-y-4 animate-fade-in p-4 md:p-6 bg-slate-950 text-slate-100 overflow-hidden">
+    <div className="flex flex-col min-h-full w-full space-y-4 p-4 md:p-6 bg-background text-foreground animate-fade-in overflow-hidden">
       
-      {/* 1. NUEVO MODULE HEADER TRANSPARENTE */}
+      {/* 1. MODULE HEADER */}
       <ModuleHeader 
-        icon={<Layers size={20} />}
+        icon={<FlaskConical size={20} />} // Cambiado al tubo de ensayo
         title="Sub-recetas Artesanales"
-        subtitle="Gestión de preparaciones intermedias, pre-batches y escandallos de producción."
+        //subtitle="Gestión de preparaciones intermedias, pre-batches y escandallos de producción."
         showKpis={showKpis}
         onToggleKpis={() => setShowKpis(!showKpis)}
-        kpiButtonText="KPIs"
+        kpiButtonText="KPIs" // Texto corregido
         primaryAction={
           <Button 
             variant="primary" 
@@ -94,28 +128,26 @@ export function SubRecetasListView({
             label="Total Preparaciones" 
             value={
               <>
-                {subRecetasProcesadas.length} <span className="text-xs font-normal text-slate-500">Activas</span>
+                {subRecetasProcesadas.length} <span className="text-xs font-normal text-muted">Activas</span>
               </>
             } 
           />
-
           <SummaryCard 
             label="Economía Circular" 
             value={
               <>
                 {subRecetasProcesadas.filter(sr => sr.control_mermas_economia_circular && sr.control_mermas_economia_circular.trim() !== '').length}
-                <span className="text-xs font-normal text-slate-500"> / {subRecetasProcesadas.length}</span>
+                <span className="text-xs font-normal text-muted"> / {subRecetasProcesadas.length}</span>
               </>
             }
-            valueClassName="text-emerald-400"
+            valueClassName="text-success"
           />
-
           <SummaryCard 
             label="Costo Promedio / ml" 
             value={
               `$${subRecetasProcesadas.length > 0 ? (subRecetasProcesadas.reduce((acc, sr) => acc + (sr.costo_unitario_clp || 0), 0) / subRecetasProcesadas.length).toFixed(1) : '0'}`
             }
-            valueClassName="text-sky-400"
+            valueClassName="text-info"
           />
         </div>
       )}
@@ -136,76 +168,69 @@ export function SubRecetasListView({
       />
 
       {/* 3. TABLA DE RESULTADOS */}
-      <Table className="flex-1">
-        <TableHead>
-          <tr>
-            <TableHeaderCell isSortable onClick={() => setOrdenAsc(!ordenAsc)}>Nombre {ordenAsc ? '↓' : '↑'}</TableHeaderCell>
-            <TableHeaderCell>Tipo</TableHeaderCell>
-            <TableHeaderCell align="right">Rendimiento (Batch)</TableHeaderCell>
-            <TableHeaderCell align="right">Costo Lote</TableHeaderCell>
-            <TableHeaderCell align="right">Costo Unitario</TableHeaderCell>
-            <TableHeaderCell align="center">Acciones</TableHeaderCell>
-          </tr>
-        </TableHead>
-        <TableBody>
-          {paginadas.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} align="center" className="py-12 text-slate-500 font-mono">
-                {data.length === 0 ? 'Cargando catálogo de preparaciones...' : 'No se encontraron sub-recetas.'}
-              </TableCell>
-            </TableRow>
-          ) : (
-            paginadas.map((sr) => {
-              const tipoObj = tipos.find(t => t.id === sr.tipo_id);
-              
-              return (
-                <TableRow key={sr.id} isClickable onClick={() => onVerDetalle(sr)}>
-                  <TableCell className="font-bold text-white group-hover:text-emerald-400 transition-colors">
-                    {sr.nombre}
-                  </TableCell>
-                  
-                  <TableCell className="font-mono text-[11px] text-purple-400 uppercase tracking-wider">
-                    {tipoObj?.nombre || '-'}
-                  </TableCell>
-                  
-                  <TableCell align="right" className="font-mono text-slate-300">
-                    {Number(sr.rendimiento_batch).toLocaleString('es-CL')} {sr.unidad_rendimiento}
-                  </TableCell>
-                  
-                  <TableCell align="right" className="font-mono text-pink-400">
-                    ${sr.costo_lote_clp?.toLocaleString('es-CL') || 0}
-                  </TableCell>
-                  
-                  <TableCell align="right" className="font-mono text-emerald-400 font-bold">
-                    ${sr.costo_unitario_clp?.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 0} / {sr.unidad_rendimiento}
-                  </TableCell>
-                  
-                  <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                    <Button 
-                      variant="secondary" 
-                      size="sm" 
-                      onClick={() => onVerDetalle(sr)}
-                      className="h-7 text-[10px] bg-slate-800 hover:bg-emerald-950/50 hover:text-emerald-400 hover:border-emerald-900/50"
-                    >
-                      Ver Ficha
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
+      <div className="flex flex-col flex-1 space-y-2">
+        <Table className="flex-1">
+          <TableHead>
+            <tr>
+              {/* Columnas 100% ordenables con visualización de dirección */}
+              <TableHeaderCell isSortable sortDirection={columnaOrden === 'nombre' ? (ordenAsc ? 'asc' : 'desc') : null} onSort={() => manejarOrden('nombre')}>Nombre</TableHeaderCell>
+              <TableHeaderCell isSortable sortDirection={columnaOrden === 'tipo' ? (ordenAsc ? 'asc' : 'desc') : null} onSort={() => manejarOrden('tipo')}>Tipo</TableHeaderCell>
+              <TableHeaderCell align="right" isSortable sortDirection={columnaOrden === 'rendimiento_batch' ? (ordenAsc ? 'asc' : 'desc') : null} onSort={() => manejarOrden('rendimiento_batch')}>Rendimiento (Batch)</TableHeaderCell>
+              <TableHeaderCell align="right" isSortable sortDirection={columnaOrden === 'costo_lote_clp' ? (ordenAsc ? 'asc' : 'desc') : null} onSort={() => manejarOrden('costo_lote_clp')}>Costo Lote</TableHeaderCell>
+              <TableHeaderCell align="right" isSortable sortDirection={columnaOrden === 'costo_unitario_clp' ? (ordenAsc ? 'asc' : 'desc') : null} onSort={() => manejarOrden('costo_unitario_clp')}>Costo Unitario</TableHeaderCell>
+            </tr>
+          </TableHead>
+          <TableBody>
+            {paginadas.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} align="center" className="py-12 text-muted font-mono">
+                  {data.length === 0 ? 'Cargando catálogo de preparaciones...' : 'No se encontraron sub-recetas.'}
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginadas.map((sr) => {
+                const tipoObj = tipos.find(t => t.id === sr.tipo_id);
+                
+                return (
+                  <TableRow key={sr.id} isClickable onClick={() => onVerDetalle(sr)}>
+                    <TableCell className="font-bold text-foreground group-hover:text-primary transition-colors">
+                      {sr.nombre}
+                    </TableCell>
+                    
+                    <TableCell>
+                      {/* Aplicamos el componente Badge para el Tipo */}
+                      <Badge variant="info" size="sm" className="uppercase tracking-wider">
+                        {tipoObj?.nombre || '-'}
+                      </Badge>
+                    </TableCell>
+                    
+                    <TableCell align="right" className="font-mono text-muted">
+                      {Number(sr.rendimiento_batch).toLocaleString('es-CL')} {sr.unidad_rendimiento}
+                    </TableCell>
+                    
+                    <TableCell align="right" className="font-mono text-foreground/70">
+                      ${sr.costo_lote_clp?.toLocaleString('es-CL') || 0}
+                    </TableCell>
+                    
+                    <TableCell align="right" className="font-mono text-primary font-bold">
+                      ${sr.costo_unitario_clp?.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || 0} / {sr.unidad_rendimiento}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
 
-      {/* 4. FOOTER PAGINACIÓN */}
-      <TablePagination 
-        paginaActual={paginaSegura}
-        totalPaginas={totalPaginas}
-        onCambiarPagina={(p) => setPaginaActual(p)}
-        elementosMostrados={totalRegistros === 0 ? 0 : paginadas.length}
-        totalElementos={totalRegistros}
-      />
-
+        {/* 4. FOOTER PAGINACIÓN */}
+        <TablePagination 
+          paginaActual={paginaSegura}
+          totalPaginas={totalPaginas}
+          onCambiarPagina={(p) => setPaginaActual(p)}
+          elementosMostrados={totalRegistros === 0 ? 0 : paginadas.length}
+          totalElementos={totalRegistros}
+        />
+      </div>
     </div>
   );
 }
