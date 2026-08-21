@@ -2,8 +2,9 @@
 import { useState } from 'react';
 import { useInsumos } from './hooks/useInsumos';
 
+// Tipos: Globales desde @/types, locales desde ./types
 import type { Insumo, InsumoPrecioHistorico } from '@/types/insumos';
-import type { VistaInsumo } from '../types'; // El único que se queda local es el de UI
+import type { VistaInsumo } from './types'; 
 
 // Componentes de Presentación
 import { InsumosList } from './components/InsumosList';
@@ -11,7 +12,16 @@ import { InsumosDetail } from './components/InsumosDetail';
 import { InsumosForm } from './components/InsumosForm';
 
 export function InsumosView() {
-  const { insumos, tipos, proveedores, cargando, guardando, guardarInsumo, eliminarInsumo, obtenerHistorico } = useInsumos();
+  const { 
+    insumos, 
+    tipos, 
+    proveedores, 
+    cargando, 
+    guardando, 
+    guardarInsumo, 
+    eliminarInsumo, 
+    obtenerHistorico 
+  } = useInsumos();
   
   // Estado UI
   const [vista, setVista] = useState<VistaInsumo>('listado');
@@ -26,7 +36,6 @@ export function InsumosView() {
     setInsumoActivo(insumo);
     setVista('detalle');
     
-    // Disparamos la carga del historial en segundo plano al abrir el detalle
     setCargandoHistorial(true);
     const hist = await obtenerHistorico(insumo.id);
     setHistoricoActivo(hist);
@@ -43,11 +52,11 @@ export function InsumosView() {
     }
   };
 
-  // Mapeamos el tipo de Supabase al tipo que espera InsumosDetail
+  // Mapeo para InsumosDetail que espera una estructura de historial
   const historialFormateado = historicoActivo.map(h => ({
     id: h.id,
     fecha: h.created_at,
-    proveedor_nombre: h.proveedores?.nombre,
+    proveedor_nombre: h.proveedores?.nombre ?? 'Sin proveedor',
     precio_compra: h.precio_compra,
     costo_unitario: h.costo_unitario,
   }));
@@ -88,7 +97,6 @@ export function InsumosView() {
             if (res.success && res.insumoActualizado) {
               setInsumoActivo(res.insumoActualizado);
               setVista('detalle');
-              // Recargar el historial de precios tras una edición exitosa
               setCargandoHistorial(true);
               const hist = await obtenerHistorico(res.insumoActualizado.id);
               setHistoricoActivo(hist);

@@ -1,13 +1,13 @@
 // src/modules/subrecetas/hooks/useSubRecetaCalculador.ts
 import { useState, useMemo } from 'react';
-import type { IngredienteBOM, InsumoGlobal } from '@/types/subrecetas';
+import type { IngredienteBOM } from '@/types/subrecetas';
+import type { Insumo as InsumoGlobal } from '@/types/insumos'; // Alias para mantener compatibilidad
 import { calcularCostoLoteBOM, calcularCostoSubReceta } from '@/lib/calculos';
 
 export function useSubRecetaCalculador(insumosDisponibles: InsumoGlobal[], rendimientoInicial = 1000) {
   const [ingredientes, setIngredientes] = useState<IngredienteBOM[]>([]);
   const [rendimientoBatch, setRendimientoBatch] = useState<number>(rendimientoInicial);
 
-  // CORREGIDO: Usando 'unidad_medida' en lugar de 'unidad'
   const agregarIngrediente = (insumoId: number) => {
     setIngredientes(prev => [
       ...prev,

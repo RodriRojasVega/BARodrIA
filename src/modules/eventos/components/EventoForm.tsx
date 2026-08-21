@@ -40,7 +40,7 @@ export function EventoForm({ onGuardado, onCancelar }: EventoFormProps) {
           .order('nombre', { ascending: true });
         
         if (error) throw error;
-        setClientes(data || []);
+        setClientes((data as any) || []);
       } catch (err) {
         console.error('Error al cargar clientes B2B:', err);
       } finally {
@@ -82,7 +82,7 @@ export function EventoForm({ onGuardado, onCancelar }: EventoFormProps) {
 
       const { error: insertError } = await supabase
         .from('eventos')
-        .insert([payload]);
+        .insert([payload as any]);
 
       if (insertError) throw insertError;
 
@@ -231,9 +231,9 @@ export function EventoForm({ onGuardado, onCancelar }: EventoFormProps) {
                 <option value="cancelado">Cancelado</option>
               </Select>
             </div>
-            <div className="md:col-span-2">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted uppercase">Observaciones Logísticas</label>
               <Textarea 
-                label="Observaciones Logísticas"
                 placeholder="Notas especiales sobre acceso, restricciones de horario o requerimientos de barra..."
                 value={observaciones}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setObservaciones(e.target.value)}

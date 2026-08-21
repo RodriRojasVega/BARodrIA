@@ -98,7 +98,7 @@ export function useCocteles() {
         if (error) throw error;
         coctelGuardado = data as Coctel;
       } else {
-        const { data, error } = await supabase.from('cocteles').insert([formData]).select().single();
+        const { data, error } = await supabase.from('cocteles').insert([formData as any]).select().single();
         if (error) throw error;
         coctelGuardado = data as Coctel;
       }

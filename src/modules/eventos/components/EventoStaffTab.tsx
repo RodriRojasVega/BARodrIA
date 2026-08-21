@@ -21,11 +21,11 @@ export function EventoStaffTab({ eventoId }: EventoStaffTabProps) {
       try {
         setCargando(true);
         const [{ data: staffData }, { data: asigData }] = await Promise.all([
-          supabase.from('staff').select('*').order('nombre'),
-          supabase.from('evento_staff_asignaciones').select('*').eq('evento_id', eventoId)
+          supabase.from('staff' as any).select('*').order('nombre'),
+          supabase.from('evento_staff_asignaciones' as any).select('*').eq('evento_id', eventoId)
         ]);
-        setStaffGlobal(staffData || []);
-        setAsignaciones(asigData || []);
+        setStaffGlobal((staffData as any) || []);
+        setAsignaciones((asigData as any) || []);
       } catch (err) {
         console.error('Error cargando staff:', err);
       } finally {
@@ -38,12 +38,12 @@ export function EventoStaffTab({ eventoId }: EventoStaffTabProps) {
   const asignarStaff = async (staffId: number) => {
     try {
       const { data, error } = await supabase
-        .from('evento_staff_asignaciones')
+        .from('evento_staff_asignaciones' as any)
         .insert([{ evento_id: eventoId, staff_id: staffId }])
         .select();
 
       if (error) throw error;
-      if (data) setAsignaciones(prev => [...prev, data[0]]);
+      if (data) setAsignaciones(prev => [...prev, (data as any)[0]]);
     } catch (err) {
       console.error('Error al asignar staff:', err);
     }
@@ -52,7 +52,7 @@ export function EventoStaffTab({ eventoId }: EventoStaffTabProps) {
   const removerAsignacion = async (id: number) => {
     try {
       const { error } = await supabase
-        .from('evento_staff_asignaciones')
+        .from('evento_staff_asignaciones' as any)
         .delete()
         .eq('id', id);
 

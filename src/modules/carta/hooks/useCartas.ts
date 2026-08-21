@@ -86,11 +86,11 @@ export function useCartas() {
 
       // Upsert de la entidad principal
       if (cartaId) {
-        const { data, error } = await supabase.from('cartas').update(formData).eq('id', cartaId).select().single();
+        const { data, error } = await supabase.from('cartas').update(formData as any).eq('id', cartaId).select().single();
         if (error) throw error;
         cartaGuardada = data as Carta;
       } else {
-        const { data, error } = await supabase.from('cartas').insert([formData]).select().single();
+        const { data, error } = await supabase.from('cartas').insert([formData as any]).select().single();
         if (error) throw error;
         cartaGuardada = data as Carta;
       }

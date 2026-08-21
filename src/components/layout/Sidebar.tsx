@@ -11,12 +11,22 @@ import {
   Settings, 
   Palette,
   ChevronLeft,
-  ChevronRight 
+  ChevronRight,
+  type LucideIcon // Importamos el tipo oficial de los iconos
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-const NAV_ITEMS = [
+// 1. Definimos la interfaz explícitamente y hacemos 'special' opcional
+interface NavItem {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+  special?: boolean;
+}
+
+// 2. Aplicamos la interfaz al arreglo
+const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/eventos', label: 'Eventos', icon: Calendar },
   { path: '/cartas', label: 'Cartas', icon: ScrollText },

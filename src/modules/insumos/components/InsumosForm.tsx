@@ -2,7 +2,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Plus, Trash2, Search, Edit3 } from 'lucide-react';
 import { calcularCostoUnitarioInsumo } from '@/lib/calculos';
-import type { Insumo, TipoInsumo, Proveedor } from '../types';
+
+// Tipos desde la fuente de verdad
+import type { Insumo, TipoInsumo } from '@/types/insumos';
+import type { Proveedor } from '@/types/proveedores';
 
 // Componentes del UI Kit Maestro 2.0
 import { ModuleHeader } from '@/components/ui/ModuleHeader';
@@ -97,7 +100,7 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
     setProveedoresAsociados(prev => new Map(prev).set(id, val === '' ? null : Number(val))); 
   };
 
-  const aplicarMejorOferta = () => {
+  /*const aplicarMejorOferta = () => {
     let mejorPrecio: number | null = null;
     proveedoresAsociados.forEach(oferta => {
       if (oferta !== null && !isNaN(oferta) && oferta > 0) {
@@ -109,7 +112,7 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
       return;
     }
     setFormData(prev => ({ ...prev, precio_compra: mejorPrecio! }));
-  };
+  };*/
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,17 +127,12 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col min-h-full w-full bg-background p-4 md:p-6 animate-fade-in space-y-6">
-      
-      {/* CABECERA MAESTRA (Con el ModuleHeader y botón Volver integrado a la derecha) */}
       <ModuleHeader 
         icon={<Edit3 size={20} />}
         title={insumoAEditar ? `Editar Insumo: ${insumoAEditar.nombre}` : 'Nuevo Insumo'}
-        //subtitle="Configura los detalles, formato de compra y proveedores asociados."
-        primaryAction={
+        action={
           <div className="flex items-center gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={onVolver}>
-              Volver
-            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={onVolver}>Volver</Button>
             <Button type="submit" variant="primary" size="sm" disabled={guardando}>
               {guardando ? 'Guardando...' : 'Guardar Insumo'}
             </Button>
@@ -143,23 +141,20 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
       />
 
       <div className="space-y-6 flex-1">
-        
-        {/* Fila 1: Nombre */}
         <Input 
           label="Nombre del Insumo"
           type="text" 
           required 
           value={formData.nombre} 
-          onChange={e => setFormData({...formData, nombre: e.target.value})} 
+          onChange={(e: any) => setFormData({...formData, nombre: e.target.value})}
           placeholder="Ej. Gin London Dry"
         />
 
-        {/* Fila 2: Tipo, Graduación y Check Artesanal */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <Select 
             label="Tipo de Insumo"
             value={formData.tipo_id} 
-            onChange={e => setFormData({...formData, tipo_id: e.target.value})}
+            onChange={(e: any) => setFormData({...formData, tipo_id: e.target.value})}
           >
             {tipos.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
           </Select>
@@ -169,7 +164,7 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
             type="number" 
             step="0.1" 
             value={formData.graduacion_alcohol_base} 
-            onChange={e => setFormData({...formData, graduacion_alcohol_base: e.target.value})} 
+            onChange={(e: any) => setFormData({...formData, graduacion_alcohol_base: e.target.value})}
           />
 
           <div className="bg-primary/5 border border-primary/20 px-4 rounded-xl flex items-center gap-3 h-[42px]">
@@ -186,51 +181,40 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
           </div>
         </div>
 
-        {/* Fila 3: Formato y Costeo Principal */}
         <div className="space-y-4 pt-4 border-t border-border">
-          <span className="text-xs font-bold uppercase tracking-wider text-primary block">
-            Formato de Compra y Costeo Principal
-          </span>
-          
+          <span className="text-xs font-bold uppercase tracking-wider text-primary block">Formato de Compra y Costeo</span>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-muted uppercase tracking-wider">Total Compra ($)</label>
-              </div>
-              <Input 
-                type="number" 
-                step="any" 
-                required 
-                value={formData.precio_compra} 
-                onChange={e => setFormData({...formData, precio_compra: e.target.value})} 
-              />
-            </div>
-
+            <Input 
+              label="Total Compra ($)"
+              type="number" 
+              step="any" 
+              required 
+              value={formData.precio_compra} 
+              onChange={(e: any) => setFormData({...formData, precio_compra: e.target.value})}
+            />
             <Select 
               label="Unidad Base"
               value={formData.unidad_medida} 
-              onChange={e => setFormData({...formData, unidad_medida: e.target.value})}
+              onChange={(e: any) => setFormData({...formData, unidad_medida: e.target.value})}
             >
               <option value="ml">Mililitros (ml)</option>
               <option value="g">Gramos (g)</option>
               <option value="unit">Unidades (unit)</option>
             </Select>
-
             <Input 
               label="Formato / Envase"
               type="number" 
               step="any" 
               required 
               value={formData.formato_envase} 
-              onChange={e => setFormData({...formData, formato_envase: e.target.value})} 
+              onChange={(e: any) => setFormData({...formData, formato_envase: e.target.value})}
             />
-
             <Input 
               label="Rendimiento (%)"
               type="number" 
               step="1" 
               value={formData.rendimiento_neto_porcentaje} 
-              onChange={e => setFormData({...formData, rendimiento_neto_porcentaje: e.target.value})} 
+              onChange={(e: any) => setFormData({...formData, rendimiento_neto_porcentaje: e.target.value})} 
             />
           </div>
 
@@ -240,76 +224,37 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
           </div>
         </div>
 
-        {/* Fila 4: Dual Asignador de Proveedores */}
         {!formData.es_artesanal && (
-          <div className="space-y-4 pt-6 border-t border-border">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-primary uppercase tracking-wider font-mono">
-                Asignación de Proveedores y Ofertas
-              </span>
-              {proveedoresAsignados.length > 0 && (
-                <button type="button" onClick={aplicarMejorOferta} className="text-xs font-bold text-primary hover:underline transition-all">
-                  Usar mejor oferta global
-                </button>
-              )}
-            </div>
-            
-            <DualAsignador
-              tituloIzq="Asignados"
-              contadorIzq={proveedoresAsignados.length}
-              iconoIzq={<Search size={14}/>}
-              placeholderBusquedaIzq="Buscar asignado..."
-              valorBusquedaIzq={busquedaAsignados}
-              onChangeBusquedaIzq={setBusquedaAsignados}
-              
-              tituloDer="Proveedores Disponibles"
-              placeholderBusquedaDer="Buscar proveedor..."
-              valorBusquedaDer={busquedaDisponibles}
-              onChangeBusquedaDer={setBusquedaDisponibles}
-              
-              childrenDer={
-                proveedoresDisponibles.length === 0 ? (
-                  <div className="text-xs text-muted p-4 text-center">No hay proveedores disponibles para añadir.</div>
-                ) : (
-                  proveedoresDisponibles.map(p => (
-                    <div key={p.id} className="flex justify-between items-center p-2 hover:bg-surface-muted rounded-lg transition-colors border border-transparent hover:border-border">
-                      <span className="text-sm font-medium text-foreground">{p.nombre}</span>
-                      <Button type="button" variant="secondary" size="sm" icon={<Plus size={14}/>} onClick={() => agregarProveedor(p.id)}>
-                        Añadir
-                      </Button>
-                    </div>
-                  ))
-                )
-              }
-              
-              childrenIzq={
-                proveedoresAsignados.length === 0 ? (
-                  <div className="text-xs text-muted p-4 text-center">Aún no has asignado proveedores.</div>
-                ) : (
-                  proveedoresAsignados.map(p => (
-                    <div key={p.id} className="flex flex-col xl:flex-row xl:items-center gap-3 p-3 bg-background border border-border rounded-lg shadow-sm">
-                      <span className="text-sm font-medium text-foreground flex-1 truncate">{p.nombre}</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-32">
-                          <Input 
-                            type="number" 
-                            placeholder="Precio"
-                            value={proveedoresAsociados.get(p.id) ?? ''} 
-                            onChange={e => actualizarPrecioProveedor(p.id, e.target.value)}
-                          />
-                        </div>
-                        <Button type="button" variant="inline-danger" size="sm" onClick={() => removerProveedor(p.id)} className="text-muted hover:text-danger">
-                          <Trash2 size={16}/>
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )
-              }
-            />
-          </div>
+          <DualAsignador
+            tituloIzq="Proveedores Asignados"
+            contadorIzq={proveedoresAsignados.length}
+            valorBusquedaIzq={busquedaAsignados}
+            onChangeBusquedaIzq={setBusquedaAsignados}
+            valorBusquedaDer={busquedaDisponibles}
+            onChangeBusquedaDer={setBusquedaDisponibles}
+            tituloDer="Proveedores Disponibles"
+            childrenDer={
+              proveedoresDisponibles.map(p => (
+                <div key={p.id} className="flex justify-between items-center p-2">
+                  <span className="text-sm">{p.nombre}</span>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => agregarProveedor(p.id)}>Añadir</Button>
+                </div>
+              ))
+            }
+            childrenIzq={
+              proveedoresAsignados.map(p => (
+                <div key={p.id} className="flex gap-2">
+                   <Input 
+                    placeholder="Precio" 
+                    value={(proveedoresAsignados as any).get?.(p.id) ?? ''}
+                    onChange={(e: any) => actualizarPrecioProveedor(p.id, e.target.value)}
+                   />
+                   <Button type="button" variant="inline-danger" onClick={() => removerProveedor(p.id)}><Trash2 size={16}/></Button>
+                </div>
+              ))
+            }
+          />
         )}
-
       </div>
     </form>
   );

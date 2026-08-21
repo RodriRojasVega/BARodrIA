@@ -1,15 +1,5 @@
 // src/types/proveedores.ts
 
-export interface InsumoGlobal {
-  id: number;
-  nombre: string;
-  unidad_medida: string;
-  formato_envase: number;
-  precio_compra: number;
-  rendimiento_neto_porcentaje: number;
-  es_artesanal: boolean;
-}
-
 export interface ProveedorInsumo {
   insumo_id: number;
   proveedor_id: number;

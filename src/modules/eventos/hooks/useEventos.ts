@@ -27,7 +27,7 @@ export function useEventos() {
         .order('fecha_evento', { ascending: true });
 
       if (err) throw err;
-      setEventos(data || []);
+      setEventos((data as any) || []);
     } catch (err: unknown) {
       const mensaje = err instanceof Error ? err.message : 'Error desconocido al cargar eventos';
       setError(mensaje);

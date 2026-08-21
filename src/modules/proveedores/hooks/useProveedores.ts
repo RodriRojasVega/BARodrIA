@@ -1,8 +1,9 @@
 // src/modules/proveedores/hooks/useProveedores.ts
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../../lib/supabase';
-import { calcularCostoUnitarioInsumo } from '../../../lib/calculos';
-import type { Proveedor, InsumoGlobal, ProveedorPrecioHistorico } from '@/types/proveedores';
+import { supabase } from '@/lib/supabase';
+import { calcularCostoUnitarioInsumo } from '@/lib/calculos';
+import type { Proveedor, ProveedorPrecioHistorico } from '@/types/proveedores';
+import type { Insumo as InsumoGlobal } from '@/types/insumos';
 
 export function useProveedores() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -15,16 +16,16 @@ export function useProveedores() {
     try {
       const [pData, iData, relData] = await Promise.all([
         supabase.from('proveedores').select('*').order('nombre'),
-        supabase.from('insumos').select('id, nombre, unidad_medida, formato_envase, precio_compra, rendimiento_neto_porcentaje, es_artesanal').order('nombre'),
+        supabase.from('insumos').select('*').order('nombre'),
         supabase.from('insumo_proveedores').select('*')
       ]);
 
       // Solo guardamos insumos comerciales (no artesanales)
-      const insumosComerciales = (iData.data || []).filter(i => !i.es_artesanal);
+      const insumosComerciales = ((iData.data || []) as InsumoGlobal[]).filter(i => !i.es_artesanal);
       setInsumosGlobales(insumosComerciales);
 
       const relsTipadas = (relData.data || []) as any[];
-      const provMapeados: Proveedor[] = (pData.data || []).map(prov => {
+      const provMapeados: Proveedor[] = (pData.data || []).map((prov: any) => {
         const misInsumos = relsTipadas
           .filter(r => r.proveedor_id === prov.id)
           .map(r => ({
@@ -63,7 +64,7 @@ export function useProveedores() {
         const { error } = await supabase.from('proveedores').update(payload).eq('id', provIdReal);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from('proveedores').insert([payload]).select().single();
+        const { data, error } = await supabase.from('proveedores').insert([payload] as any).select().single();
         if (error) throw error;
         provIdReal = Number(data.id);
       }
@@ -81,14 +82,13 @@ export function useProveedores() {
           insumo_id: i.insumo_id,
           precio_oferta: i.precio_oferta
         }));
-        await supabase.from('insumo_proveedores').insert(arrInsert);
+        await supabase.from('insumo_proveedores').insert(arrInsert as any);
       }
 
       // 4. Auditoría de Histórico
       let registrosHist: any[] = [];
       insumosTempo.forEach(i => {
         const viejoPrecio = mapaViejos.get(i.insumo_id);
-        // Si el precio es diferente (o es un insumo nuevo para este proveedor)
         if (viejoPrecio !== i.precio_oferta) {
           const insObj = insumosGlobales.find(x => x.id === i.insumo_id);
           const formato = insObj ? parseFloat(insObj.formato_envase.toString()) || 1 : 1;
@@ -107,7 +107,7 @@ export function useProveedores() {
       });
 
       if (registrosHist.length > 0) {
-        await supabase.from('insumo_precios_historicos').insert(registrosHist);
+        await supabase.from('insumo_precios_historicos').insert(registrosHist as any);
       }
 
       // 5. Recargar y devolver objeto actualizado
@@ -136,13 +136,12 @@ export function useProveedores() {
       .eq('proveedor_id', id)
       .order('created_at', { ascending: false });
     
-    // Mapeamos el nombre del insumo usando el estado global para no tener que hacer un JOIN pesado
     const mapeado = (data || []).map((h: any) => {
       const ins = insumosGlobales.find(i => i.id === h.insumo_id);
       return { ...h, insumo_nombre: ins ? ins.nombre : 'Insumo Eliminado' };
     });
 
-    return mapeado;
+    return mapeado as ProveedorPrecioHistorico[];
   };
 
   return {

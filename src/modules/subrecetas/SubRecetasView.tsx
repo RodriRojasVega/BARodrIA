@@ -1,22 +1,35 @@
 // src/modules/subrecetas/SubRecetasView.tsx
 import { useState } from 'react';
-import { SubRecetasList, type SubRecetaItem } from './components/SubRecetasList';
+import { SubRecetasList } from './components/SubRecetasList';
 import { SubRecetasDetail } from './components/SubRecetasDetail';
 import { SubRecetasForm } from './components/SubRecetasForm';
-import { useSubRecetas } from './hooks/useSubRecetas';
+import { useSubRecetas } from './hooks/useSubRecetas'; // Hook correcto
+
+// Tipos centralizados
+import type { IngredienteBOM, PasoPreparacion } from '@/types/subrecetas';
+import type { SubRecetaItem } from './components/SubRecetasList';
 
 export function SubRecetasModule() {
-  const { subRecetas, tipos, insumos, isLoading, guardarSubReceta, eliminarSubReceta, obtenerDetallesSubReceta } = useSubRecetas();
+  const { 
+    subRecetas, 
+    tipos, 
+    insumos, 
+    isLoading, 
+    guardarSubReceta, 
+    eliminarSubReceta, 
+    obtenerDetallesSubReceta 
+  } = useSubRecetas();
 
   const [vistaActiva, setVistaActiva] = useState<'list' | 'detail' | 'form'>('list');
   const [subRecetaSeleccionada, setSubRecetaSeleccionada] = useState<SubRecetaItem | null>(null);
-  const [ingredientesActivos, setIngredientesActivos] = useState<any[]>([]);
-  const [pasosActivos, setPasosActivos] = useState<any[]>([{ descripcion: '' }]);
+  
+  const [ingredientesActivos, setIngredientesActivos] = useState<IngredienteBOM[]>([]);
+  const [pasosActivos, setPasosActivos] = useState<PasoPreparacion[]>([]);
 
   const handleNuevaSubReceta = () => {
     setSubRecetaSeleccionada(null);
     setIngredientesActivos([]);
-    setPasosActivos([{ descripcion: '' }]);
+    setPasosActivos([{ id: 0, sub_receta_id: 0, numero_paso: 1, descripcion: '', es_critico: false }]);
     setVistaActiva('form');
   };
 
@@ -31,13 +44,12 @@ export function SubRecetasModule() {
   const handleEditarSubReceta = async (subReceta: SubRecetaItem) => {
     const { ingredientes, pasos } = await obtenerDetallesSubReceta(subReceta.id);
     setIngredientesActivos(ingredientes);
-    setPasosActivos(pasos.length > 0 ? pasos : [{ descripcion: '' }]);
+    setPasosActivos(pasos.length > 0 ? pasos : [{ id: 0, sub_receta_id: subReceta.id, numero_paso: 1, descripcion: '', es_critico: false }]);
     setSubRecetaSeleccionada(subReceta);
     setVistaActiva('form');
   };
 
   if (isLoading) {
-    // Aplicamos semántica UI Kit: bg-background y text-primary
     return (
       <div className="flex h-full items-center justify-center bg-background text-primary font-mono animate-pulse">
         Conectando a BARodrIA...
@@ -46,7 +58,6 @@ export function SubRecetasModule() {
   }
 
   return (
-    // Aplicamos semántica UI Kit: bg-background
     <div className="h-full w-full flex flex-col overflow-hidden bg-background">
       {vistaActiva === 'list' && (
         <SubRecetasList 
@@ -89,3 +100,5 @@ export function SubRecetasModule() {
     </div>
   );
 }
+
+export default SubRecetasModule;

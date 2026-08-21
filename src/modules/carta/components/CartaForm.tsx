@@ -174,7 +174,7 @@ export function CartaForm({ cartaAEditar, coctelesDisponibles, onCargarCocteles,
             iconoIzq="✅"
             placeholderBusquedaIzq="Filtrar asignados..."
             valorBusquedaIzq={filtroAsig}
-            onChangeBusquedaIzq={e => setFiltroAsig(e.target.value)}
+            onChangeBusquedaIzq={val => setFiltroAsig(val)}
             childrenIzq={
               asigFiltrados.length === 0 ? (
                 <div className="text-xs text-muted text-center py-10 font-mono">Sin cócteles asignados.</div>
@@ -198,7 +198,7 @@ export function CartaForm({ cartaAEditar, coctelesDisponibles, onCargarCocteles,
             iconoDer="📋"
             placeholderBusquedaDer="Buscar cóctel..."
             valorBusquedaDer={filtroDisp}
-            onChangeBusquedaDer={e => setFiltroDisp(e.target.value)}
+            onChangeBusquedaDer={val => setFiltroAsig(val)}
             childrenDer={
               dispFiltrados.length === 0 ? (
                 <div className="text-xs text-muted text-center py-10 font-mono">No hay resultados.</div>

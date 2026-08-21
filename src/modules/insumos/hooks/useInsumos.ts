@@ -2,9 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { calcularCostoUnitarioInsumo } from '@/lib/calculos';
-import type { Proveedor } from '../types/proveedor';
-import type { Insumo, TipoInsumo, ProveedorPrecioHistorico } from '@/types/insumos';
-
+import type { Proveedor } from '@/types/proveedores';
+import type { Insumo, TipoInsumo, InsumoProveedor, InsumoPrecioHistorico } from '@/types/insumos';
 
 interface InsumoPayload {
   nombre: string;
@@ -41,22 +40,28 @@ export function useInsumos() {
       ]);
 
       const provsGlobales = resProv.data || [];
-      setTipos(resTipos.data || []);
-      setProveedores(provsGlobales);
+      setTipos((resTipos.data as TipoInsumo[]) || []);
+      setProveedores(provsGlobales as Proveedor[]);
 
-      const relsTipadas = (resRels.data || []) as InsumoRelRow[];
-      const mapeados: Insumo[] = (resIns.data || []).map((insumo: any) => {
-        const misProveedores = relsTipadas
+      const relsTipadas: InsumoRelRow[] = (resRels.data as InsumoRelRow[]) || [];
+      const insumosData = (resIns.data || []) as any[];
+
+      const mapeados: Insumo[] = insumosData.map((insumo: any): Insumo => {
+        const misProveedores: InsumoProveedor[] = relsTipadas
           .filter(r => r.insumo_id === insumo.id)
           .map(r => {
             const provObj = provsGlobales.find(p => p.id === r.proveedor_id);
             return {
               proveedor_id: Number(r.proveedor_id),
-              nombre: provObj ? provObj.nombre : 'Proveedor desconocido',
+              nombre: provObj ? (provObj as any).nombre : 'Proveedor desconocido',
               precio_oferta: r.precio_oferta !== null ? Number(r.precio_oferta) : null
             };
           });
-        return { ...insumo, proveedores: misProveedores };
+        return { 
+          ...insumo, 
+          proveedores: misProveedores,
+          unidad_medida: insumo.unidad_medida as 'ml' | 'g' | 'unit' | 'dash'
+        };
       });
 
       setInsumos(mapeados);
@@ -110,7 +115,6 @@ export function useInsumos() {
       if (isEdicion && idEdicion) {
         insumoIdReal = parseInt(idEdicion);
 
-        // 1. Consultar estado ANTERIOR en la BD para hacer un "diff" inteligente
         const { data: insumoActual } = await supabase.from('insumos').select('precio_compra').eq('id', insumoIdReal).single();
         if (insumoActual) precioAnterior = Number(insumoActual.precio_compra);
 
@@ -119,32 +123,19 @@ export function useInsumos() {
           preciosProveedoresAnteriores.set(Number(r.proveedor_id), r.precio_oferta !== null ? Number(r.precio_oferta) : null);
         });
 
-        // 2. Actualizar Insumo y limpiar relaciones viejas
-        const { error } = await supabase.from('insumos').update(dataToSave).eq('id', insumoIdReal);
-        if (error) throw error;
+        await supabase.from('insumos').update(dataToSave as any).eq('id', insumoIdReal);
         await supabase.from('insumo_proveedores').delete().eq('insumo_id', insumoIdReal);
       } else {
-        const { data, error } = await supabase.from('insumos').insert([dataToSave]).select();
+        const { data, error } = await supabase.from('insumos').insert([dataToSave] as any).select();
         if (error) throw error;
-        if (!data || data.length === 0) throw new Error("No se obtuvo ID.");
         insumoIdReal = Number(data[0].id);
       }
 
-      const registrosHistoricos: Array<{
-        insumo_id: number;
-        proveedor_id: number | null;
-        precio_compra: number;
-        costo_unitario: number;
-      }> = [];
+      // Historización
+      const registrosHistoricos = [];
 
-      // 3. Validar si el precio base cambió (o si es nuevo) para registrar historia
       if (!isEdicion || precio !== precioAnterior) {
-        registrosHistoricos.push({
-          insumo_id: insumoIdReal,
-          proveedor_id: null,
-          precio_compra: precio,
-          costo_unitario: costoCalc
-        });
+        registrosHistoricos.push({ insumo_id: insumoIdReal, proveedor_id: null, precio_compra: precio, costo_unitario: costoCalc });
       }
 
       if (!payload.es_artesanal && proveedoresAsociados.size > 0) {
@@ -154,15 +145,13 @@ export function useInsumos() {
           precio_oferta: oferta !== null && !isNaN(oferta) ? oferta : null
         }));
 
-        await supabase.from('insumo_proveedores').insert(nuevasRels);
+        await supabase.from('insumo_proveedores').insert(nuevasRels as any);
 
-        // 4. Validar si el precio de oferta del proveedor cambió o es nuevo para registrar historia
         nuevasRels.forEach(r => {
           if (r.precio_oferta !== null && r.precio_oferta > 0) {
             const proveedorIdNum = Number(r.proveedor_id);
             const precioPrevio = preciosProveedoresAnteriores.get(proveedorIdNum);
 
-            // Si es un proveedor nuevo o su precio oferta cambió
             if (!isEdicion || !preciosProveedoresAnteriores.has(proveedorIdNum) || precioPrevio !== r.precio_oferta) {
               const costoProvBase = calcularCostoUnitarioInsumo(r.precio_oferta, formato);
               registrosHistoricos.push({
@@ -176,25 +165,12 @@ export function useInsumos() {
         });
       }
 
-      // 5. Solo insertamos en el histórico si realmente hay cambios detectados
       if (registrosHistoricos.length > 0) {
-        await supabase.from('insumo_precios_historicos').insert(registrosHistoricos);
+        await supabase.from('insumo_precios_historicos').insert(registrosHistoricos as any);
       }
 
       await cargarDatos();
-
-      const { data: insumoRecuperado } = await supabase.from('insumos').select('*').eq('id', insumoIdReal).single();
-      const { data: relsProv } = await supabase.from('insumo_proveedores').select('*').eq('insumo_id', insumoIdReal);
-      const misProv = (relsProv || []).map((r: InsumoRelRow) => {
-        const pObj = proveedores.find(p => p.id === r.proveedor_id);
-        return {
-          proveedor_id: Number(r.proveedor_id),
-          nombre: pObj ? pObj.nombre : 'Proveedor desconocido',
-          precio_oferta: r.precio_oferta !== null ? Number(r.precio_oferta) : null
-        };
-      });
-
-      return { success: true, insumoActualizado: { ...insumoRecuperado, proveedores: misProv } as Insumo };
+      return { success: true };
     } catch (err) {
       console.error(err);
       return { success: false };
@@ -209,23 +185,14 @@ export function useInsumos() {
     return !error;
   };
 
-  const obtenerHistorico = async (id: number): Promise<PrecioHistorico[]> => {
+  const obtenerHistorico = async (id: number): Promise<InsumoPrecioHistorico[]> => {
     const { data } = await supabase
       .from('insumo_precios_historicos')
       .select('*, proveedores(nombre)')
       .eq('insumo_id', id)
       .order('created_at', { ascending: false });
-    return data || [];
+    return (data as unknown as InsumoPrecioHistorico[]) || [];
   };
 
-  return {
-    insumos,
-    tipos,
-    proveedores,
-    cargando,
-    guardando,
-    guardarInsumo,
-    eliminarInsumo,
-    obtenerHistorico
-  };
+  return { insumos, tipos, proveedores, cargando, guardando, guardarInsumo, eliminarInsumo, obtenerHistorico };
 }

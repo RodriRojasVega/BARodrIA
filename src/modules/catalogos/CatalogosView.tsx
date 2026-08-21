@@ -113,13 +113,13 @@ export function CatalogosView() {
       if (registroEditando) {
         const { error: err } = await supabase
           .from(tablaActiva)
-          .update(formCampos)
+          .update(formCampos as any)
           .eq('id', registroEditando.id);
         error = err;
       } else {
         const { error: err } = await supabase
           .from(tablaActiva)
-          .insert([formCampos]);
+          .insert([formCampos as any]);
         error = err;
       }
 

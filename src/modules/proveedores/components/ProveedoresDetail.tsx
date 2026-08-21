@@ -1,7 +1,10 @@
 // src/modules/proveedores/components/ProveedoresDetail.tsx
 import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Edit3, Trash2, ClipboardList, TrendingUp, Users, Info } from 'lucide-react';
-import type { Proveedor, InsumoGlobal, ProveedorPrecioHistorico } from '../types';
+
+// Tipos centralizados
+import type { Proveedor, ProveedorPrecioHistorico } from '@/types/proveedores';
+import type { Insumo as InsumoGlobal } from '@/types/insumos';
 
 // Componentes del UI Kit Maestro 2.0
 import { ModuleHeader } from '@/components/ui/ModuleHeader';
@@ -14,7 +17,7 @@ import { InfoCard } from '@/components/ui/InfoCard';
 interface Props {
   proveedor: Proveedor;
   insumosGlobales: InsumoGlobal[];
-  obtenerHistorico: (id: number) => Promise<PRoveedorPrecioHistorico[]>;
+  obtenerHistorico: (id: number) => Promise<ProveedorPrecioHistorico[]>; // Corregido el tipo
   onVolver: () => void;
   onEditar: () => void;
   onEliminar: (id: number, nombre: string) => void;
@@ -134,40 +137,30 @@ export function ProveedoresDetail({ proveedor, insumosGlobales, obtenerHistorico
   return (
     <div className="flex flex-col min-h-full w-full space-y-3 p-4 md:p-6 bg-background text-foreground animate-fade-in">
       
-      {/* CABECERA MAESTRA CON BOTONES COMPACTOS (size="sm") */}
       <ModuleHeader 
         icon={<Users size={20} />}
         title={proveedor.nombre}
         badges={<Badge variant="info" size="sm">Distribuidor</Badge>}
-        primaryAction={
+        action={
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" icon={<ArrowLeft size={14} />} onClick={onVolver}>
-              Volver
-            </Button>
-            <Button variant="secondary" size="sm" icon={<Edit3 size={14} />} onClick={onEditar}>
-              Editar
-            </Button>
-            <Button variant="danger" size="sm" icon={<Trash2 size={14} />} onClick={() => onEliminar(proveedor.id, proveedor.nombre)}>
-              Eliminar
-            </Button>
+            <Button variant="ghost" size="sm" icon={<ArrowLeft size={14} />} onClick={onVolver}>Volver</Button>
+            <Button variant="secondary" size="sm" icon={<Edit3 size={14} />} onClick={onEditar}>Editar</Button>
+            <Button variant="danger" size="sm" icon={<Trash2 size={14} />} onClick={() => onEliminar(proveedor.id, proveedor.nombre)}>Eliminar</Button>
           </div>
         }
       />
 
-      {/* SISTEMA DE TABS */}
       <div className="flex-1 flex flex-col">
-        
         <Tabs 
           activeTab={activeTab} 
           onChangeTab={setActiveTab}
           tabs={[
-            { id: 'info', label: 'Información General', icon: <Info size={16}/>, activeColor: 'text-primary border-primary' },
-            { id: 'catalogo', label: 'Catálogo de Productos', icon: <ClipboardList size={16}/>, activeColor: 'text-primary border-primary' },
-            { id: 'historico', label: 'Histórico de Precios', icon: <TrendingUp size={16}/>, activeColor: 'text-primary border-primary' }
+            { id: 'info', label: 'Información General', icon: <Info size={16}/> },
+            { id: 'catalogo', label: 'Catálogo de Productos', icon: <ClipboardList size={16}/> },
+            { id: 'historico', label: 'Histórico de Precios', icon: <TrendingUp size={16}/> }
           ]}
         />
 
-        {/* TAB 1: INFORMACIÓN GENERAL */}
         <TabPanel id="info" activeTab={activeTab}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in pt-3">
             <InfoCard title="Razón Social / Nombre" value={proveedor.nombre} copyText={proveedor.nombre} variant="primary" />
@@ -178,7 +171,6 @@ export function ProveedoresDetail({ proveedor, insumosGlobales, obtenerHistorico
           </div>
         </TabPanel>
 
-        {/* TAB 2: CATÁLOGO DE PRODUCTOS */}
         <TabPanel id="catalogo" activeTab={activeTab}>
           <div className="flex flex-col space-y-2 animate-fade-in pt-1">
             <TableToolbar 
@@ -222,7 +214,6 @@ export function ProveedoresDetail({ proveedor, insumosGlobales, obtenerHistorico
           </div>
         </TabPanel>
 
-        {/* TAB 3: HISTÓRICO DE PRECIOS */}
         <TabPanel id="historico" activeTab={activeTab}>
           <div className="flex flex-col space-y-2 animate-fade-in pt-1">
             <TableToolbar 

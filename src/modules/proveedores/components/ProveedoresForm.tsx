@@ -1,7 +1,8 @@
 // src/modules/proveedores/components/ProveedoresForm.tsx
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, Users } from 'lucide-react';
-import type { Proveedor, InsumoGlobal } from '../types';
+import type { Proveedor } from '@/types/proveedores';
+import type { Insumo as InsumoGlobal } from '@/types/insumos';
 
 // Componentes del UI Kit Maestro 2.0
 import { ModuleHeader } from '@/components/ui/ModuleHeader';
@@ -36,7 +37,7 @@ export function ProveedoresForm({ provAEditar, insumosGlobales, guardando, onVol
         email: provAEditar.email || '',
         observaciones: provAEditar.observaciones || ''
       });
-      setInsumosTempo(provAEditar.insumos.map(r => ({ 
+      setInsumosTempo(provAEditar.insumos.map((r: any) => ({ 
         insumo_id: r.insumo_id, 
         precio_oferta: r.precio_oferta !== null ? r.precio_oferta : 0 
       })));

@@ -34,7 +34,7 @@ export function DashboardView() {
   async function obtenerConteoTabla(nombreTabla: string): Promise<number> {
     try {
       const { count, error } = await supabase
-        .from(nombreTabla)
+        .from(nombreTabla as any)
         .select('*', { count: 'exact', head: true });
       
       if (error) return 0;

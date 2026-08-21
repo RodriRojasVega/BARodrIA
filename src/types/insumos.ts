@@ -25,8 +25,8 @@ export interface Insumo {
   precio_compra: number;
   costo_unitario: number;
   graduacion_alcohol_base: number;
-  rendimiento_neto_porcentaje: number;
-  es_artesanal: boolean;
+  rendimiento_neto_porcentaje: number | null; // Corregido a nullable
+  es_artesanal: boolean | null;              // Corregido a nullable
   proveedores?: InsumoProveedor[];
 }
 
@@ -39,3 +39,6 @@ export interface InsumoPrecioHistorico {
   created_at: string;
   proveedores?: { nombre: string };
 }
+
+// Alias para evitar errores de exportación en otros módulos
+export type InsumoGlobal = Insumo;

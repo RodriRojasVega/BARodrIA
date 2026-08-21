@@ -1,5 +1,6 @@
 // src/lib/calculos.ts
-import type { IngredienteBOM, InsumoGlobal } from '@/types/subrecetas';
+import type { IngredienteBOM } from '@/types/subrecetas';
+import type { Insumo as InsumoGlobal } from '@/types/insumos';
 
 /**
  * Calcula el costo unitario por ml o gramo de un insumo simple.
@@ -21,9 +22,13 @@ export function calcularCostoLoteBOM(
 ): number {
   return ingredientes.reduce((totalCost, ing) => {
     const insumoBase = insumosDisponibles.find(i => i.id === ing.insumo_id);
-    if (!insumoBase || !insumoBase.formato_envase || insumoBase.formato_envase <= 0) return totalCost;
+    
+    // Si no encontramos el insumo o es inválido, evitamos errores y sumamos 0
+    if (!insumoBase || !insumoBase.formato_envase || insumoBase.formato_envase <= 0) {
+      return totalCost;
+    }
 
-    // Aquí TypeScript ya no se quejará porque 'ing.cantidad' coincide con el tipo
+    // Cálculo del costo proporcional del insumo basado en el costo_unitario del insumo base
     const costoInsumo = (ing.cantidad / insumoBase.formato_envase) * insumoBase.costo_unitario;
     return totalCost + (isNaN(costoInsumo) ? 0 : costoInsumo);
   }, 0);
