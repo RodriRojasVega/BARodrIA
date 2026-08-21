@@ -179,6 +179,42 @@ export type Database = {
           },
         ]
       }
+      coctel_garnishes: {
+        Row: {
+          cantidad: number
+          coctel_id: number
+          garnish_id: number
+          id: number
+        }
+        Insert: {
+          cantidad?: number
+          coctel_id: number
+          garnish_id: number
+          id?: never
+        }
+        Update: {
+          cantidad?: number
+          coctel_id?: number
+          garnish_id?: number
+          id?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coctel_garnishes_coctel_id_fkey"
+            columns: ["coctel_id"]
+            isOneToOne: false
+            referencedRelation: "cocteles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coctel_garnishes_garnish_id_fkey"
+            columns: ["garnish_id"]
+            isOneToOne: false
+            referencedRelation: "garnishes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coctel_ingredientes: {
         Row: {
           cantidad: number
@@ -562,24 +598,33 @@ export type Database = {
           hora_fin: string | null
           hora_inicio: string | null
           id: number
+          modalidad_calculo: string | null
           nombre: string
           orden: number
+          pax_etapa: number | null
+          regla_consumo: number | null
         }
         Insert: {
           evento_id: number
           hora_fin?: string | null
           hora_inicio?: string | null
           id?: never
+          modalidad_calculo?: string | null
           nombre: string
           orden: number
+          pax_etapa?: number | null
+          regla_consumo?: number | null
         }
         Update: {
           evento_id?: number
           hora_fin?: string | null
           hora_inicio?: string | null
           id?: never
+          modalidad_calculo?: string | null
           nombre?: string
           orden?: number
+          pax_etapa?: number | null
+          regla_consumo?: number | null
         }
         Relationships: [
           {
@@ -591,56 +636,135 @@ export type Database = {
           },
         ]
       }
+      evento_staff_asignacion: {
+        Row: {
+          etapa_id: number | null
+          evento_id: number
+          hora_citacion: string | null
+          id: number
+          punto_servicio_id: number | null
+          staff_id: number
+        }
+        Insert: {
+          etapa_id?: number | null
+          evento_id: number
+          hora_citacion?: string | null
+          id?: never
+          punto_servicio_id?: number | null
+          staff_id: number
+        }
+        Update: {
+          etapa_id?: number | null
+          evento_id?: number
+          hora_citacion?: string | null
+          id?: never
+          punto_servicio_id?: number | null
+          staff_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evento_staff_asignacion_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "evento_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evento_staff_asignacion_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evento_staff_asignacion_punto_servicio_id_fkey"
+            columns: ["punto_servicio_id"]
+            isOneToOne: false
+            referencedRelation: "puntos_servicio"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evento_staff_asignacion_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eventos: {
         Row: {
           cliente_empresa_id: number | null
+          cliente_final_id: number | null
           created_at: string
           estado: string
           fecha_evento: string
           hora_fin: string
           hora_inicio: string
           id: number
+          mandante_id: number | null
           nombre: string
           observaciones_logistica: string | null
           salon_id: number | null
           slug: string
           spot_id: number | null
+          tipo_evento: string | null
           total_pax: number
         }
         Insert: {
           cliente_empresa_id?: number | null
+          cliente_final_id?: number | null
           created_at?: string
           estado?: string
           fecha_evento: string
           hora_fin: string
           hora_inicio: string
           id?: never
+          mandante_id?: number | null
           nombre: string
           observaciones_logistica?: string | null
           salon_id?: number | null
           slug: string
           spot_id?: number | null
+          tipo_evento?: string | null
           total_pax: number
         }
         Update: {
           cliente_empresa_id?: number | null
+          cliente_final_id?: number | null
           created_at?: string
           estado?: string
           fecha_evento?: string
           hora_fin?: string
           hora_inicio?: string
           id?: never
+          mandante_id?: number | null
           nombre?: string
           observaciones_logistica?: string | null
           salon_id?: number | null
           slug?: string
           spot_id?: number | null
+          tipo_evento?: string | null
           total_pax?: number
         }
         Relationships: [
           {
+            foreignKeyName: "eventos_cliente_final_id_fkey"
+            columns: ["cliente_final_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_empresas"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "eventos_cliente_fkey"
             columns: ["cliente_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_mandante_id_fkey"
+            columns: ["mandante_id"]
             isOneToOne: false
             referencedRelation: "clientes_empresas"
             referencedColumns: ["id"]
@@ -681,6 +805,70 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      garnishes: {
+        Row: {
+          id: number
+          insumo_base_id: number
+          nombre: string
+          rendimiento_por_unidad: number
+          tipo_corte: string
+        }
+        Insert: {
+          id?: never
+          insumo_base_id: number
+          nombre: string
+          rendimiento_por_unidad?: number
+          tipo_corte: string
+        }
+        Update: {
+          id?: never
+          insumo_base_id?: number
+          nombre?: string
+          rendimiento_por_unidad?: number
+          tipo_corte?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "garnishes_insumo_base_id_fkey"
+            columns: ["insumo_base_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      herramientas: {
+        Row: {
+          categoria: string | null
+          id: number
+          nombre: string
+          proveedor_id: number | null
+          slug: string
+        }
+        Insert: {
+          categoria?: string | null
+          id?: never
+          nombre: string
+          proveedor_id?: number | null
+          slug: string
+        }
+        Update: {
+          categoria?: string | null
+          id?: never
+          nombre?: string
+          proveedor_id?: number | null
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "herramientas_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hielos: {
         Row: {
@@ -991,21 +1179,38 @@ export type Database = {
           capacidad_operativa_ml: number
           id: number
           nombre: string
+          proveedor_id: number | null
+          racks_por_pallet: number | null
           slug: string
+          unidades_por_rack: number | null
         }
         Insert: {
           capacidad_operativa_ml: number
           id?: number
           nombre: string
+          proveedor_id?: number | null
+          racks_por_pallet?: number | null
           slug: string
+          unidades_por_rack?: number | null
         }
         Update: {
           capacidad_operativa_ml?: number
           id?: number
           nombre?: string
+          proveedor_id?: number | null
+          racks_por_pallet?: number | null
           slug?: string
+          unidades_por_rack?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "soportes_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       spots: {
         Row: {
@@ -1028,6 +1233,30 @@ export type Database = {
           id?: never
           nombre?: string
           tipo?: string | null
+        }
+        Relationships: []
+      }
+      staff: {
+        Row: {
+          estado: string | null
+          id: number
+          nombre: string
+          rol: string | null
+          telefono: string | null
+        }
+        Insert: {
+          estado?: string | null
+          id?: never
+          nombre: string
+          rol?: string | null
+          telefono?: string | null
+        }
+        Update: {
+          estado?: string | null
+          id?: never
+          nombre?: string
+          rol?: string | null
+          telefono?: string | null
         }
         Relationships: []
       }
