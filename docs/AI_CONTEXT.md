@@ -13,29 +13,27 @@ Actúa como un Desarrollador Frontend Senior experto en React, TypeScript y Tail
 
 ## 📂 Estructura de Carpetas y Arquitectura (Alias `@/` = `src/`)
 
-```text
-├── docs/                      # Documentación del proyecto y artefactos para IA
-│   ├── AI_CONTEXT.md          # Reglas, UI Kit y arquitectura del sistema
-│   └── database/schema.sql    # DDL del esquema de PostgreSQL (Supabase)
-├── public/                    # Archivos estáticos e iconos PWA
-└── src/
-    ├── assets/                # Imágenes, logos e ilustraciones
-    ├── components/
-    │   ├── layout/            # Componentes estructurales (Sidebar, Navbar)
-    │   └── ui/                # UI Kit Maestro 2.0 (Botones, Tablas, Inputs, etc.)
-    ├── hooks/                 # Custom hooks globales/transversales
-    ├── lib/                   # Clientes e integraciones (supabase.ts, calculos.ts)
-    ├── modules/               # Módulos de negocio autocontenidos
-    │   └── [nombre_modulo]/   # Ej: insumos, coctel, carta, eventos, proveedores
-    │       ├── [Nombre]View.tsx # Orquestador: vistas activas, KPIs y navegación
-    │       ├── components/    # Subvistas y modales exclusivos ([Modulo]Detail, [Modulo]Form, etc.)
-    │       ├── hooks/         # Lógica de negocio y llamadas a Supabase (use[Modulo].ts)
-    │       └── types.ts       # Tipos locales efímeros exclusivos del módulo
-    └── types/                 # Interfaces y entidades de base de datos globales
-        ├── database.types.ts  # Tipos autogenerados por CLI de Supabase
-        ├── index.ts           # Barrel export de tipos
-        └── [entidad].ts       # Modelos compartidos (insumos.ts, carta.ts, coctel.ts, etc.)
-```
+    ├── docs/                     # Documentación del proyecto y artefactos para IA
+    │   ├── AI_CONTEXT.md         # Reglas, UI Kit y arquitectura del sistema
+    │   └── database/schema.sql   # DDL del esquema de PostgreSQL (Supabase)
+    ├── public/                   # Archivos estáticos e iconos PWA
+    └── src/
+        ├── assets/               # Imágenes, logos e ilustraciones
+        ├── components/
+        │   ├── layout/           # Componentes estructurales (Sidebar, Navbar)
+        │   └── ui/               # UI Kit Maestro 2.0 (Botones, Tablas, Inputs, etc.)
+        ├── hooks/                # Custom hooks globales/transversales
+        ├── lib/                  # Clientes e integraciones (supabase.ts, calculos.ts)
+        ├── modules/              # Módulos de negocio autocontenidos
+        │   └── [nombre_modulo]/  # Ej: insumos, coctel, carta, eventos, proveedores
+        │       ├── [Nombre]View.tsx # Orquestador: vistas activas, KPIs y navegación
+        │       ├── components/   # Subvistas y modales exclusivos ([Modulo]Detail, [Modulo]Form, etc.)
+        │       ├── hooks/        # Lógica de negocio y llamadas a Supabase (use[Modulo].ts)
+        │       └── types.ts      # Tipos locales efímeros exclusivos del módulo
+        └── types/                # Interfaces y entidades de base de datos globales
+            ├── database.types.ts # Tipos autogenerados por CLI de Supabase
+            ├── index.ts          # Barrel export de tipos
+            └── [entidad].ts      # Modelos compartidos (insumos.ts, carta.ts, coctel.ts, etc.)
 
 ## 🥇 Reglas de Oro (Golden Rules) para Generación de Código
 
@@ -80,118 +78,11 @@ Para mantener la atomicidad y el orden a medida que la PWA escala, los módulos 
 *   **Tipos Globales (`src/types/`):** Utilízalos exclusivamente para entidades de base de datos o modelos de negocio que se comparten o relacionan en **más de un módulo** (ej. `Carta`, `Coctel`, `Insumo`, `Proveedor`).
 *   **Tipos Locales (`src/modules/[nombre]/types.ts`):** Utilízalos para estructuras de datos efímeras, estados de formularios locales, filtros de tablas o props de subcomponentes que no salen del ámbito de ese módulo.
 
-## 🧩 Diccionario del UI Kit Maestro 2.0 (APIs de Componentes)
+## 🧩 Diccionario del UI Kit Maestro 2.0 (Fuente de Verdad Externa)
 
-**REGLA DE ORO ESTRICTA:** Para generar cualquier vista, NO debes utilizar etiquetas HTML nativas (`<button>`, `<table>`, `<input>`, `<select>`, `<span class="badge">`) si existe un componente equivalente en este UI Kit. Debes importar y utilizar estrictamente los siguientes componentes con sus Props exactas.
-
-### 0. Estructura de Layout (Navegación)
-*   **Sidebar:** Menú lateral de navegación basado en SPA (`react-router-dom`).
-    *   `import { Sidebar } from '@/components/layout/Sidebar';`
-    *   **Props:** Ninguna (gestiona su propia ruta activa con `useLocation` y la lista estática `NAV_ITEMS`).
-    *   **Uso:** `<Sidebar />` (Se ubica en el contenedor principal de la App).
-
-### 1. Cabeceras y KPIs (Estructura de Vistas)
-*   **ModuleHeader:** Cabecera estándar para todos los módulos.
-    *   `import { ModuleHeader } from '@/components/ui/ModuleHeader';`
-    *   **Props:** `icon` (ReactNode), `title` (string), `subtitle?` (string), `showKpis?` (boolean), `onToggleKpis?` (function), `kpiButtonText?` (string), `primaryAction` (ReactNode).
-    *   **Uso:** `<ModuleHeader icon={<Icon/>} title="Módulo" primaryAction={<Button>Nuevo</Button>} />`
-
-*   **SummaryCard:** Tarjetas para mostrar KPIs debajo del header.
-    *   `import { SummaryCard } from '@/components/ui/SummaryCard';`
-    *   **Props:** `label` (string), `value` (ReactNode), `badge?` (ReactNode), `valueClassName?` (string, ej. "text-primary").
-    *   **Uso:** `<SummaryCard label="Total" value="$150" valueClassName="text-success" />` 
-
-### 2. Navegación Interna (Pestañas)
-*   **Tabs & TabPanel:** Sistema de pestañas con renderizado condicional.
-    *   `import { Tabs, TabPanel } from '@/components/ui/Tabs';`
-    *   **Props Tabs:** `tabs` (Array de `{id, label, icon?, activeColor?}`), `activeTab` (string), `onChangeTab` (function).
-    *   **Props TabPanel:** `id` (string), `activeTab` (string), `children` (ReactNode).
-    *   **Uso:** 
-        ```tsx
-        <Tabs 'Datos', 'border-accent 'info', activeColor: activeTab="{tab}" id: label: onChangeTab="{setTab}" tabs="{[{" text-accent' }]}/>
-        <TabPanel activeTab="{tab}" id="info">Contenido</TabPanel>
-        ```
-
-### 3. Formularios (Inputs y Selects)
-*   **Input:** Campo de texto minimalista (soporta `forwardRef`).
-    *   `import { Input } from '@/components/ui/Input';`
-    *   **Props:** `label?` (string), `icon?` (ReactNode), `prefix?` (string), más atributos nativos de `<input>`.
-    *   **Uso:** `<Input label="Nombre" icon={<User size={14}/>} placeholder="Ingresa..." />`
-
-*   **Select:** Menú desplegable estilizado (soporta `forwardRef`).
-    *   `import { Select } from '@/components/ui/Select';`
-    *   **Props:** `label?` (string), `children` (<option>s), más atributos nativos de `<select>`.
-    *   **Uso:** `<Select label="Categoría"><option value="1">A</option></Select>`
-
-### 4. Acciones y Estado
-*   **Button:** Botones estandarizados.
-    *   `import { Button } from '@/components/ui/Button';`
-    *   **Props:** `variant` ('primary' | 'secondary' | 'danger' | 'ghost' | 'inline' | 'inline-danger'), `size` ('sm' | 'md' | 'lg'), `icon?` (ReactNode), `children?` (ReactNode).
-    *   **Uso:** `<Button variant="primary" icon={<Save size={16}/>}>Guardar</Button>`
-
-*   **Badge:** Etiquetas de estado semánticas.
-    *   `import { Badge } from '@/components/ui/Badge';`
-    *   **Props:** `variant` ('success' | 'warning' | 'danger' | 'info' | 'purple' | 'default'), `size` ('sm' | 'md'), `children` (ReactNode).
-    *   **Uso:** `<Badge variant="success">Activo</Badge>`
-
-### 5. Sistema de Tablas (Data Display)
-*   **Composición de Tabla:** Reemplaza completamente las tablas nativas.
-    *   `import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell, TableToolbar, TablePagination } from '@/components/ui/Table';`
-    *   **Toolbar Props:** `busqueda`, `onBusquedaChange`, `limite`, `onLimiteChange`, `placeholder?`.
-    *   **Row Props:** `isClickable?` (boolean), `onClick?` (function).
-    *   **HeaderCell Props:** `align?` ('left'|'center'|'right'), `isSortable?`, `sortDirection?`, `onSort?`.
-    *   **Cell Props:** `align?` ('left'|'center'|'right').
-    *   **Pagination Props:** `paginaActual`, `totalPaginas`, `onCambiarPagina`, `elementosMostrados`, `totalElementos`.
-    *   **Estructura Base:** `<TableToolbar /> <Table><TableHead><TableRow><TableHeaderCell>...</Table>`
-
-### 6. Filas Dinámicas (Formularios Array / Recetas)
-*   **DynamicRow:** Para listas secuenciales simples (ej. Pasos).
-    *   `import { DynamicRow } from '@/components/ui/DynamicRow';`
-    *   **Props:** `children` (Inputs internos), `onRemove?` (function).
-*   **DynamicIngredientRow:** Para listas de insumos con columnas (Grid-12).
-    *   `import { DynamicIngredientRow } from '@/components/ui/DynamicIngredientRow';`
-    *   **Props:** `children` (Selects/Inputs que deben sumar 12 columnas), `onRemove` (function).
-
-### 7. Selector Dual
-*   **DualAsignador:** Panel dual de selección (Asignados vs. Disponibles) con buscadores y contadores integrados.
-    *   `import { DualAsignador } from '@/components/ui/DualAsignador';`
-    *   **Props:** 
-        *   Izquierda: `tituloIzq` (string), `contadorIzq` (number), `iconoIzq?` (ReactNode), `placeholderBusquedaIzq?` (string), `valorBusquedaIzq?` (string), `onChangeBusquedaIzq?` (function), `childrenIzq` (ReactNode).
-        *   Derecha: `tituloDer` (string), `iconoDer?` (ReactNode), `placeholderBusquedaDer?` (string), `valorBusquedaDer?` (string), `onChangeBusquedaDer?` (function), `childrenDer` (ReactNode).
-    *   **Uso:** 
-        ```tsx
-        <DualAsignador childrenDer="{...}" childrenIzq="{...}" contador="{5}" tituloDer="Insumos Disponibles" tituloIzq="Receta Activa"/>
-        ```
-
-### 8. Tarjeta de Información
-*   **InfoCard:** Componente para mostrar información detallada en tarjetas visuales con colores temáticos y botón de copiado rápido al portapapeles.
-    *   `import { InfoCard } from '@/components/ui/InfoCard';`
-    *   **Props:**
-        *   `title` (string): Título de la tarjeta (determina el color según la variante).
-        *   `value` (string | number | null): Valor principal a mostrar.
-        *   `copyText` (string): Texto que se copiará al portapapeles (si se omite, el botón de copiado no se renderiza).
-        *   `variant` ('primary' | 'info' | 'success' | 'warning' | 'purple'): Selector de color para el título.
-        *   `children` (ReactNode): Contenido personalizado alternativo si no se usa `value`.
-    *   **Uso:**
-        ```tsx
-        <InfoCard copyText="contacto@empresa.cl" title="Correo Electrónico" value="contacto@empresa.cl" variant="warning"/>
-        ```
-        
-### 9. Componentes de Navegación y Modales
-*   **PillNavigation:** Menú de navegación horizontal tipo "píldoras" para cambiar entre vistas o tablas sin usar Tabs pesados.
-    *   `import { PillNavigation } from '@/components/ui/PillNavigation';`
-    *   **Props:** `options` (Array de `{id, label}`), `activeId`, `onChange`.
-*   **Modal:** Ventana emergente estandarizada con fondo oscuro (backdrop blur), soporte para tecla Escape y scroll interno.
-    *   `import { Modal } from '@/components/ui/Modal';`
-    *   **Props:** `isOpen`, `onClose`, `title`, `children`.
-
-### 10. Formularios Avanzados y Listas Dinámicas
-*   **Textarea:** Versión multilinea del Input con el mismo estándar de bordes y colores semánticos.
-    *   `import { Textarea } from '@/components/ui/Textarea';`
-*   **DynamicRow / DynamicIngredientRow:** Contenedores de filas dinámicas (con botón de eliminar integrado) para construir constructores de recetas (BOM) y listas de pasos sin romper la grilla.
-    *   `import { DynamicRow } from '@/components/ui/DynamicRow';`
-*   **StepList:** Renderizador visual elegante para listas de pasos numerados secuencialmente, ideal para instrucciones de preparación.
-    *   `import { StepList } from '@/components/ui/StepList';`
+> **⚠️ REGLA DE ORO ESTRICTA:** Para generar cualquier vista, NO debes utilizar etiquetas HTML nativas (`<button>`, `<table>`, `<input>`, `<select>`, etc.) si existe un componente equivalente en el UI Kit. 
+> 
+> La especificación técnica completa, interfaces, props y ejemplos de uso de **todos los componentes del UI Kit** se encuentran centralizados y documentados detalladamente en el archivo **`src/components/ui/UI_KIT_DOCS.md`** (dentro del submódulo Git del kit). Debes consultar dicho archivo como única fuente de verdad para el uso de átomos, moléculas y organismos (como `Button`, `Input`, `Table`, `Modal`, `DualAsignador`, `Sidebar`, etc.).
 
 > ⚠️ **REGLA ARQUITECTÓNICA DE FORMULARIOS Y DETALLES:**
 > Las vistas de detalle y los formularios (`FormView`, `DetailView`) **NO DEBEN** estar envueltos en tarjetas principales con fondo (`bg-surface`) ni bordes. Deben usar un contenedor transparente (`bg-background`) y dejar que las secciones internas (como los `InfoCard`, `SummaryCard` o bloques de grilla) dibujen las cajas para mantener el diseño limpio.
@@ -227,12 +118,10 @@ Estas funcionalidades están planificadas para fases posteriores. El código act
   - No hardcodear identificadores fijos ni asumir que existe una sola organización en el sistema.
   - Diseñar interfaces y tipos en `@/types/` preparados para admitir opcionalmente campos de auditoría y pertenencia (`empresa_id?`, `created_by?`).
 
+## 🧩 Arquitectura del Sistema & UI Kit (Actualizado - Agosto 2026)
 
-  ## 🧩 Arquitectura del Sistema & UI Kit (Actualizado - Agosto 2026)
-
-### 1. Nuevos Componentes UI (`src/components/ui/`)
-* **`InfoCard.tsx`**: Tarjeta modular de información para vistas de detalle y fichas.
-  * **Características**: Títulos con colores dinámicos por categoría (variantes `primary`, `info`, `success`, `warning`, `purple`), soporte para texto multilínea o hijos personalizados, y botón integrado de copiado rápido al portapapeles con feedback visual temporal (`navigator.clipboard`).
+### 1. Sistema de Documentación Desacoplado (`UI_KIT_DOCS.md`)
+* El diccionario detallado de componentes se independizó y ahora reside en la raíz del submódulo del kit (**`src/components/ui/UI_KIT_DOCS.md`**), asegurando un mantenimiento limpio, versionado y reutilizable entre diferentes proyectos.
 
 ### 2. Estándar Arquitectónico de Módulos (Ej: Proveedores)
 * **Estructura de Vistas**:
