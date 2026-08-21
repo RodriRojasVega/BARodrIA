@@ -10,7 +10,7 @@ export interface InsumoGlobal {
   es_artesanal: boolean;
 }
 
-export interface InsumoProveedorRel {
+export interface ProveedorInsumo {
   insumo_id: number;
   proveedor_id: number;
   precio_oferta: number | null;
@@ -23,10 +23,10 @@ export interface Proveedor {
   telefono: string | null;
   email: string | null;
   observaciones: string | null;
-  insumos: InsumoProveedorRel[];
+  insumos: ProveedorInsumo[];
 }
 
-export interface PrecioHistorico {
+export interface ProveedorPrecioHistorico {
   id: number;
   insumo_id: number;
   proveedor_id: number | null;

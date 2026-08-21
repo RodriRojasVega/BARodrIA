@@ -10,6 +10,7 @@ import { SubRecetasModule } from './modules/subrecetas/SubRecetasView';
 import { CoctelView } from './modules/coctel/CoctelView';
 import { CartaView } from './modules/carta/CartaView';
 import { UiKitView } from './modules/uikit/UiKitView';
+import { EventosView } from './modules/eventos/EventosView';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<DashboardView />} />
+              <Route path="/eventos" element={<EventosView />} />
               <Route path="/insumos" element={<InsumosView />} />
               <Route path="/subrecetas" element={<SubRecetasModule />} />
               <Route path="/cocteles" element={<CoctelView />} />

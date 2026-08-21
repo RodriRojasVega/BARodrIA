@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { calcularCostoUnitarioInsumo } from '@/lib/calculos';
 import type { Proveedor } from '../types/proveedor';
-import type { Insumo, TipoInsumo, PrecioHistorico } from '@/types/insumos';
+import type { Insumo, TipoInsumo, ProveedorPrecioHistorico } from '@/types/insumos';
 
 
 interface InsumoPayload {

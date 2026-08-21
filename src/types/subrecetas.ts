@@ -1,8 +1,11 @@
 // src/types/subrecetas.ts
+export type UnidadMedida = 'ml' | 'g' | 'unit' | 'dash';
 
 export interface TipoSubReceta {
   id: number;
+  slug: string;
   nombre: string;
+  descripcion: string | null;
 }
 
 export interface InsumoGlobal {
@@ -29,12 +32,12 @@ export interface SubReceta {
   slug: string;
   nombre: string;
   rendimiento_batch: number;
-  unidad_rendimiento: 'ml' | 'g' | 'unit'; // Según tu CHECK constraint
+  unidad_rendimiento: 'ml' | 'g' | 'unit';
   elaboracion_instrucciones: string;
   indicaciones_almacenamiento: string;
   vida_util: string;
-  control_mermas_economia_circular: string | null; // Puede ser nulo
-  garnish_relacionado_id: number | null; // Puede ser nulo
+  control_mermas_economia_circular: string | null;
+  garnish_relacionado_id: number | null;
   insumo_asociado_id: number;
   tipo_id: number;
 }

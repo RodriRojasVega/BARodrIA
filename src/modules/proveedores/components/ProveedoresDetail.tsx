@@ -1,7 +1,7 @@
 // src/modules/proveedores/components/ProveedoresDetail.tsx
 import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Edit3, Trash2, ClipboardList, TrendingUp, Users, Info } from 'lucide-react';
-import type { Proveedor, InsumoGlobal, PrecioHistorico } from '../types';
+import type { Proveedor, InsumoGlobal, ProveedorPrecioHistorico } from '../types';
 
 // Componentes del UI Kit Maestro 2.0
 import { ModuleHeader } from '@/components/ui/ModuleHeader';
@@ -14,7 +14,7 @@ import { InfoCard } from '@/components/ui/InfoCard';
 interface Props {
   proveedor: Proveedor;
   insumosGlobales: InsumoGlobal[];
-  obtenerHistorico: (id: number) => Promise<PrecioHistorico[]>;
+  obtenerHistorico: (id: number) => Promise<PRoveedorPrecioHistorico[]>;
   onVolver: () => void;
   onEditar: () => void;
   onEliminar: (id: number, nombre: string) => void;
@@ -22,7 +22,7 @@ interface Props {
 
 export function ProveedoresDetail({ proveedor, insumosGlobales, obtenerHistorico, onVolver, onEditar, onEliminar }: Props) {
   const [activeTab, setActiveTab] = useState('info');
-  const [historico, setHistorico] = useState<PrecioHistorico[]>([]);
+  const [historico, setHistorico] = useState<ProveedorPrecioHistorico[]>([]);
   const [cargandoHist, setCargandoHist] = useState(false);
 
   // Estados para Tabla Catálogo
@@ -36,7 +36,7 @@ export function ProveedoresDetail({ proveedor, insumosGlobales, obtenerHistorico
   const [busquedaHist, setBusquedaHist] = useState('');
   const [paginaHist, setPaginaHist] = useState(1);
   const [limiteHist, setLimiteHist] = useState(5);
-  const [colHist, setColHist] = useState<keyof PrecioHistorico>('created_at');
+  const [colHist, setColHist] = useState<keyof ProveedorPrecioHistorico>('created_at');
   const [dirHist, setDirHist] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
@@ -58,7 +58,7 @@ export function ProveedoresDetail({ proveedor, insumosGlobales, obtenerHistorico
     else { setColCat(col); setDirCat('asc'); }
   };
 
-  const manejarOrdenHist = (col: keyof PrecioHistorico) => {
+  const manejarOrdenHist = (col: keyof ProveedorPrecioHistorico) => {
     if (colHist === col) setDirHist(dirHist === 'asc' ? 'desc' : 'asc');
     else { setColHist(col); setDirHist(col === 'created_at' ? 'desc' : 'asc'); }
   };

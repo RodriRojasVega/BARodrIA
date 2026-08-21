@@ -7,7 +7,7 @@ import {
   FlaskConical, 
   Wine, 
   ScrollText, 
-  MonitorPlay, 
+  Calendar, 
   Settings, 
   Palette,
   ChevronLeft,
@@ -18,14 +18,15 @@ import { twMerge } from 'tailwind-merge';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/eventos', label: 'Eventos', icon: Calendar },
+  { path: '/cartas', label: 'Cartas', icon: ScrollText },
+  { path: '/cocteles', label: 'Cócteles', icon: Wine },
+  { path: '/subrecetas', label: 'Sub-recetas', icon: FlaskConical },
   { path: '/insumos', label: 'Insumos', icon: ShoppingCart },
   { path: '/proveedores', label: 'Proveedores', icon: Truck },
-  { path: '/subrecetas', label: 'Sub-recetas', icon: FlaskConical },
-  { path: '/cocteles', label: 'Cócteles', icon: Wine },
-  { path: '/cartas', label: 'Cartas', icon: ScrollText },
-  { path: '/bartender', label: 'Modo Bartender', icon: MonitorPlay, special: true },
   { path: '/catalogos', label: 'Catálogos Estáticos', icon: Settings },
   { path: '/uikit', label: 'Laboratorio UI', icon: Palette },
+  //{ path: '/bartender', label: 'Modo Bartender', icon: MonitorPlay, special: true },
 ];
 
 function cn(...classes: (string | undefined | null | false)[]) {

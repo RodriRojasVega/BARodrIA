@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useInsumos } from './hooks/useInsumos';
 
-import type { Insumo, PrecioHistorico } from '@/types/insumos';
+import type { Insumo, InsumoPrecioHistorico } from '@/types/insumos';
 import type { VistaInsumo } from '../types'; // El único que se queda local es el de UI
 
 // Componentes de Presentación
@@ -18,7 +18,7 @@ export function InsumosView() {
   const [insumoActivo, setInsumoActivo] = useState<Insumo | null>(null);
   
   // Estado del Historial
-  const [historicoActivo, setHistoricoActivo] = useState<PrecioHistorico[]>([]);
+  const [historicoActivo, setHistoricoActivo] = useState<InsumoPrecioHistorico[]>([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
 
   // Controladores de Vistas

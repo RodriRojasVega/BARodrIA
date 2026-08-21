@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { calcularCostoUnitarioInsumo } from '../../../lib/calculos';
-import type { Proveedor, InsumoGlobal, PrecioHistorico } from '@/types/proveedores';
+import type { Proveedor, InsumoGlobal, ProveedorPrecioHistorico } from '@/types/proveedores';
 
 export function useProveedores() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -129,7 +129,7 @@ export function useProveedores() {
     return !error;
   };
 
-  const obtenerHistoricoProv = async (id: number): Promise<PrecioHistorico[]> => {
+  const obtenerHistoricoProv = async (id: number): Promise<ProveedorPrecioHistorico[]> => {
     const { data } = await supabase
       .from('insumo_precios_historicos')
       .select('*')

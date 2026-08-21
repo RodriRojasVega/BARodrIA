@@ -20,7 +20,11 @@ CREATE TABLE public.soportes (
   slug character varying NOT NULL UNIQUE,
   nombre character varying NOT NULL,
   capacidad_operativa_ml integer NOT NULL,
-  CONSTRAINT soportes_pkey PRIMARY KEY (id)
+  unidades_por_rack integer DEFAULT 25,
+  racks_por_pallet integer DEFAULT 4,
+  proveedor_id integer,
+  CONSTRAINT soportes_pkey PRIMARY KEY (id),
+  CONSTRAINT soportes_proveedor_id_fkey FOREIGN KEY (proveedor_id) REFERENCES public.proveedores(id)
 );
 CREATE TABLE public.hielos (
   id integer NOT NULL DEFAULT nextval('hielos_id_seq'::regclass),
@@ -218,7 +222,7 @@ CREATE TABLE public.carta_cocteles (
 CREATE TABLE public.clientes_empresas (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
   nombre character varying NOT NULL,
-  tipo character varying CHECK (tipo::text = ANY (ARRAY['cliente_directo'::character varying, 'centro_eventos'::character varying, 'banquetera'::character varying, 'empresa'::character varying]::text[])),
+  tipo character varying CHECK (tipo::text = ANY (ARRAY['empresa_final'::text, 'productora'::text, 'banquetera'::text, 'centro_eventos'::text, 'particular'::text])),
   contacto_nombre character varying,
   telefono character varying,
   email character varying,
@@ -247,10 +251,15 @@ CREATE TABLE public.eventos (
   observaciones_logistica text,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   spot_id integer,
+  tipo_evento character varying CHECK (tipo_evento::text = ANY (ARRAY['corporativo'::text, 'matrimonio'::text, 'cumpleanos'::text, 'activacion_marca'::text, 'festival_masivo'::text, 'particular'::text, 'otro'::text])),
+  mandante_id integer,
+  cliente_final_id integer,
   CONSTRAINT eventos_pkey PRIMARY KEY (id),
   CONSTRAINT eventos_cliente_fkey FOREIGN KEY (cliente_empresa_id) REFERENCES public.clientes_empresas(id),
   CONSTRAINT eventos_salon_fkey FOREIGN KEY (salon_id) REFERENCES public.salones_espacios(id),
-  CONSTRAINT eventos_spot_fkey FOREIGN KEY (spot_id) REFERENCES public.spots(id)
+  CONSTRAINT eventos_spot_fkey FOREIGN KEY (spot_id) REFERENCES public.spots(id),
+  CONSTRAINT eventos_mandante_id_fkey FOREIGN KEY (mandante_id) REFERENCES public.clientes_empresas(id),
+  CONSTRAINT eventos_cliente_final_id_fkey FOREIGN KEY (cliente_final_id) REFERENCES public.clientes_empresas(id)
 );
 CREATE TABLE public.evento_etapas (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -259,6 +268,9 @@ CREATE TABLE public.evento_etapas (
   nombre character varying NOT NULL,
   hora_inicio time without time zone,
   hora_fin time without time zone,
+  modalidad_calculo character varying CHECK (modalidad_calculo::text = ANY (ARRAY['paquete_fijo'::character varying, 'barra_libre'::character varying, 'tickets'::character varying]::text[])),
+  pax_etapa integer,
+  regla_consumo numeric,
   CONSTRAINT evento_etapas_pkey PRIMARY KEY (id),
   CONSTRAINT evento_etapas_evento_fkey FOREIGN KEY (evento_id) REFERENCES public.eventos(id)
 );
@@ -343,4 +355,52 @@ CREATE TABLE public.comanda_items (
   CONSTRAINT comanda_items_comanda_fkey FOREIGN KEY (comanda_id) REFERENCES public.comandas(id),
   CONSTRAINT comanda_items_coctel_fkey FOREIGN KEY (coctel_id) REFERENCES public.cocteles(id),
   CONSTRAINT comanda_items_insumo_fkey FOREIGN KEY (insumo_id) REFERENCES public.insumos(id)
+);
+CREATE TABLE public.herramientas (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  slug character varying NOT NULL UNIQUE,
+  nombre character varying NOT NULL,
+  categoria character varying CHECK (categoria::text = ANY (ARRAY['preparacion'::character varying, 'servicio'::character varying, 'montaje'::character varying]::text[])),
+  proveedor_id integer,
+  CONSTRAINT herramientas_pkey PRIMARY KEY (id),
+  CONSTRAINT herramientas_proveedor_id_fkey FOREIGN KEY (proveedor_id) REFERENCES public.proveedores(id)
+);
+CREATE TABLE public.garnishes (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  insumo_base_id integer NOT NULL,
+  nombre character varying NOT NULL,
+  tipo_corte character varying NOT NULL,
+  rendimiento_por_unidad numeric NOT NULL DEFAULT 1,
+  CONSTRAINT garnishes_pkey PRIMARY KEY (id),
+  CONSTRAINT garnishes_insumo_base_id_fkey FOREIGN KEY (insumo_base_id) REFERENCES public.insumos(id)
+);
+CREATE TABLE public.coctel_garnishes (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  coctel_id integer NOT NULL,
+  garnish_id integer NOT NULL,
+  cantidad numeric NOT NULL DEFAULT 1,
+  CONSTRAINT coctel_garnishes_pkey PRIMARY KEY (id),
+  CONSTRAINT coctel_garnishes_coctel_id_fkey FOREIGN KEY (coctel_id) REFERENCES public.cocteles(id),
+  CONSTRAINT coctel_garnishes_garnish_id_fkey FOREIGN KEY (garnish_id) REFERENCES public.garnishes(id)
+);
+CREATE TABLE public.staff (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre character varying NOT NULL,
+  rol character varying CHECK (rol::text = ANY (ARRAY['produccion'::character varying, 'barback'::character varying, 'bartender'::character varying, 'capitan'::character varying]::text[])),
+  telefono character varying,
+  estado character varying DEFAULT 'activo'::character varying,
+  CONSTRAINT staff_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.evento_staff_asignacion (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  staff_id integer NOT NULL,
+  evento_id integer NOT NULL,
+  etapa_id integer,
+  punto_servicio_id integer,
+  hora_citacion time without time zone,
+  CONSTRAINT evento_staff_asignacion_pkey PRIMARY KEY (id),
+  CONSTRAINT evento_staff_asignacion_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
+  CONSTRAINT evento_staff_asignacion_evento_id_fkey FOREIGN KEY (evento_id) REFERENCES public.eventos(id),
+  CONSTRAINT evento_staff_asignacion_etapa_id_fkey FOREIGN KEY (etapa_id) REFERENCES public.evento_etapas(id),
+  CONSTRAINT evento_staff_asignacion_punto_servicio_id_fkey FOREIGN KEY (punto_servicio_id) REFERENCES public.puntos_servicio(id)
 );

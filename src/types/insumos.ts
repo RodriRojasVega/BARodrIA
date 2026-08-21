@@ -1,11 +1,15 @@
 // src/types/insumos.ts
+
+export type UnidadMedida = 'ml' | 'g' | 'unit' | 'dash';
+
 export interface TipoInsumo {
   id: number;
-  nombre: string;
   slug: string;
+  nombre: string;
+  descripcion: string | null;
 }
 
-export interface InsumoProveedorRel {
+export interface InsumoProveedor {
   proveedor_id: number;
   nombre: string;
   precio_oferta: number | null;
@@ -16,17 +20,17 @@ export interface Insumo {
   nombre: string;
   slug: string;
   tipo_id: number | null;
-  unidad_medida: string;
+  unidad_medida: UnidadMedida;
   formato_envase: number;
   precio_compra: number;
   costo_unitario: number;
   graduacion_alcohol_base: number;
   rendimiento_neto_porcentaje: number;
   es_artesanal: boolean;
-  proveedores?: InsumoProveedorRel[];
+  proveedores?: InsumoProveedor[];
 }
 
-export interface PrecioHistorico {
+export interface InsumoPrecioHistorico {
   id: number;
   insumo_id: number;
   proveedor_id: number | null;
