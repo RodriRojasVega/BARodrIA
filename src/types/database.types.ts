@@ -110,6 +110,30 @@ export type Database = {
         }
         Relationships: []
       }
+      categorias_servicio: {
+        Row: {
+          descripcion: string | null
+          estado: string | null
+          id: number
+          nombre: string
+          slug: string
+        }
+        Insert: {
+          descripcion?: string | null
+          estado?: string | null
+          id?: never
+          nombre: string
+          slug: string
+        }
+        Update: {
+          descripcion?: string | null
+          estado?: string | null
+          id?: never
+          nombre?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       clientes_empresas: {
         Row: {
           contacto_nombre: string | null
@@ -513,26 +537,102 @@ export type Database = {
           },
         ]
       }
+      concepto_insumo_equivalencias: {
+        Row: {
+          categoria_servicio_id: number
+          concepto_id: number
+          estado: string | null
+          id: number
+          insumo_id: number
+          prioridad: number
+        }
+        Insert: {
+          categoria_servicio_id: number
+          concepto_id: number
+          estado?: string | null
+          id?: never
+          insumo_id: number
+          prioridad?: number
+        }
+        Update: {
+          categoria_servicio_id?: number
+          concepto_id?: number
+          estado?: string | null
+          id?: never
+          insumo_id?: number
+          prioridad?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cie_categoria_fkey"
+            columns: ["categoria_servicio_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_servicio"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cie_concepto_fkey"
+            columns: ["concepto_id"]
+            isOneToOne: false
+            referencedRelation: "conceptos_oferta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cie_insumo_fkey"
+            columns: ["insumo_id"]
+            isOneToOne: false
+            referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conceptos_oferta: {
+        Row: {
+          estado: string | null
+          id: number
+          nombre: string
+          slug: string
+          tipo: string
+          unidad_medida_base: string
+        }
+        Insert: {
+          estado?: string | null
+          id?: never
+          nombre: string
+          slug: string
+          tipo: string
+          unidad_medida_base: string
+        }
+        Update: {
+          estado?: string | null
+          id?: never
+          nombre?: string
+          slug?: string
+          tipo?: string
+          unidad_medida_base?: string
+        }
+        Relationships: []
+      }
       evento_etapa_items: {
         Row: {
           coctel_id: number | null
+          concepto_id: number | null
           etapa_id: number
           id: number
-          insumo_id: number | null
           volumen_proyectado_total: number | null
         }
         Insert: {
           coctel_id?: number | null
+          concepto_id?: number | null
           etapa_id: number
           id?: never
-          insumo_id?: number | null
           volumen_proyectado_total?: number | null
         }
         Update: {
           coctel_id?: number | null
+          concepto_id?: number | null
           etapa_id?: number
           id?: never
-          insumo_id?: number | null
           volumen_proyectado_total?: number | null
         }
         Relationships: [
@@ -544,17 +644,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "evento_etapa_items_concepto_fkey"
+            columns: ["concepto_id"]
+            isOneToOne: false
+            referencedRelation: "conceptos_oferta"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "evento_etapa_items_etapa_fkey"
             columns: ["etapa_id"]
             isOneToOne: false
             referencedRelation: "evento_etapas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "evento_etapa_items_insumo_fkey"
-            columns: ["insumo_id"]
-            isOneToOne: false
-            referencedRelation: "insumos"
             referencedColumns: ["id"]
           },
         ]
@@ -1064,26 +1164,62 @@ export type Database = {
         }
         Relationships: []
       }
+      punto_servicio_asignaciones: {
+        Row: {
+          evento_etapa_salon_id: number
+          id: number
+          pax_estimado_asignado: number | null
+          punto_servicio_id: number
+        }
+        Insert: {
+          evento_etapa_salon_id: number
+          id?: never
+          pax_estimado_asignado?: number | null
+          punto_servicio_id: number
+        }
+        Update: {
+          evento_etapa_salon_id?: number
+          id?: never
+          pax_estimado_asignado?: number | null
+          punto_servicio_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "psa_etapa_salon_fkey"
+            columns: ["evento_etapa_salon_id"]
+            isOneToOne: false
+            referencedRelation: "evento_etapa_salones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "psa_punto_fkey"
+            columns: ["punto_servicio_id"]
+            isOneToOne: false
+            referencedRelation: "puntos_servicio"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       punto_servicio_oferta: {
         Row: {
           coctel_id: number | null
+          concepto_id: number | null
           factor_ajuste_demanda: number | null
           id: number
-          insumo_id: number | null
           punto_servicio_id: number
         }
         Insert: {
           coctel_id?: number | null
+          concepto_id?: number | null
           factor_ajuste_demanda?: number | null
           id?: never
-          insumo_id?: number | null
           punto_servicio_id: number
         }
         Update: {
           coctel_id?: number | null
+          concepto_id?: number | null
           factor_ajuste_demanda?: number | null
           id?: never
-          insumo_id?: number | null
           punto_servicio_id?: number
         }
         Relationships: [
@@ -1095,10 +1231,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "pto_srv_oferta_insumo_fkey"
-            columns: ["insumo_id"]
+            foreignKeyName: "pto_srv_oferta_concepto_fkey"
+            columns: ["concepto_id"]
             isOneToOne: false
-            referencedRelation: "insumos"
+            referencedRelation: "conceptos_oferta"
             referencedColumns: ["id"]
           },
           {
@@ -1113,34 +1249,20 @@ export type Database = {
       puntos_servicio: {
         Row: {
           estado: string | null
-          evento_etapa_salon_id: number
           id: number
           nombre: string
-          pax_estimado_asignado: number | null
         }
         Insert: {
           estado?: string | null
-          evento_etapa_salon_id: number
           id?: never
           nombre: string
-          pax_estimado_asignado?: number | null
         }
         Update: {
           estado?: string | null
-          evento_etapa_salon_id?: number
           id?: never
           nombre?: string
-          pax_estimado_asignado?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "pto_srv_etapa_salon_fkey"
-            columns: ["evento_etapa_salon_id"]
-            isOneToOne: false
-            referencedRelation: "evento_etapa_salones"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       salones_espacios: {
         Row: {

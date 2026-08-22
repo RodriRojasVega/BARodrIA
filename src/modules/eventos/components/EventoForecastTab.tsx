@@ -1,143 +1,244 @@
 // src/modules/eventos/components/EventoForecastTab.tsx
 import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell } from '@/components/ui/Table';
-import { InfoCard } from '@/components/ui/InfoCard';
-import { RefreshCw, AlertCircle } from 'lucide-react';
+import { Clock, Martini, Package, Check, ListFilter } from 'lucide-react';
 
 interface EventoForecastTabProps {
   eventoId: number;
-  totalPax: number;
+  totalPax?: number;
 }
 
-interface InsumoProyectado {
+interface OfertaItem {
+  id: number;
+  tipo: 'coctel' | 'concepto';
+  nombre: string;
+  consumoUnitario: number;
+  peso: number;
+  unidadBase: string;
+}
+
+interface PuntoServicioForecast {
   id: number;
   nombre: string;
-  unidad: string;
-  cantidadUnitaria: number;
-  cantidadTotal: number;
-  costoUnitario: number;
-  costoTotal: number;
+  paxAsignado: number;
+  oferta: OfertaItem[];
 }
 
-export function EventoForecastTab({ eventoId: _eventoId, totalPax }: EventoForecastTabProps) {
-  const [factorAjuste, setFactorAjuste] = useState<number>(1.15);
-  const [calculando, setCalculando] = useState<boolean>(false);
+interface EtapaForecast {
+  id: number;
+  nombre: string;
+  horario: string;
+  paxEtapa: number;
+  reglaConsumo: number; // Factor de holgura
+  puntos: PuntoServicioForecast[];
+}
 
-  const [insumosProyectados, setInsumosProyectados] = useState<InsumoProyectado[]>([
-    { id: 1, nombre: 'Pisco Control C 40°', unidad: 'ml', cantidadUnitaria: 60, cantidadTotal: 60 * totalPax * 1.15, costoUnitario: 18.5, costoTotal: 60 * totalPax * 1.15 * 18.5 },
-    { id: 2, nombre: 'Jarabe de Jengibre & Miel (Batch)', unidad: 'ml', cantidadUnitaria: 30, cantidadTotal: 30 * totalPax * 1.15, costoUnitario: 4.2, costoTotal: 30 * totalPax * 1.15 * 4.2 },
-    { id: 3, nombre: 'Jugo de Limón Sutil (Clarificado)', unidad: 'ml', cantidadUnitaria: 30, cantidadTotal: 30 * totalPax * 1.15, costoUnitario: 8.0, costoTotal: 30 * totalPax * 1.15 * 8.0 },
-    { id: 4, nombre: 'Hielo Cubo 5x5 Cristalino', unidad: 'g', cantidadUnitaria: 300, cantidadTotal: 300 * totalPax * 1.15, costoUnitario: 1.5, costoTotal: 300 * totalPax * 1.15 * 1.5 },
-  ]);
+export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
 
-  const handleRecalcular = () => {
-    setCalculando(true);
-    setTimeout(() => {
-      const actualizados = insumosProyectados.map(item => {
-        const total = item.cantidadUnitaria * totalPax * factorAjuste;
-        return {
-          ...item,
-          cantidadTotal: total,
-          costoTotal: total * item.costoUnitario
-        };
-      });
-      setInsumosProyectados(actualizados);
-      setCalculando(false);
-    }, 400);
+  const [selecciones, setSelecciones] = useState<Record<number, 'todos' | number[]>>({});
+
+  // Mock de datos (Read-Only) alineado al DDL
+  const etapasForecast: EtapaForecast[] = [
+    {
+      id: 1,
+      nombre: 'Etapa 1: Recepción & Cóctel',
+      horario: '19:00 - 21:00',
+      paxEtapa: 600,
+      reglaConsumo: 1.15,
+      puntos: [
+        {
+          id: 101,
+          nombre: 'Barra Terraza Exterior',
+          paxAsignado: 450,
+          oferta: [
+            { id: 1, tipo: 'coctel', nombre: 'Pisco Sour Catedral', consumoUnitario: 1.5, peso: 1.2, unidadBase: 'unit' },
+            { id: 2, tipo: 'concepto', nombre: 'Bebida de Fantasía Cola', consumoUnitario: 250, peso: 0.8, unidadBase: 'ml' },
+          ]
+        },
+        {
+          id: 102,
+          nombre: 'Estación de Bienvenida VIP',
+          paxAsignado: 150,
+          oferta: [
+            { id: 4, tipo: 'concepto', nombre: 'Espumante Brut', consumoUnitario: 200, peso: 1.5, unidadBase: 'ml' },
+            { id: 2, tipo: 'concepto', nombre: 'Bebida de Fantasía Cola', consumoUnitario: 250, peso: 0.3, unidadBase: 'ml' },
+          ]
+        }
+      ]
+    }
+  ];
+
+  const toggleSeleccion = (etapaId: number, puntoId: number | 'todos') => {
+    setSelecciones(prev => {
+      const seleccionActual = prev[etapaId] || 'todos';
+      if (puntoId === 'todos') return { ...prev, [etapaId]: 'todos' };
+      if (seleccionActual === 'todos') return { ...prev, [etapaId]: [puntoId] };
+
+      const nuevaSeleccion = seleccionActual.includes(puntoId)
+        ? seleccionActual.filter(id => id !== puntoId)
+        : [...seleccionActual, puntoId];
+
+      return {
+        ...prev,
+        [etapaId]: nuevaSeleccion.length === 0 ? 'todos' : nuevaSeleccion
+      };
+    });
   };
 
-  const costoTotalForecast = insumosProyectados.reduce((acc, item) => acc + item.costoTotal, 0);
+  const obtenerConsolidado = (etapa: EtapaForecast) => {
+    const seleccion = selecciones[etapa.id] || 'todos';
+    const puntosActivos = seleccion === 'todos' 
+      ? etapa.puntos 
+      : etapa.puntos.filter(p => seleccion.includes(p.id));
+
+    const consolidado = new Map<number, OfertaItem & { volumenTotal: number }>();
+
+    puntosActivos.forEach(punto => {
+      punto.oferta.forEach(item => {
+        const volumenCalculado = punto.paxAsignado * item.consumoUnitario * item.peso * etapa.reglaConsumo;
+        
+        if (consolidado.has(item.id)) {
+          consolidado.get(item.id)!.volumenTotal += volumenCalculado;
+        } else {
+          consolidado.set(item.id, { ...item, volumenTotal: volumenCalculado });
+        }
+      });
+    });
+
+    return Array.from(consolidado.values());
+  };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Uso de InfoCard oficial y tokens semánticos */}
-      <InfoCard variant="success" title="Simulador de Demanda y BOM">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-2">
-          <div>
-            <p className="text-xs text-muted">Volumen base configurado:</p>
-            <span className="text-sm font-bold text-foreground">{totalPax} Asistentes (PAX)</span>
-          </div>
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <div className="w-40">
-              <Input 
-                label="Factor de Holgura (%)"
-                type="number"
-                step="0.05"
-                min="1.0"
-                max="2.0"
-                value={factorAjuste}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFactorAjuste(Number(e.target.value))}
-              />
+      <div className="space-y-12 animate-fade-in pb-10" data-evento-id={eventoId}>
+        {etapasForecast.map((etapa) => {
+        const seleccionActual = selecciones[etapa.id] || 'todos';
+        const itemsConsolidados = obtenerConsolidado(etapa);
+
+        return (
+          <div key={etapa.id} className="flex flex-col gap-6">
+            
+            {/* Cabecera Informativa de la Etapa */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 ml-2 border-b border-border/50 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 text-primary rounded-xl shadow-sm">
+                  <Clock size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground tracking-tight">{etapa.nombre}</h3>
+                  <div className="flex items-center gap-3 text-xs font-mono text-muted">
+                    <span>{etapa.horario} hrs</span>
+                    <span className="text-border/50">•</span>
+                    <span className="font-bold text-primary">{etapa.paxEtapa} PAX Globales</span>
+                  </div>
+                </div>
+              </div>
+              <Badge variant="info">Holgura Etapa: {(etapa.reglaConsumo * 100 - 100).toFixed(0)}%</Badge>
             </div>
-            <Button 
-              variant="primary" 
-              size="sm" 
-              icon={<RefreshCw size={14} className={calculando ? 'animate-spin' : ''} />} 
-              onClick={handleRecalcular}
-              className="mt-6"
-            >
-              Actualizar
-            </Button>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              
+              {/* COLUMNA IZQUIERDA: Puntos Operativos */}
+              <div className="lg:col-span-4 xl:col-span-3 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-mono uppercase text-muted font-bold ml-1">
+                  <ListFilter size={14} />
+                  <span>Puntos Operativos</span>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => toggleSeleccion(etapa.id, 'todos')}
+                    className={`flex items-center justify-between p-3 rounded-2xl text-sm transition-all duration-200 border ${
+                      seleccionActual === 'todos' 
+                        ? 'bg-primary text-primary-foreground border-primary shadow-md' 
+                        : 'bg-transparent hover:bg-surface text-foreground border-border/50'
+                    }`}
+                  >
+                    <span className="font-semibold">Consolidado Etapa</span>
+                    {seleccionActual === 'todos' && <Check size={16} />}
+                  </button>
+
+                  {etapa.puntos.map(punto => {
+                    const estaSeleccionado = seleccionActual !== 'todos' && seleccionActual.includes(punto.id);
+                    return (
+                      <button
+                        key={punto.id}
+                        onClick={() => toggleSeleccion(etapa.id, punto.id)}
+                        className={`flex flex-col text-left p-3 rounded-2xl transition-all duration-200 border ${
+                          estaSeleccionado 
+                            ? 'bg-primary/10 border-primary/30 shadow-sm' 
+                            : 'bg-transparent hover:bg-surface border-border/50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className={`font-medium text-sm ${estaSeleccionado ? 'text-primary font-bold' : 'text-foreground'}`}>
+                            {punto.nombre}
+                          </span>
+                          {estaSeleccionado && <Check size={16} className="text-primary" />}
+                        </div>
+                        <span className="text-xs font-mono text-muted mt-1">{punto.paxAsignado} PAX Asignados</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* COLUMNA DERECHA: Tabla Flotante Read-Only */}
+              <div className="lg:col-span-8 xl:col-span-9">
+                <div className="overflow-x-auto custom-scrollbar">
+                  <Table>
+                    <TableHead>
+                      <TableRow className="border-b border-border/50">
+                        <TableHeaderCell>Concepto Comercial / Cóctel</TableHeaderCell>
+                        <TableHeaderCell align="center">Consumo Base</TableHeaderCell>
+                        <TableHeaderCell align="center">Peso (Ajuste)</TableHeaderCell>
+                        <TableHeaderCell align="right">Volumen Requerido</TableHeaderCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {itemsConsolidados.length > 0 ? (
+                        itemsConsolidados.map((item) => (
+                          <TableRow key={item.id} className="border-b border-border/30 hover:bg-transparent transition-colors">
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="p-1.5 bg-surface rounded-lg border border-border/50 shadow-sm">
+                                  {item.tipo === 'coctel' ? (
+                                    <Martini size={14} className="text-primary" />
+                                  ) : (
+                                    <Package size={14} className="text-muted-foreground" />
+                                  )}
+                                </div>
+                                <span className="font-medium text-foreground">{item.nombre}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell align="center" className="font-mono text-xs text-muted">
+                              {item.consumoUnitario} {item.unidadBase}/PAX
+                            </TableCell>
+                            <TableCell align="center" className="font-mono text-xs text-muted">
+                              {item.peso}x
+                            </TableCell>
+                            <TableCell align="right">
+                              <span className="font-mono text-base font-bold text-primary">
+                                {item.volumenTotal.toLocaleString('es-CL', { maximumFractionDigits: 1 })} {item.unidadBase}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center" className="py-8 text-muted border-none">
+                            Selecciona al menos un punto de servicio.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </InfoCard>
-
-      {/* Tabla utilizando tokens de superficie y bordes semánticos */}
-      <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-border flex justify-between items-center">
-          <span className="text-xs font-mono font-bold text-muted uppercase tracking-wider">
-            Listado Consolidado de Insumos Requeridos
-          </span>
-          <Badge variant="success">
-            Costo Teórico Total: ${costoTotalForecast.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
-          </Badge>
-        </div>
-
-        <div className="overflow-x-auto custom-scrollbar">
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeaderCell>Insumo / Materia Prima</TableHeaderCell>
-                <TableHeaderCell align="center">Consumo Unitario</TableHeaderCell>
-                <TableHeaderCell align="center">Volumen Total Proyectado</TableHeaderCell>
-                <TableHeaderCell align="right">Costo Unitario ($)</TableHeaderCell>
-                <TableHeaderCell align="right">Costo Total ($)</TableHeaderCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {insumosProyectados.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-semibold text-foreground">{item.nombre}</TableCell>
-                  <TableCell align="center" className="font-mono text-xs text-muted">
-                    {item.cantidadUnitaria} {item.unidad} / PAX
-                  </TableCell>
-                  <TableCell align="center">
-                    <span className="font-mono font-bold text-primary">
-                      {item.cantidadTotal.toLocaleString('es-CL', { maximumFractionDigits: 1 })} {item.unidad}
-                    </span>
-                  </TableCell>
-                  <TableCell align="right" className="font-mono text-xs text-muted">
-                    ${item.costoUnitario.toFixed(2)}
-                  </TableCell>
-                  <TableCell align="right" className="font-mono font-bold text-danger">
-                    ${item.costoTotal.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-
-      <div className="flex items-start gap-3 p-4 bg-surface-muted border border-border rounded-xl text-xs text-muted">
-        <AlertCircle size={16} className="text-primary shrink-0 mt-0.5" />
-        <p>
-          Este listado alimenta directamente las Órdenes de Despacho (WMS). Las cantidades se multiplican de forma síncrona con el rendimiento de las sub-recetas artesanales.
-        </p>
-      </div>
+        );
+      })}
     </div>
   );
 }

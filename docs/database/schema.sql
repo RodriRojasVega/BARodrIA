@@ -278,12 +278,12 @@ CREATE TABLE public.evento_etapa_items (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
   etapa_id integer NOT NULL,
   coctel_id integer,
-  insumo_id integer,
   volumen_proyectado_total numeric,
+  concepto_id integer,
   CONSTRAINT evento_etapa_items_pkey PRIMARY KEY (id),
   CONSTRAINT evento_etapa_items_etapa_fkey FOREIGN KEY (etapa_id) REFERENCES public.evento_etapas(id),
   CONSTRAINT evento_etapa_items_coctel_fkey FOREIGN KEY (coctel_id) REFERENCES public.cocteles(id),
-  CONSTRAINT evento_etapa_items_insumo_fkey FOREIGN KEY (insumo_id) REFERENCES public.insumos(id)
+  CONSTRAINT evento_etapa_items_concepto_fkey FOREIGN KEY (concepto_id) REFERENCES public.conceptos_oferta(id)
 );
 CREATE TABLE public.spots (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -303,23 +303,20 @@ CREATE TABLE public.evento_etapa_salones (
 );
 CREATE TABLE public.puntos_servicio (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
-  evento_etapa_salon_id integer NOT NULL,
   nombre character varying NOT NULL,
-  pax_estimado_asignado integer,
   estado character varying DEFAULT 'activo'::character varying,
-  CONSTRAINT puntos_servicio_pkey PRIMARY KEY (id),
-  CONSTRAINT pto_srv_etapa_salon_fkey FOREIGN KEY (evento_etapa_salon_id) REFERENCES public.evento_etapa_salones(id)
+  CONSTRAINT puntos_servicio_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.punto_servicio_oferta (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
   punto_servicio_id integer NOT NULL,
   coctel_id integer,
-  insumo_id integer,
   factor_ajuste_demanda numeric DEFAULT 1.00,
+  concepto_id integer,
   CONSTRAINT punto_servicio_oferta_pkey PRIMARY KEY (id),
-  CONSTRAINT pto_srv_oferta_insumo_fkey FOREIGN KEY (insumo_id) REFERENCES public.insumos(id),
   CONSTRAINT pto_srv_oferta_punto_fkey FOREIGN KEY (punto_servicio_id) REFERENCES public.puntos_servicio(id),
-  CONSTRAINT pto_srv_oferta_coctel_fkey FOREIGN KEY (coctel_id) REFERENCES public.cocteles(id)
+  CONSTRAINT pto_srv_oferta_coctel_fkey FOREIGN KEY (coctel_id) REFERENCES public.cocteles(id),
+  CONSTRAINT pto_srv_oferta_concepto_fkey FOREIGN KEY (concepto_id) REFERENCES public.conceptos_oferta(id)
 );
 CREATE TABLE public.mesas (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -403,4 +400,42 @@ CREATE TABLE public.evento_staff_asignacion (
   CONSTRAINT evento_staff_asignacion_evento_id_fkey FOREIGN KEY (evento_id) REFERENCES public.eventos(id),
   CONSTRAINT evento_staff_asignacion_etapa_id_fkey FOREIGN KEY (etapa_id) REFERENCES public.evento_etapas(id),
   CONSTRAINT evento_staff_asignacion_punto_servicio_id_fkey FOREIGN KEY (punto_servicio_id) REFERENCES public.puntos_servicio(id)
+);
+CREATE TABLE public.punto_servicio_asignaciones (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  punto_servicio_id integer NOT NULL,
+  evento_etapa_salon_id integer NOT NULL,
+  pax_estimado_asignado integer,
+  CONSTRAINT punto_servicio_asignaciones_pkey PRIMARY KEY (id),
+  CONSTRAINT psa_etapa_salon_fkey FOREIGN KEY (evento_etapa_salon_id) REFERENCES public.evento_etapa_salones(id),
+  CONSTRAINT psa_punto_fkey FOREIGN KEY (punto_servicio_id) REFERENCES public.puntos_servicio(id)
+);
+CREATE TABLE public.categorias_servicio (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  slug character varying NOT NULL UNIQUE,
+  nombre character varying NOT NULL,
+  descripcion text,
+  estado character varying DEFAULT 'activo'::character varying,
+  CONSTRAINT categorias_servicio_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.conceptos_oferta (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  slug character varying NOT NULL UNIQUE,
+  nombre character varying NOT NULL,
+  unidad_medida_base character varying NOT NULL CHECK (unidad_medida_base::text = ANY (ARRAY['ml'::text, 'g'::text, 'unit'::text])),
+  tipo character varying NOT NULL CHECK (tipo::text = ANY (ARRAY['destilado'::text, 'mixer'::text, 'cristaleria'::text, 'garnish'::text, 'otro'::text])),
+  estado character varying DEFAULT 'activo'::character varying,
+  CONSTRAINT conceptos_oferta_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.concepto_insumo_equivalencias (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  concepto_id integer NOT NULL,
+  categoria_servicio_id integer NOT NULL,
+  insumo_id integer NOT NULL,
+  prioridad integer NOT NULL DEFAULT 1,
+  estado character varying DEFAULT 'activo'::character varying,
+  CONSTRAINT concepto_insumo_equivalencias_pkey PRIMARY KEY (id),
+  CONSTRAINT cie_concepto_fkey FOREIGN KEY (concepto_id) REFERENCES public.conceptos_oferta(id),
+  CONSTRAINT cie_categoria_fkey FOREIGN KEY (categoria_servicio_id) REFERENCES public.categorias_servicio(id),
+  CONSTRAINT cie_insumo_fkey FOREIGN KEY (insumo_id) REFERENCES public.insumos(id)
 );

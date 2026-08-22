@@ -1,140 +1,404 @@
 // src/modules/eventos/components/EventoStaffTab.tsx
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { InfoCard } from '@/components/ui/InfoCard';
-import { Button } from '@/components/ui/Button';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
-import { UserPlus, Trash2, Users } from 'lucide-react';
-import type { Staff, EventoStaffAsignacion } from '@/types';
+import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell } from '@/components/ui/Table';
+import { Clock, Check, ListFilter, Users, ShieldCheck, GlassWater, Sparkles, Briefcase } from 'lucide-react';
 
 interface EventoStaffTabProps {
   eventoId: number;
 }
 
-export function EventoStaffTab({ eventoId }: EventoStaffTabProps) {
-  const [staffGlobal, setStaffGlobal] = useState<Staff[]>([]);
-  const [asignaciones, setAsignaciones] = useState<EventoStaffAsignacion[]>([]);
-  const [cargando, setCargando] = useState(true);
+type PerfilStaffKey = 'capitanes' | 'bartenders' | 'barbacks' | 'produccion';
+type PerfilSeleccion = 'all' | PerfilStaffKey[];
 
-  useEffect(() => {
-    async function fetchStaffData() {
-      try {
-        setCargando(true);
-        const [{ data: staffData }, { data: asigData }] = await Promise.all([
-          supabase.from('staff' as any).select('*').order('nombre'),
-          supabase.from('evento_staff_asignaciones' as any).select('*').eq('evento_id', eventoId)
-        ]);
-        setStaffGlobal((staffData as any) || []);
-        setAsignaciones((asigData as any) || []);
-      } catch (err) {
-        console.error('Error cargando staff:', err);
-      } finally {
-        setCargando(false);
-      }
+interface MiembroStaff {
+  id: number;
+  nombre: string;
+  rol: PerfilStaffKey;
+  rolEspecifico: string;
+  estado: 'Asignado' | 'Confirmado' | 'En Ruta';
+  puntosAsignados: string;
+}
+
+interface PuntoServicioStaff {
+  id: number;
+  nombre: string;
+  paxAsignado: number;
+  secciones: {
+    capitanes: MiembroStaff[];
+    bartenders: MiembroStaff[];
+    barbacks: MiembroStaff[];
+    produccion: MiembroStaff[];
+  };
+}
+
+interface EtapaStaff {
+  id: number;
+  nombre: string;
+  horario: string;
+  paxEtapa: number;
+  puntos: PuntoServicioStaff[];
+}
+
+export function EventoStaffTab({ eventoId: _eventoId }: EventoStaffTabProps) {
+  const [perfilesSeleccionados, setPerfilesSeleccionados] = useState<PerfilSeleccion>('all');
+  const [modoConsolidado, setModoConsolidado] = useState<boolean>(false);
+  const [seleccionesPuntos, setSeleccionesPuntos] = useState<Record<number, 'todos' | number[]>>({});
+
+  const etapasStaff: EtapaStaff[] = [
+    {
+      id: 1,
+      nombre: 'Etapa 1: Recepción & Cóctel',
+      horario: '19:00 - 21:00',
+      paxEtapa: 600,
+      puntos: [
+        {
+          id: 101,
+          nombre: 'Barra Terraza Exterior',
+          paxAsignado: 450,
+          secciones: {
+            capitanes: [
+              { id: 1, nombre: 'Carlos Mendoza', rol: 'capitanes', rolEspecifico: 'Capitán de Barra Senior', estado: 'Confirmado', puntosAsignados: 'Barra Terraza, Estación VIP' }
+            ],
+            bartenders: [
+              { id: 2, nombre: 'Matías Soto', rol: 'bartenders', rolEspecifico: 'Bartender Coctelería Clásica', estado: 'Confirmado', puntosAsignados: 'Barra Terraza Exterior' },
+              { id: 3, nombre: 'Valentina Rojas', rol: 'bartenders', rolEspecifico: 'Bartender Mixer & Highball', estado: 'Asignado', puntosAsignados: 'Barra Terraza Exterior' }
+            ],
+            barbacks: [
+              { id: 4, nombre: 'Ignacio Pizarro', rol: 'barbacks', rolEspecifico: 'Barback / Logística de Hielo', estado: 'Confirmado', puntosAsignados: 'Barra Terraza, Isla Central' }
+            ],
+            produccion: [
+              { id: 5, nombre: 'Camila Valenzuela', rol: 'produccion', rolEspecifico: 'Jefe de Mise en Place & Producción', estado: 'Confirmado', puntosAsignados: 'Global del Evento' }
+            ]
+          }
+        },
+        {
+          id: 102,
+          nombre: 'Estación de Bienvenida VIP',
+          paxAsignado: 150,
+          secciones: {
+            capitanes: [],
+            bartenders: [
+              { id: 6, nombre: 'Esteban Fariña', rol: 'bartenders', rolEspecifico: 'Bartender Espumantes', estado: 'Confirmado', puntosAsignados: 'Estación VIP' }
+            ],
+            barbacks: [
+              { id: 7, nombre: 'Lucas Morales', rol: 'barbacks', rolEspecifico: 'Barback Auxiliar', estado: 'Asignado', puntosAsignados: 'Estación VIP' }
+            ],
+            produccion: []
+          }
+        }
+      ]
     }
-    fetchStaffData();
-  }, [eventoId]);
+  ];
 
-  const asignarStaff = async (staffId: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('evento_staff_asignaciones' as any)
-        .insert([{ evento_id: eventoId, staff_id: staffId }])
-        .select();
+  const togglePerfil = (perfil: PerfilStaffKey | 'all') => {
+    setPerfilesSeleccionados(prev => {
+      if (perfil === 'all') return 'all';
+      if (prev === 'all') return [perfil];
+      const existe = prev.includes(perfil);
+      const nuevaLista = existe ? prev.filter(p => p !== perfil) : [...prev, perfil];
+      return nuevaLista.length === 0 ? 'all' : nuevaLista;
+    });
+  };
 
-      if (error) throw error;
-      if (data) setAsignaciones(prev => [...prev, (data as any)[0]]);
-    } catch (err) {
-      console.error('Error al asignar staff:', err);
+  const toggleSeleccionPunto = (etapaId: number, puntoId: number | 'todos') => {
+    setSeleccionesPuntos(prev => {
+      const seleccionActual = prev[etapaId] || 'todos';
+      if (puntoId === 'todos') return { ...prev, [etapaId]: 'todos' };
+      if (seleccionActual === 'todos') return { ...prev, [etapaId]: [puntoId] };
+
+      const nuevaSeleccion = seleccionActual.includes(puntoId)
+        ? seleccionActual.filter(id => id !== puntoId)
+        : [...seleccionActual, puntoId];
+
+      return {
+        ...prev,
+        [etapaId]: nuevaSeleccion.length === 0 ? 'todos' : nuevaSeleccion
+      };
+    });
+  };
+
+  const obtenerStaffProcesado = (etapa: EtapaStaff) => {
+    const perfilesActivos: PerfilStaffKey[] = perfilesSeleccionados === 'all' 
+      ? ['capitanes', 'bartenders', 'barbacks', 'produccion'] 
+      : perfilesSeleccionados;
+
+    if (modoConsolidado) {
+      const mapaGlobal = new Map<number, MiembroStaff>();
+      etapasStaff.forEach(e => {
+        e.puntos.forEach(p => {
+          perfilesActivos.forEach(perfilKey => {
+            p.secciones[perfilKey].forEach(miembro => {
+              if (!mapaGlobal.has(miembro.id)) {
+                mapaGlobal.set(miembro.id, miembro);
+              }
+            });
+          });
+        });
+      });
+      return Array.from(mapaGlobal.values());
+    } else {
+      const seleccion = seleccionesPuntos[etapa.id] || 'todos';
+      const puntosActivos = seleccion === 'todos' 
+        ? etapa.puntos 
+        : etapa.puntos.filter(p => seleccion.includes(p.id));
+
+      const mapaEtapa = new Map<number, MiembroStaff>();
+      puntosActivos.forEach(punto => {
+        perfilesActivos.forEach(perfilKey => {
+          punto.secciones[perfilKey].forEach(miembro => {
+            if (!mapaEtapa.has(miembro.id)) {
+              mapaEtapa.set(miembro.id, miembro);
+            }
+          });
+        });
+      });
+      return Array.from(mapaEtapa.values());
     }
   };
 
-  const removerAsignacion = async (id: number) => {
-    try {
-      const { error } = await supabase
-        .from('evento_staff_asignaciones' as any)
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      setAsignaciones(prev => prev.filter(a => a.id !== id));
-    } catch (err) {
-      console.error('Error al remover staff:', err);
-    }
+  const isPerfilSelected = (perfil: PerfilStaffKey | 'all') => {
+    if (perfil === 'all') return perfilesSeleccionados === 'all';
+    if (perfilesSeleccionados === 'all') return false;
+    return perfilesSeleccionados.includes(perfil);
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Cabecera del Módulo de Staff utilizando InfoCard y tokens semánticos */}
-      <InfoCard variant="success" title="Gestión de Capital Humano">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-2">
-          <p className="text-xs text-muted">
-            Asignación táctica de bartenders, barbacks y capitanes de barra para el evento.
-          </p>
-          <Badge variant="success">{asignaciones.length} Operativos Asignados</Badge>
-        </div>
-      </InfoCard>
-
-      {/* Asignador Dual basado puramente en tokens semánticos de superficie y bordes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-6 animate-fade-in pb-10" data-evento-id={_eventoId}>
+      
+      {/* 1. CONTROLES SUPERIORES FLOTANTES */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         
-        {/* Columna Izquierda: Staff Disponible */}
-        <div className="bg-surface border border-border rounded-2xl p-4 flex flex-col h-[400px] shadow-xl">
-          <h4 className="text-xs font-bold text-foreground mb-3 uppercase font-mono flex items-center gap-2">
-            <Users size={14} className="text-primary" /> Staff Registrado (Disponibles)
-          </h4>
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-            {cargando ? (
-              <div className="text-xs text-muted text-center py-20 font-mono animate-pulse">Cargando personal...</div>
-            ) : (
-              staffGlobal.map(st => {
-                const yaAsignado = asignaciones.some(a => a.staff_id === st.id);
-                if (yaAsignado) return null;
-                return (
-                  <div key={st.id} className="flex justify-between items-center bg-surface-muted p-2.5 rounded-xl border border-border hover:border-border-hover transition">
-                    <div>
-                      <p className="text-xs text-foreground font-bold">{st.nombre}</p>
-                      <span className="text-[10px] font-mono text-primary uppercase">{st.rol || 'Bartender'}</span>
-                    </div>
-                    <Button variant="secondary" size="sm" icon={<UserPlus size={14} />} onClick={() => asignarStaff(st.id)}>
-                      Asignar
-                    </Button>
-                  </div>
-                );
-              })
-            )}
-          </div>
+        {/* Selector Multiselección de Perfiles */}
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          <button
+            onClick={() => togglePerfil('all')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
+              perfilesSeleccionados === 'all' 
+                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
+                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
+            }`}
+          >
+            <Sparkles size={14} />
+            <span>All Staff</span>
+            {perfilesSeleccionados === 'all' && <Check size={14} className="ml-1" />}
+          </button>
+
+          <button
+            onClick={() => togglePerfil('bartenders')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
+              isPerfilSelected('bartenders') 
+                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
+                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
+            }`}
+          >
+            <GlassWater size={14} />
+            <span>Bartenders</span>
+            {isPerfilSelected('bartenders') && <Check size={14} className="ml-1" />}
+          </button>
+          
+          <button
+            onClick={() => togglePerfil('capitanes')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
+              isPerfilSelected('capitanes') 
+                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
+                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
+            }`}
+          >
+            <ShieldCheck size={14} />
+            <span>Capitanes de Barra</span>
+            {isPerfilSelected('capitanes') && <Check size={14} className="ml-1" />}
+          </button>
+
+          <button
+            onClick={() => togglePerfil('barbacks')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
+              isPerfilSelected('barbacks') 
+                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
+                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
+            }`}
+          >
+            <Users size={14} />
+            <span>Barbacks & Logística</span>
+            {isPerfilSelected('barbacks') && <Check size={14} className="ml-1" />}
+          </button>
+
+          <button
+            onClick={() => togglePerfil('produccion')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
+              isPerfilSelected('produccion') 
+                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
+                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
+            }`}
+          >
+            <Briefcase size={14} />
+            <span>Staff de Producción</span>
+            {isPerfilSelected('produccion') && <Check size={14} className="ml-1" />}
+          </button>
         </div>
 
-        {/* Columna Derecha: Staff Asignado al Evento */}
-        <div className="bg-surface border border-primary/40 rounded-2xl p-4 flex flex-col h-[400px] shadow-xl">
-          <h4 className="text-xs font-bold text-primary mb-3 uppercase font-mono flex items-center gap-2">
-            ✅ Equipo en Operación
-          </h4>
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-            {asignaciones.length === 0 ? (
-              <div className="text-xs text-muted text-center py-20 font-mono">Sin personal asignado a este evento.</div>
-            ) : (
-              asignaciones.map(asig => {
-                const st = staffGlobal.find(s => s.id === asig.staff_id);
-                if (!st) return null;
-                return (
-                  <div key={asig.id} className="flex items-center justify-between bg-surface-muted p-2.5 rounded-xl border border-primary/20">
-                    <div>
-                      <p className="text-xs text-foreground font-bold">{st.nombre}</p>
-                      <span className="text-[10px] font-mono text-muted uppercase">{st.rol || 'General'}</span>
-                    </div>
-                    <Button variant="inline-danger" onClick={() => removerAsignacion(asig.id)}>
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
+        {/* Botón Toggle Consolidado Global (Brilla por sí solo, sin headers ni badges) */}
+        <button
+          onClick={() => setModoConsolidado(!modoConsolidado)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border shrink-0 ${
+            modoConsolidado 
+              ? 'bg-primary text-primary-foreground border-primary shadow-md' 
+              : 'bg-transparent hover:bg-surface text-foreground border-border/50'
+          }`}
+        >
+          <Sparkles size={14} />
+          <span>Vista Consolidada Global</span>
+        </button>
 
       </div>
+
+      {/* 2. RENDERIZADO DE CONTENIDO (Sin headers redundantes, alineado a la altura de la tabla) */}
+      {modoConsolidado ? (
+        <div className="overflow-x-auto custom-scrollbar">
+          <Table>
+            <TableHead>
+              <TableRow className="border-b border-border/50">
+                <TableHeaderCell>Colaborador</TableHeaderCell>
+                <TableHeaderCell>Rol / Perfil</TableHeaderCell>
+                <TableHeaderCell>Puntos de Servicio / Alcance</TableHeaderCell>
+                <TableHeaderCell align="right">Estado</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {obtenerStaffProcesado(etapasStaff[0]).map((miembro) => (
+                <TableRow key={miembro.id} className="border-b border-border/30 hover:bg-transparent">
+                  <TableCell className="font-medium text-foreground">{miembro.nombre}</TableCell>
+                  <TableCell className="text-xs text-muted">
+                    <span className="capitalize font-semibold text-primary">{miembro.rol}</span> — {miembro.rolEspecifico}
+                  </TableCell>
+                  <TableCell className="text-xs font-mono text-foreground">{miembro.puntosAsignados}</TableCell>
+                  <TableCell align="right">
+                    <Badge variant={miembro.estado === 'Confirmado' ? 'success' : 'warning'}>
+                      {miembro.estado}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        etapasStaff.map((etapa) => {
+          const seleccionActual = seleccionesPuntos[etapa.id] || 'todos';
+          const staffEtapa = obtenerStaffProcesado(etapa);
+
+          return (
+            <div key={etapa.id} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              
+              {/* Columna Izquierda: Información de Etapa + Puntos Operativos alineados a la tabla */}
+              <div className="lg:col-span-4 xl:col-span-3 space-y-4">
+                
+                {/* Información de la Etapa integrada arriba al mismo nivel que el header de la tabla */}
+                <div className="flex items-center gap-3 p-3 bg-surface/50 border border-border/40 rounded-2xl">
+                  <div className="p-2 bg-primary/10 text-primary rounded-xl shrink-0">
+                    <Clock size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold text-foreground truncate">{etapa.nombre}</h4>
+                    <div className="flex items-center gap-2 text-[11px] font-mono text-muted">
+                      <span>{etapa.horario} hrs</span>
+                      <span>•</span>
+                      <span className="font-bold text-primary">{etapa.paxEtapa} PAX</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Puntos Operativos */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-mono uppercase text-muted font-bold ml-1">
+                    <ListFilter size={14} />
+                    <span>Puntos Operativos</span>
+                  </div>
+                  
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => toggleSeleccionPunto(etapa.id, 'todos')}
+                      className={`flex items-center justify-between p-3 rounded-2xl text-sm transition-all border ${
+                        seleccionActual === 'todos' 
+                          ? 'bg-primary text-primary-foreground border-primary shadow-md' 
+                          : 'bg-transparent hover:bg-surface text-foreground border-border/50'
+                      }`}
+                    >
+                      <span className="font-semibold">Consolidado Etapa</span>
+                      {seleccionActual === 'todos' && <Check size={16} />}
+                    </button>
+
+                    {etapa.puntos.map(punto => {
+                      const estaSeleccionado = seleccionActual !== 'todos' && seleccionActual.includes(punto.id);
+                      return (
+                        <button
+                          key={punto.id}
+                          onClick={() => toggleSeleccionPunto(etapa.id, punto.id)}
+                          className={`flex flex-col text-left p-3 rounded-2xl transition-all border ${
+                            estaSeleccionado 
+                              ? 'bg-primary/10 border-primary/30 shadow-sm' 
+                              : 'bg-transparent hover:bg-surface border-border/50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className={`font-medium text-sm ${estaSeleccionado ? 'text-primary font-bold' : 'text-foreground'}`}>
+                              {punto.nombre}
+                            </span>
+                            {estaSeleccionado && <Check size={16} className="text-primary" />}
+                          </div>
+                          <span className="text-xs font-mono text-muted mt-1">{punto.paxAsignado} PAX</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Columna Derecha: Tabla Flotante de Staff (Sus cabeceras inician exactamente a la misma altura que la info de etapa) */}
+              <div className="lg:col-span-8 xl:col-span-9">
+                <div className="overflow-x-auto custom-scrollbar">
+                  <Table>
+                    <TableHead>
+                      <TableRow className="border-b border-border/50">
+                        <TableHeaderCell>Colaborador</TableHeaderCell>
+                        <TableHeaderCell>Rol / Perfil</TableHeaderCell>
+                        <TableHeaderCell>Puntos de Servicio / Alcance</TableHeaderCell>
+                        <TableHeaderCell align="right">Estado</TableHeaderCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {staffEtapa.length > 0 ? (
+                        staffEtapa.map((miembro) => (
+                          <TableRow key={miembro.id} className="border-b border-border/30 hover:bg-transparent">
+                            <TableCell className="font-medium text-foreground">{miembro.nombre}</TableCell>
+                            <TableCell className="text-xs text-muted">
+                              <span className="capitalize font-semibold text-primary">{miembro.rol}</span> — {miembro.rolEspecifico}
+                            </TableCell>
+                            <TableCell className="text-xs font-mono text-foreground">{miembro.puntosAsignados}</TableCell>
+                            <TableCell align="right">
+                              <Badge variant={miembro.estado === 'Confirmado' ? 'success' : 'warning'}>
+                                {miembro.estado}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center" className="py-8 text-muted border-none">
+                            No hay personal asignado en los perfiles seleccionados para estos puntos.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+            </div>
+          );
+        })
+      )}
+
     </div>
   );
 }

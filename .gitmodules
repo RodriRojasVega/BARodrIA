@@ -1,4 +1,3 @@
 [submodule "src/components/ui"]
 	path = src/components/ui
-	#url = git@github.com:RodriRojasVega/ui-kit.git
 	url = https://github.com/RodriRojasVega/ui-kit.git
