@@ -11,30 +11,32 @@ Actúa como un Desarrollador Frontend Senior experto en React, TypeScript y Tail
 - **Despliegue:** Netlify.
 - **Entorno de Desarrollo:** Linux (WSL2 en Ubuntu) - *Estricto Case-Sensitive*.
 
-## 📂 Estructura de Carpetas y Arquitectura (Alias `@/` = `src/`)
 
- ├── docs/ # Documentación del proyecto y artefactos para IA
- │ ├── AI_CONTEXT.md # Reglas, UI Kit y arquitectura del sistema
- │ └── database/schema.sql # DDL del esquema de PostgreSQL (Supabase)
- ├── public/ # Archivos estáticos e iconos PWA
- └── src/
- ├── assets/ # Imágenes, logos e ilustraciones
- ├── components/
- │ ├── layout/ # Componentes estructurales (Sidebar, Navbar)
- │ └── ui/ # UI Kit Maestro 2.0 (Botones, Tablas, Inputs, Toast, etc.)
- ├── hooks/ # Custom hooks globales/transversales
- ├── lib/ # Clientes e integraciones (supabase.ts, calculos.ts)
- ├── modules/ # Módulos de negocio autocontenidos
- │ └── [nombre_modulo]/ # Ej: insumos, coctel, carta, eventos, proveedores
- │ ├── [Nombre]View.tsx # Orquestador: vistas activas, KPIs y navegación
- │ ├── components/ # Subvistas y modales exclusivos ([Modulo]Detail, [Modulo]Form, etc.)
- │ │ └── tabs/ # Sub-componentes exclusivos para las pestañas de FORMULARIOS o DETALLES
- │ ├── hooks/ # Lógica de negocio, llamadas a Supabase y mutaciones (use[Modulo].ts, use[Modulo]Mutations.ts)
- │ └── types.ts # Tipos locales efímeros exclusivos del módulo
- └── types/ # Interfaces y entidades de base de datos globales
- ├── database.types.ts # Tipos autogenerados por CLI de Supabase
- ├── index.ts # Barrel export de tipos
- └── [entidad].ts # Modelos compartidos (insumos.ts, carta.ts, coctel.ts, etc.)
+
+
+## 📂 Estructura de Carpetas y Arquitectura (Alias @/ = src/)
+    ├── docs/
+    │   ├── AI_CONTEXT.md             # Reglas, UI Kit y arquitectura del sistema
+    │   └── database/schema.sql       # DDL del esquema de PostgreSQL (Supabase)
+    ├──public/                        # Archivos estáticos e iconos PWA
+    └── src/
+        ├── assets/                   # Imágenes, logos e ilustraciones
+        ├── components/
+        │   ├── layout/               # Componentes estructurales (Sidebar, Navbar)
+        │   └── ui/                   # UI Kit Maestro 2.0 (Botones, Tablas, Inputs, Toast, etc.)
+        ├── hooks/                    # Custom hooks globales/transversales
+        ├── lib/                      # Clientes e integraciones (supabase.ts, calculos.ts)
+        ├── modules/                  # Módulos de negocio autocontenidos
+        │   └── [nombre_modulo]/      # Ej: insumos, coctel, carta, eventos, proveedores
+        │       ├── [Nombre]View.tsx  # Orquestador: vistas activas, KPIs y navegación
+        │       ├── components/       # Subvistas y modales exclusivos ([Modulo]Detail, [Modulo]Form, etc.)
+        │       │   └── tabs/         # Sub-componentes exclusivos para las pestañas de FORMULARIOS o DETALLES
+        │       ├── hooks/            # Lógica de negocio, llamadas a Supabase y mutaciones (use[Modulo].ts, use[Modulo]    Mutations.ts)
+        │       └── types.ts          # Tipos locales efímeros exclusivos del módulo
+        └── types/                    # Interfaces y entidades de base de datos globales
+            ├── database.types.ts     # Tipos autogenerados por CLI de Supabase
+            ├── index.ts              # Barrel export de tipos
+            └── [entidad].ts          # Modelos compartidos (insumos.ts, carta.ts, coctel.ts, etc.)
 
 ## 🥇 Reglas de Oro (Golden Rules) para Generación de Código
 
