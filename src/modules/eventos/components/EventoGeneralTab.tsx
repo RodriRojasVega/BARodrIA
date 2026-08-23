@@ -16,6 +16,11 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
   const resumenModalidades = ['Barra Libre', 'Paquete Fijo'];
   const totalStaffAsignado = 24;
 
+  // Extraer nombres de catálogos o valores de respaldo seguros
+  const tipoNombre = evento.tipo_evento_info?.nombre || (typeof evento.tipo_evento === 'string' ? evento.tipo_evento : 'Corporativo');
+  const estadoNombre = evento.estado_info?.nombre || (typeof evento.estado === 'string' ? evento.estado : 'Cotización');
+  const estadoSlug = evento.estado_info?.slug || (typeof evento.estado === 'string' ? evento.estado : 'cotizacion');
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       
@@ -33,7 +38,7 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
         />
         <EventDashboardCard 
           label="Tipología" 
-          value={evento.tipo_evento?.toUpperCase() || 'CORPORATIVO'} 
+          value={tipoNombre.toUpperCase()} 
           icon={<Briefcase size={16} />}
         />
         <EventDashboardCard 
@@ -43,14 +48,14 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
           icon={<Users size={16} />}
         />
         <EventDashboardCard 
-          label="Staff Asignado" 
-          value={`${totalStaffAsignado} Pers.`} 
+          label="Staff Proj. / Asignado" 
+          value={`${evento.staff_proyectado || 0} / ${totalStaffAsignado}`} 
           icon={<Users size={16} />}
         />
         <EventDashboardCard 
           label="Estado Operativo" 
-          value={<span className="capitalize">{evento.estado.replace('_', ' ')}</span>} 
-          valueClassName={evento.estado === 'confirmado' ? 'text-success' : 'text-foreground'}
+          value={<span className="capitalize">{estadoNombre}</span>} 
+          valueClassName={estadoSlug === 'confirmado' ? 'text-success' : 'text-foreground'}
           icon={<Activity size={16} />}
         />
       </div>

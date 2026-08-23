@@ -16,19 +16,18 @@ export const mockEventoDetalleCompleto: EventoConRelaciones = {
   id: 1,
   slug: 'gran-aniversario-corporativo-2026',
   nombre: 'Gran Aniversario Corporativo 2026',
-  tipo_evento: 'corporativo',
+  tipo_evento: 1, // ID de tipo_evento
   fecha_evento: '2026-08-25',
   hora_inicio: '19:00:00',
   hora_fin: '04:00:00',
   total_pax: 3500,
-  estado: 'en_produccion',
+  staff_proyectado: 120, // Nuevo campo obligatorio
+  estado: 1, // ID de estados_evento (1 = Cotización)
   mandante_id: 101,
   cliente_final_id: 202,
   salon_id: 1,
   spot_id: 1,
-  cliente_empresa_id: 101,
   observaciones_logistica: 'Requiere supervisión estricta en la cadena de frío para barra principal.',
-  created_at: new Date().toISOString(),
   mandante: {
     id: 101,
     nombre: 'Productora Global Events SpA',
@@ -44,29 +43,37 @@ export const mockEventoDetalleCompleto: EventoConRelaciones = {
     contacto_nombre: 'Ana Torres',
     telefono: '+56987654321',
     email: 'atorres@bancoit.cl'
+  },
+  tipo_evento_info: {
+    id: 1,
+    slug: 'corporativo',
+    nombre: 'Corporativo'
+  },
+  estado_info: {
+    id: 1,
+    slug: 'cotizacion',
+    nombre: 'Cotización'
   }
 };
 
-// NUEVO: Arreglo de lista para abastecer el hook inteligente en EventosList
 export const mockEventosLista: EventoConRelaciones[] = [
   mockEventoDetalleCompleto,
   {
     id: 2,
     slug: 'lanzamiento-marca-tech-2026',
     nombre: 'Lanzamiento de Marca Tech',
-    tipo_evento: 'activacion_marca',
+    tipo_evento: 4, // ID 4 = Activación de Marca
     fecha_evento: '2026-08-30',
     hora_inicio: '20:00:00',
     hora_fin: '02:00:00',
     total_pax: 800,
-    estado: 'confirmado',
+    staff_proyectado: 35,
+    estado: 2, // ID 2 = Confirmado
     mandante_id: 102,
     cliente_final_id: 203,
     salon_id: 2,
     spot_id: 1,
-    cliente_empresa_id: 102,
     observaciones_logistica: 'Coctelería molecular de autor requerida.',
-    created_at: new Date().toISOString(),
     mandante: {
       id: 102,
       nombre: 'Marketing Experencial Ltda',
@@ -82,6 +89,16 @@ export const mockEventosLista: EventoConRelaciones[] = [
       contacto_nombre: 'Felipe Rojas',
       telefono: '+56955443322',
       email: 'frojas@techstore.cl'
+    },
+    tipo_evento_info: {
+      id: 4,
+      slug: 'activacion_marca',
+      nombre: 'Activación de Marca'
+    },
+    estado_info: {
+      id: 2,
+      slug: 'confirmado',
+      nombre: 'Confirmado'
     }
   }
 ];

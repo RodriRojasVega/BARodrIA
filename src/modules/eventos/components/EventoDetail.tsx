@@ -31,13 +31,18 @@ export function EventoDetail({ evento, onVolver }: EventoDetailProps) {
     { id: 'staff', label: 'Asignación de Staff', icon: <UserCheck size={14} /> },
   ];
 
-  const renderBadgeEstado = (estado: string) => {
-    switch (estado) {
-      case 'confirmado': return <Badge variant="success">Confirmado</Badge>;
-      case 'en_produccion': return <Badge variant="warning">En Producción</Badge>;
-      case 'ejecutado': return <Badge variant="info">Ejecutado</Badge>;
-      case 'cancelado': return <Badge variant="danger">Cancelado</Badge>;
-      default: return <Badge variant="default">Cotización</Badge>;
+  // Extracción segura del nombre y slug del estado utilizando el catálogo relacional
+  const estadoNombre = evento.estado_info?.nombre || 'Cotización';
+  const estadoSlug = evento.estado_info?.slug || 'cotizacion';
+  const tipoNombre = evento.tipo_evento_info?.nombre || 'Evento Corporativo';
+
+  const renderBadgeEstado = (slug: string, nombre: string) => {
+    switch (slug) {
+      case 'confirmado': return <Badge variant="success">{nombre}</Badge>;
+      case 'en_produccion': return <Badge variant="warning">{nombre}</Badge>;
+      case 'ejecutado': return <Badge variant="info">{nombre}</Badge>;
+      case 'cancelado': return <Badge variant="danger">{nombre}</Badge>;
+      default: return <Badge variant="default">{nombre}</Badge>;
     }
   };
 
@@ -54,9 +59,9 @@ export function EventoDetail({ evento, onVolver }: EventoDetailProps) {
           badges={
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold text-primary uppercase tracking-wider">
-                {evento.tipo_evento || 'Evento Corporativo'}
+                {tipoNombre}
               </span>
-              {renderBadgeEstado(evento.estado)}
+              {renderBadgeEstado(estadoSlug, estadoNombre)}
             </div>
           }
           primaryAction={

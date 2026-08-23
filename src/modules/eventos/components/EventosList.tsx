@@ -35,25 +35,27 @@ export function EventosList({ eventos, cargando, onSelectEvent, onNuevoEvento }:
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
-  const eventosFiltrados = eventos.filter(ev => 
-    ev.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    (ev.tipo_evento && ev.tipo_evento.toLowerCase().includes(busqueda.toLowerCase()))
-  );
+  // Búsqueda segura sobre el nombre y el nombre del catálogo relacional
+  const eventosFiltrados = eventos.filter(ev => {
+    const nombreMatch = ev.nombre.toLowerCase().includes(busqueda.toLowerCase());
+    const tipoMatch = ev.tipo_evento_info?.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ?? false;
+    return nombreMatch || tipoMatch;
+  });
 
   const calendarEvents: CalendarEvent[] = eventosFiltrados.map(ev => ({
     id: ev.id,
     title: `${ev.nombre} (${ev.total_pax} PAX)`,
     date: ev.fecha_evento,
-    status: ev.estado as CalendarEvent['status']
+    status: (ev.estado_info?.slug ?? 'cotizacion') as CalendarEvent['status']
   }));
 
-  const renderBadgeEstado = (estado: string) => {
-    switch (estado) {
-      case 'confirmado': return <Badge variant="success">Confirmado</Badge>;
-      case 'en_produccion': return <Badge variant="warning">En Producción</Badge>;
-      case 'ejecutado': return <Badge variant="info">Ejecutado</Badge>;
-      case 'cancelado': return <Badge variant="danger">Cancelado</Badge>;
-      default: return <Badge variant="default">Cotización</Badge>;
+  const renderBadgeEstado = (slug: string, nombre: string) => {
+    switch (slug) {
+      case 'confirmado': return <Badge variant="success">{nombre}</Badge>;
+      case 'en_produccion': return <Badge variant="warning">{nombre}</Badge>;
+      case 'ejecutado': return <Badge variant="info">{nombre}</Badge>;
+      case 'cancelado': return <Badge variant="danger">{nombre}</Badge>;
+      default: return <Badge variant="default">{nombre}</Badge>;
     }
   };
 
@@ -113,7 +115,6 @@ export function EventosList({ eventos, cargando, onSelectEvent, onNuevoEvento }:
             Sincronizando agenda logística de eventos...
           </div>
         ) : eventosFiltrados.length === 0 ? (
-          /* REFACTOR: Uso estricto de EmptyState */
           <EmptyState 
             icon={<CalendarDays size={48} />}
             title="No se encontraron eventos registrados"
@@ -128,39 +129,45 @@ export function EventosList({ eventos, cargando, onSelectEvent, onNuevoEvento }:
               </div>
             )}
             
-            {/* VISTA 2: TARJETAS (GRILLA) - REFACTORIZADA */}
+            {/* VISTA 2: TARJETAS (GRILLA) */}
             {vistaActual === 'tarjetas' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto custom-scrollbar pr-1 pb-4">
-                {eventosFiltrados.map((ev) => (
-                  <DataCard 
-                    key={ev.id}
-                    title={ev.nombre}
-                    badge={renderBadgeEstado(ev.estado)}
-                    onClick={() => onSelectEvent(ev.id)}
-                  >
-                    <span className="text-[10px] sm:text-xs font-mono text-primary font-bold uppercase tracking-wider block mb-1">
-                      {ev.tipo_evento || 'Corporativo'}
-                    </span>
-                    {ev.mandante && (
-                      <p className="text-xs text-muted">
-                        Mandante: <strong className="text-foreground">{ev.mandante.nombre}</strong>
-                      </p>
-                    )}
-                    
-                    <div className="pt-3 mt-3 border-t border-border/50 flex items-center justify-between">
-                      <IconText 
-                        icon={<CalendarDays size={13} />} 
-                        text={ev.fecha_evento} 
-                        textClassName="font-mono text-muted" 
-                      />
-                      <IconText 
-                        icon={<Users size={13} className="text-primary" />} 
-                        text={`${ev.total_pax} PAX`} 
-                        textClassName="font-mono font-bold text-foreground" 
-                      />
-                    </div>
-                  </DataCard>
-                ))}
+                {eventosFiltrados.map((ev) => {
+                  const estadoSlug = ev.estado_info?.slug ?? 'cotizacion';
+                  const estadoNombre = ev.estado_info?.nombre ?? 'Cotización';
+                  const tipoNombre = ev.tipo_evento_info?.nombre ?? 'Corporativo';
+
+                  return (
+                    <DataCard 
+                      key={ev.id}
+                      title={ev.nombre}
+                      badge={renderBadgeEstado(estadoSlug, estadoNombre)}
+                      onClick={() => onSelectEvent(ev.id)}
+                    >
+                      <span className="text-[10px] sm:text-xs font-mono text-primary font-bold uppercase tracking-wider block mb-1">
+                        {tipoNombre}
+                      </span>
+                      {ev.mandante && (
+                        <p className="text-xs text-muted">
+                          Mandante: <strong className="text-foreground">{ev.mandante.nombre}</strong>
+                        </p>
+                      )}
+                      
+                      <div className="pt-3 mt-3 border-t border-border/50 flex items-center justify-between">
+                        <IconText 
+                          icon={<CalendarDays size={13} />} 
+                          text={ev.fecha_evento} 
+                          textClassName="font-mono text-muted" 
+                        />
+                        <IconText 
+                          icon={<Users size={13} className="text-primary" />} 
+                          text={`${ev.total_pax} PAX`} 
+                          textClassName="font-mono font-bold text-foreground" 
+                        />
+                      </div>
+                    </DataCard>
+                  );
+                })}
               </div>
             )}
 
@@ -180,16 +187,22 @@ export function EventosList({ eventos, cargando, onSelectEvent, onNuevoEvento }:
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {eventosFiltrados.map((ev) => (
-                        <TableRow key={ev.id} isClickable onClick={() => onSelectEvent(ev.id)}>
-                          <TableCell className="font-semibold text-foreground">{ev.nombre}</TableCell>
-                          <TableCell className="font-mono text-xs text-muted uppercase">{ev.tipo_evento || 'N/D'}</TableCell>
-                          <TableCell className="text-foreground">{ev.mandante?.nombre || 'Directo'}</TableCell>
-                          <TableCell className="font-mono text-xs text-muted">{ev.fecha_evento}</TableCell>
-                          <TableCell align="center"><span className="font-mono font-bold text-primary">{ev.total_pax} PAX</span></TableCell>
-                          <TableCell align="center">{renderBadgeEstado(ev.estado)}</TableCell>
-                        </TableRow>
-                      ))}
+                      {eventosFiltrados.map((ev) => {
+                        const estadoSlug = ev.estado_info?.slug ?? 'cotizacion';
+                        const estadoNombre = ev.estado_info?.nombre ?? 'Cotización';
+                        const tipoNombre = ev.tipo_evento_info?.nombre ?? 'N/D';
+
+                        return (
+                          <TableRow key={ev.id} isClickable onClick={() => onSelectEvent(ev.id)}>
+                            <TableCell className="font-semibold text-foreground">{ev.nombre}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted uppercase">{tipoNombre}</TableCell>
+                            <TableCell className="text-foreground">{ev.mandante?.nombre || 'Directo'}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted">{ev.fecha_evento}</TableCell>
+                            <TableCell align="center"><span className="font-mono font-bold text-primary">{ev.total_pax} PAX</span></TableCell>
+                            <TableCell align="center">{renderBadgeEstado(estadoSlug, estadoNombre)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>

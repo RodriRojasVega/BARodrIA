@@ -613,6 +613,81 @@ export type Database = {
         }
         Relationships: []
       }
+      estados_evento: {
+        Row: {
+          descripcion: string | null
+          id: number
+          nombre: string
+          orden: number | null
+          slug: string
+        }
+        Insert: {
+          descripcion?: string | null
+          id?: never
+          nombre: string
+          orden?: number | null
+          slug: string
+        }
+        Update: {
+          descripcion?: string | null
+          id?: never
+          nombre?: string
+          orden?: number | null
+          slug?: string
+        }
+        Relationships: []
+      }
+      evento_actividades_cronograma: {
+        Row: {
+          created_at: string | null
+          es_hito: boolean | null
+          etapa_id: number | null
+          evento_id: number | null
+          hora_fin: string
+          hora_inicio: string
+          id: number
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          created_at?: string | null
+          es_hito?: boolean | null
+          etapa_id?: number | null
+          evento_id?: number | null
+          hora_fin: string
+          hora_inicio: string
+          id?: number
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          created_at?: string | null
+          es_hito?: boolean | null
+          etapa_id?: number | null
+          evento_id?: number | null
+          hora_fin?: string
+          hora_inicio?: string
+          id?: number
+          nombre?: string
+          orden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evento_actividades_cronograma_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "evento_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evento_actividades_cronograma_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "eventos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evento_etapa_items: {
         Row: {
           coctel_id: number | null
@@ -794,10 +869,9 @@ export type Database = {
       }
       eventos: {
         Row: {
-          cliente_empresa_id: number | null
           cliente_final_id: number | null
           created_at: string
-          estado: string
+          estado: number
           fecha_evento: string
           hora_fin: string
           hora_inicio: string
@@ -808,14 +882,14 @@ export type Database = {
           salon_id: number | null
           slug: string
           spot_id: number | null
-          tipo_evento: string | null
+          staff_proyectado: number | null
+          tipo_evento: number | null
           total_pax: number
         }
         Insert: {
-          cliente_empresa_id?: number | null
           cliente_final_id?: number | null
           created_at?: string
-          estado?: string
+          estado?: number
           fecha_evento: string
           hora_fin: string
           hora_inicio: string
@@ -826,14 +900,14 @@ export type Database = {
           salon_id?: number | null
           slug: string
           spot_id?: number | null
-          tipo_evento?: string | null
+          staff_proyectado?: number | null
+          tipo_evento?: number | null
           total_pax: number
         }
         Update: {
-          cliente_empresa_id?: number | null
           cliente_final_id?: number | null
           created_at?: string
-          estado?: string
+          estado?: number
           fecha_evento?: string
           hora_fin?: string
           hora_inicio?: string
@@ -844,7 +918,8 @@ export type Database = {
           salon_id?: number | null
           slug?: string
           spot_id?: number | null
-          tipo_evento?: string | null
+          staff_proyectado?: number | null
+          tipo_evento?: number | null
           total_pax?: number
         }
         Relationships: [
@@ -856,10 +931,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "eventos_cliente_fkey"
-            columns: ["cliente_empresa_id"]
+            foreignKeyName: "eventos_estado_id_fkey"
+            columns: ["estado"]
             isOneToOne: false
-            referencedRelation: "clientes_empresas"
+            referencedRelation: "estados_evento"
             referencedColumns: ["id"]
           },
           {
@@ -881,6 +956,13 @@ export type Database = {
             columns: ["spot_id"]
             isOneToOne: false
             referencedRelation: "spots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_tipo_evento_id_fkey"
+            columns: ["tipo_evento"]
+            isOneToOne: false
+            referencedRelation: "tipos_evento"
             referencedColumns: ["id"]
           },
         ]
@@ -1539,6 +1621,27 @@ export type Database = {
           dilucion_estimada_porcentaje?: number
           herramienta_requerida?: string
           id?: number
+          nombre?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      tipos_evento: {
+        Row: {
+          descripcion: string | null
+          id: number
+          nombre: string
+          slug: string
+        }
+        Insert: {
+          descripcion?: string | null
+          id?: never
+          nombre: string
+          slug: string
+        }
+        Update: {
+          descripcion?: string | null
+          id?: never
           nombre?: string
           slug?: string
         }
