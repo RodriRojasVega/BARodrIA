@@ -31,7 +31,7 @@ Actúa como un Desarrollador Frontend Senior experto en React, TypeScript y Tail
         │       ├── [Nombre]View.tsx  # Orquestador: vistas activas, KPIs y navegación
         │       ├── components/       # Subvistas y modales exclusivos ([Modulo]Detail, [Modulo]Form, etc.)
         │       │   └── tabs/         # Sub-componentes exclusivos para las pestañas de FORMULARIOS o DETALLES
-        │       ├── hooks/            # Lógica de negocio, llamadas a Supabase y mutaciones (use[Modulo].ts, use[Modulo]    Mutations.ts)
+        │       ├── hooks/            # Lógica de negocio, llamadas a Supabase y mutaciones (use[Modulo].ts, use[Modulo]Mutations.ts)
         │       └── types.ts          # Tipos locales efímeros exclusivos del módulo
         └── types/                    # Interfaces y entidades de base de datos globales
             ├── database.types.ts     # Tipos autogenerados por CLI de Supabase
