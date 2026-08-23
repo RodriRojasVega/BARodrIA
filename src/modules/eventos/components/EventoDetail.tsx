@@ -62,7 +62,7 @@ export function EventoDetail({ evento, onVolver }: EventoDetailProps) {
           primaryAction={
             <div className="flex items-center gap-2">
               <Button 
-                variant="ghost" 
+                variant="secondary" 
                 size="sm" 
                 icon={<Printer size={15} />} 
                 onClick={() => window.print()}
@@ -72,16 +72,14 @@ export function EventoDetail({ evento, onVolver }: EventoDetailProps) {
                 variant="secondary" 
                 size="sm" 
                 icon={<Edit size={15} />}
-              >
-                Editar
-              </Button>
+                title="Editar"
+              />
               <Button 
                 variant="danger" 
                 size="sm" 
                 icon={<Trash2 size={15} />}
-              >
-                Eliminar
-              </Button>
+                title="Eliminar"
+              />
             </div>
           }
         />

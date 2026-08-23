@@ -117,3 +117,14 @@ export interface EventoStaffAsignacion {
   punto_servicio_id: number | null;
   hora_citacion: string | null;
 }
+
+export interface EventoActividadCronograma {
+  id: number;
+  evento_id: number;
+  etapa_id: number | null;
+  orden: number;
+  nombre: string;
+  hora_inicio: string; // 'HH:mm:ss'
+  hora_fin: string;   // 'HH:mm:ss'
+  es_hito: boolean;
+}

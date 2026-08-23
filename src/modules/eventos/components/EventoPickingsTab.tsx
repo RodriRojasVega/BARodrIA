@@ -1,7 +1,11 @@
 // src/modules/eventos/components/EventoPickingsTab.tsx
 import { useState } from 'react';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell } from '@/components/ui/Table';
-import { Clock, Check, ListFilter, ChefHat, Package, Wine, Wrench, Layers } from 'lucide-react';
+import { BlockHeader } from '@/components/ui/BlockHeader';
+import { SelectableCard } from '@/components/ui/SelectableCard';
+import { ToggleButton } from '@/components/ui/ToggleButton';
+import { CategoryFilter, type CategoryOption } from '@/components/ui/CategoryFilter';
+import { ChefHat, Wine, Package, Wrench, Layers } from 'lucide-react';
 
 interface EventoPickingsTabProps {
   eventoId: number;
@@ -33,21 +37,30 @@ interface PuntoServicioLogistica {
 interface EtapaLogistica {
   id: number;
   nombre: string;
+  fase: string;
   horario: string;
   paxEtapa: number;
   puntos: PuntoServicioLogistica[];
 }
 
-export function EventoPickingsTab({ eventoId: _eventoId }: EventoPickingsTabProps) {
+export function EventoPickingsTab({ eventoId }: EventoPickingsTabProps) {
   const [categoriaActiva, setCategoriaActiva] = useState<CategoriaLogistica>('produccion');
   const [modoConsolidado, setModoConsolidado] = useState<boolean>(false);
   const [selecciones, setSelecciones] = useState<Record<number, 'todos' | number[]>>({});
 
+  const categoriasLogisticaOptions: CategoryOption[] = [
+    { id: 'produccion', label: 'Producción & Mise in Place', icon: <ChefHat size={14} /> },
+    { id: 'insumos', label: 'Insumos Comerciales', icon: <Wine size={14} /> },
+    { id: 'soportes', label: 'Soportes & Cristalería', icon: <Package size={14} /> },
+    { id: 'herramientas', label: 'Herramientas & Equipos', icon: <Wrench size={14} /> },
+  ];
+
   const etapasLogistica: EtapaLogistica[] = [
     {
       id: 1,
-      nombre: 'Etapa 1: Recepción & Cóctel',
-      horario: '19:00 - 21:00',
+      nombre: 'Recepción & Cóctel',
+      fase: 'Etapa 1',
+      horario: '19:00 - 21:00 hrs',
       paxEtapa: 600,
       puntos: [
         {
@@ -112,8 +125,8 @@ export function EventoPickingsTab({ eventoId: _eventoId }: EventoPickingsTabProp
     });
   };
 
-  const obtenerItemsProcesados = (etapa: EtapaLogistica) => {
-    if (modoConsolidado) {
+  const obtenerItemsProcesados = (etapa: EtapaLogistica | 'global') => {
+    if (etapa === 'global') {
       const mapaGlobal = new Map<string, ItemLogistico & { cantidad: number }>();
       etapasLogistica.forEach(e => {
         e.puntos.forEach(p => {
@@ -148,92 +161,40 @@ export function EventoPickingsTab({ eventoId: _eventoId }: EventoPickingsTabProp
   };
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10" data-evento-id={_eventoId}>
+    <div className="space-y-6 animate-fade-in pb-10" data-evento-id={eventoId}>
       
-      {/* 1. CONTROLES SUPERIORES FLOTANTES */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        
-        {/* Selector de Categorías */}
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          <button
-            onClick={() => setCategoriaActiva('produccion')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
-              categoriaActiva === 'produccion' 
-                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-            }`}
-          >
-            <ChefHat size={14} />
-            <span>Producción & Mise in Place</span>
-          </button>
-          
-          <button
-            onClick={() => setCategoriaActiva('insumos')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
-              categoriaActiva === 'insumos' 
-                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-            }`}
-          >
-            <Wine size={14} />
-            <span>Insumos Comerciales</span>
-          </button>
+      {/* 1. CONTROLES SUPERIORES: CategoryFilter y ToggleButton */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-2">
+        <CategoryFilter 
+          options={categoriasLogisticaOptions}
+          activeId={categoriaActiva}
+          onChange={(id) => setCategoriaActiva(id as CategoriaLogistica)}
+        />
 
-          <button
-            onClick={() => setCategoriaActiva('soportes')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
-              categoriaActiva === 'soportes' 
-                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-            }`}
-          >
-            <Package size={14} />
-            <span>Soportes & Cristalería</span>
-          </button>
-
-          <button
-            onClick={() => setCategoriaActiva('herramientas')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
-              categoriaActiva === 'herramientas' 
-                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-            }`}
-          >
-            <Wrench size={14} />
-            <span>Herramientas & Equipos</span>
-          </button>
-        </div>
-
-        {/* Botón Toggle Consolidado Global */}
-        <button
+        <ToggleButton 
+          isActive={modoConsolidado}
           onClick={() => setModoConsolidado(!modoConsolidado)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border shrink-0 ${
-            modoConsolidado 
-              ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-              : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-          }`}
+          icon={<Layers size={14} />}
         >
-          <Layers size={14} />
-          <span>Vista Consolidada Global</span>
-        </button>
-
+          Vista Consolidada Global
+        </ToggleButton>
       </div>
 
       {/* 2. RENDERIZADO DE CONTENIDO */}
       {modoConsolidado ? (
-        <div className="flex flex-col gap-4">
-          <div className="overflow-x-auto custom-scrollbar">
-            <Table>
-              <TableHead>
-                <TableRow className="border-b border-border/50">
-                  <TableHeaderCell>Descripción del Ítem</TableHeaderCell>
-                  <TableHeaderCell>Notas / Formato</TableHeaderCell>
-                  <TableHeaderCell align="right">Cantidad Total a Cargar</TableHeaderCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {obtenerItemsProcesados(etapasLogistica[0]).map((item) => (
-                  <TableRow key={item.id} className="border-b border-border/30 hover:bg-transparent">
+        <div className="overflow-x-auto custom-scrollbar pt-2">
+          <Table className="border-none bg-transparent shadow-none">
+            <TableHead>
+              <TableRow className="border-b border-border/50">
+                <TableHeaderCell>Descripción del Ítem</TableHeaderCell>
+                <TableHeaderCell>Notas / Formato</TableHeaderCell>
+                <TableHeaderCell align="right">Cantidad Total a Cargar</TableHeaderCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {obtenerItemsProcesados('global').length > 0 ? (
+                obtenerItemsProcesados('global').map((item) => (
+                  <TableRow key={item.id} className="border-b border-border/30 hover:bg-transparent transition-colors">
                     <TableCell className="font-medium text-foreground">{item.nombre}</TableCell>
                     <TableCell className="text-xs text-muted">{item.detalleAdicional || 'Estándar'}</TableCell>
                     <TableCell align="right">
@@ -242,10 +203,16 @@ export function EventoPickingsTab({ eventoId: _eventoId }: EventoPickingsTabProp
                       </span>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} align="center" className="py-8 text-muted border-none">
+                    No hay elementos en esta categoría para proyectar globalmente.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
       ) : (
         etapasLogistica.map((etapa) => {
@@ -253,108 +220,75 @@ export function EventoPickingsTab({ eventoId: _eventoId }: EventoPickingsTabProp
           const itemsEtapa = obtenerItemsProcesados(etapa);
 
           return (
-            <div key={etapa.id} className="flex flex-col gap-4">
+            <div key={etapa.id} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-8">
               
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 ml-2 border-b border-border/50 pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 text-primary rounded-xl shadow-sm">
-                    <Clock size={18} />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-foreground tracking-tight">{etapa.nombre}</h3>
-                    <div className="flex items-center gap-3 text-xs font-mono text-muted">
-                      <span>{etapa.horario} hrs</span>
-                      <span className="text-border/50">•</span>
-                      <span className="font-bold text-primary">{etapa.paxEtapa} PAX</span>
-                    </div>
-                  </div>
+              {/* Columna Izquierda: BlockHeader Oficial + Puntos Operativos */}
+              <div className="lg:col-span-4 xl:col-span-3 space-y-4">
+                <BlockHeader 
+                  horario={etapa.horario}
+                  nombre={etapa.nombre}
+                  fase={etapa.fase}
+                  pax={etapa.paxEtapa}
+                />
+
+                <div className="flex flex-col gap-2">
+                  <SelectableCard 
+                    title="Consolidado Etapa"
+                    isActive={seleccionActual === 'todos'}
+                    onClick={() => toggleSeleccion(etapa.id, 'todos')}
+                  />
+
+                  {etapa.puntos.map(punto => {
+                    const estaSeleccionado = seleccionActual !== 'todos' && seleccionActual.includes(punto.id);
+                    return (
+                      <SelectableCard 
+                        key={punto.id}
+                        title={punto.nombre}
+                        subtitle={`${punto.paxAsignado} PAX Asignados`}
+                        isActive={estaSeleccionado}
+                        onClick={() => toggleSeleccion(etapa.id, punto.id)}
+                      />
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                
-                {/* Columna Izquierda: Puntos Operativos */}
-                <div className="lg:col-span-4 xl:col-span-3 space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-mono uppercase text-muted font-bold ml-1">
-                    <ListFilter size={14} />
-                    <span>Puntos Operativos</span>
-                  </div>
-                  
-                  <div className="flex flex-col gap-2">
-                    <button
-                      onClick={() => toggleSeleccion(etapa.id, 'todos')}
-                      className={`flex items-center justify-between p-3 rounded-2xl text-sm transition-all border ${
-                        seleccionActual === 'todos' 
-                          ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                          : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-                      }`}
-                    >
-                      <span className="font-semibold">Consolidado Etapa</span>
-                      {seleccionActual === 'todos' && <Check size={16} />}
-                    </button>
-
-                    {etapa.puntos.map(punto => {
-                      const estaSeleccionado = seleccionActual !== 'todos' && seleccionActual.includes(punto.id);
-                      return (
-                        <button
-                          key={punto.id}
-                          onClick={() => toggleSeleccion(etapa.id, punto.id)}
-                          className={`flex flex-col text-left p-3 rounded-2xl transition-all border ${
-                            estaSeleccionado 
-                              ? 'bg-primary/10 border-primary/30 shadow-sm' 
-                              : 'bg-transparent hover:bg-surface border-border/50'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span className={`font-medium text-sm ${estaSeleccionado ? 'text-primary font-bold' : 'text-foreground'}`}>
-                              {punto.nombre}
-                            </span>
-                            {estaSeleccionado && <Check size={16} className="text-primary" />}
-                          </div>
-                          <span className="text-xs font-mono text-muted mt-1">{punto.paxAsignado} PAX</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Columna Derecha: Tabla Flotante de Picking */}
-                <div className="lg:col-span-8 xl:col-span-9">
-                  <div className="overflow-x-auto custom-scrollbar">
-                    <Table>
-                      <TableHead>
-                        <TableRow className="border-b border-border/50">
-                          <TableHeaderCell>Descripción del Ítem</TableHeaderCell>
-                          <TableHeaderCell>Notas / Formato</TableHeaderCell>
-                          <TableHeaderCell align="right">Cantidad Requerida</TableHeaderCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {itemsEtapa.length > 0 ? (
-                          itemsEtapa.map((item) => (
-                            <TableRow key={item.id} className="border-b border-border/30 hover:bg-transparent">
-                              <TableCell className="font-medium text-foreground">{item.nombre}</TableCell>
-                              <TableCell className="text-xs text-muted">{item.detalleAdicional || 'Estándar'}</TableCell>
-                              <TableCell align="right">
-                                <span className="font-mono text-base font-bold text-primary">
-                                  {item.cantidad.toLocaleString('es-CL')} {item.unidad}
-                                </span>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={3} align="center" className="py-8 text-muted border-none">
-                              No hay elementos en esta sección para los puntos seleccionados.
+              {/* Columna Derecha: Tabla Flotante Read-Only */}
+              <div className="lg:col-span-8 xl:col-span-9">
+                <div className="overflow-x-auto custom-scrollbar">
+                  <Table className="border-none bg-transparent shadow-none">
+                    <TableHead>
+                      <TableRow className="border-b border-border/50">
+                        <TableHeaderCell>Descripción del Ítem</TableHeaderCell>
+                        <TableHeaderCell>Notas / Formato</TableHeaderCell>
+                        <TableHeaderCell align="right">Cantidad Requerida</TableHeaderCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {itemsEtapa.length > 0 ? (
+                        itemsEtapa.map((item) => (
+                          <TableRow key={item.id} className="border-b border-border/30 hover:bg-transparent transition-colors">
+                            <TableCell className="font-medium text-foreground">{item.nombre}</TableCell>
+                            <TableCell className="text-xs text-muted">{item.detalleAdicional || 'Estándar'}</TableCell>
+                            <TableCell align="right">
+                              <span className="font-mono text-base font-bold text-primary">
+                                {item.cantidad.toLocaleString('es-CL')} {item.unidad}
+                              </span>
                             </TableCell>
                           </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center" className="py-8 text-muted border-none">
+                            No hay elementos en esta sección para los puntos seleccionados.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
-
               </div>
+
             </div>
           );
         })

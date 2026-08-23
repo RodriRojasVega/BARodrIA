@@ -2,7 +2,11 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/Badge';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell } from '@/components/ui/Table';
-import { Clock, Check, ListFilter, Users, ShieldCheck, GlassWater, Sparkles, Briefcase } from 'lucide-react';
+import { BlockHeader } from '@/components/ui/BlockHeader';
+import { SelectableCard } from '@/components/ui/SelectableCard';
+import { ToggleButton } from '@/components/ui/ToggleButton';
+import { CategoryFilter, type CategoryOption } from '@/components/ui/CategoryFilter';
+import { Sparkles, GlassWater, ShieldCheck, Users, Briefcase } from 'lucide-react';
 
 interface EventoStaffTabProps {
   eventoId: number;
@@ -35,21 +39,31 @@ interface PuntoServicioStaff {
 interface EtapaStaff {
   id: number;
   nombre: string;
+  fase: string;
   horario: string;
   paxEtapa: number;
   puntos: PuntoServicioStaff[];
 }
 
-export function EventoStaffTab({ eventoId: _eventoId }: EventoStaffTabProps) {
+export function EventoStaffTab({ eventoId }: EventoStaffTabProps) {
   const [perfilesSeleccionados, setPerfilesSeleccionados] = useState<PerfilSeleccion>('all');
   const [modoConsolidado, setModoConsolidado] = useState<boolean>(false);
   const [seleccionesPuntos, setSeleccionesPuntos] = useState<Record<number, 'todos' | number[]>>({});
 
+  const perfilesFiltroOptions: CategoryOption[] = [
+    { id: 'all', label: 'All Staff', icon: <Sparkles size={14} /> },
+    { id: 'bartenders', label: 'Bartenders', icon: <GlassWater size={14} /> },
+    { id: 'capitanes', label: 'Capitanes de Barra', icon: <ShieldCheck size={14} /> },
+    { id: 'barbacks', label: 'Barbacks & Logística', icon: <Users size={14} /> },
+    { id: 'produccion', label: 'Staff de Producción', icon: <Briefcase size={14} /> },
+  ];
+
   const etapasStaff: EtapaStaff[] = [
     {
       id: 1,
-      nombre: 'Etapa 1: Recepción & Cóctel',
-      horario: '19:00 - 21:00',
+      nombre: 'Recepción & Cóctel',
+      fase: 'Etapa 1',
+      horario: '19:00 - 21:00 hrs',
       paxEtapa: 600,
       puntos: [
         {
@@ -91,14 +105,23 @@ export function EventoStaffTab({ eventoId: _eventoId }: EventoStaffTabProps) {
     }
   ];
 
-  const togglePerfil = (perfil: PerfilStaffKey | 'all') => {
+  const handlePerfilChange = (id: string | number) => {
+    if (id === 'all') {
+      setPerfilesSeleccionados('all');
+      return;
+    }
+    const perfil = id as PerfilStaffKey;
     setPerfilesSeleccionados(prev => {
-      if (perfil === 'all') return 'all';
       if (prev === 'all') return [perfil];
       const existe = prev.includes(perfil);
       const nuevaLista = existe ? prev.filter(p => p !== perfil) : [...prev, perfil];
       return nuevaLista.length === 0 ? 'all' : nuevaLista;
     });
+  };
+
+  const getActivePerfilIds = () => {
+    if (perfilesSeleccionados === 'all') return ['all'];
+    return perfilesSeleccionados;
   };
 
   const toggleSeleccionPunto = (etapaId: number, puntoId: number | 'todos') => {
@@ -118,12 +141,12 @@ export function EventoStaffTab({ eventoId: _eventoId }: EventoStaffTabProps) {
     });
   };
 
-  const obtenerStaffProcesado = (etapa: EtapaStaff) => {
+  const obtenerStaffProcesado = (etapa: EtapaStaff | 'global') => {
     const perfilesActivos: PerfilStaffKey[] = perfilesSeleccionados === 'all' 
       ? ['capitanes', 'bartenders', 'barbacks', 'produccion'] 
       : perfilesSeleccionados;
 
-    if (modoConsolidado) {
+    if (etapa === 'global') {
       const mapaGlobal = new Map<number, MiembroStaff>();
       etapasStaff.forEach(e => {
         e.puntos.forEach(p => {
@@ -157,105 +180,30 @@ export function EventoStaffTab({ eventoId: _eventoId }: EventoStaffTabProps) {
     }
   };
 
-  const isPerfilSelected = (perfil: PerfilStaffKey | 'all') => {
-    if (perfil === 'all') return perfilesSeleccionados === 'all';
-    if (perfilesSeleccionados === 'all') return false;
-    return perfilesSeleccionados.includes(perfil);
-  };
-
   return (
-    <div className="space-y-6 animate-fade-in pb-10" data-evento-id={_eventoId}>
+    <div className="space-y-6 animate-fade-in pb-10" data-evento-id={eventoId}>
       
-      {/* 1. CONTROLES SUPERIORES FLOTANTES */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        
-        {/* Selector Multiselección de Perfiles */}
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          <button
-            onClick={() => togglePerfil('all')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
-              perfilesSeleccionados === 'all' 
-                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-            }`}
-          >
-            <Sparkles size={14} />
-            <span>All Staff</span>
-            {perfilesSeleccionados === 'all' && <Check size={14} className="ml-1" />}
-          </button>
+      {/* 1. CONTROLES SUPERIORES: CategoryFilter y ToggleButton */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-2">
+        <CategoryFilter 
+          options={perfilesFiltroOptions}
+          activeId={getActivePerfilIds()}
+          onChange={handlePerfilChange}
+        />
 
-          <button
-            onClick={() => togglePerfil('bartenders')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
-              isPerfilSelected('bartenders') 
-                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-            }`}
-          >
-            <GlassWater size={14} />
-            <span>Bartenders</span>
-            {isPerfilSelected('bartenders') && <Check size={14} className="ml-1" />}
-          </button>
-          
-          <button
-            onClick={() => togglePerfil('capitanes')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
-              isPerfilSelected('capitanes') 
-                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-            }`}
-          >
-            <ShieldCheck size={14} />
-            <span>Capitanes de Barra</span>
-            {isPerfilSelected('capitanes') && <Check size={14} className="ml-1" />}
-          </button>
-
-          <button
-            onClick={() => togglePerfil('barbacks')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
-              isPerfilSelected('barbacks') 
-                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-            }`}
-          >
-            <Users size={14} />
-            <span>Barbacks & Logística</span>
-            {isPerfilSelected('barbacks') && <Check size={14} className="ml-1" />}
-          </button>
-
-          <button
-            onClick={() => togglePerfil('produccion')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border ${
-              isPerfilSelected('produccion') 
-                ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-            }`}
-          >
-            <Briefcase size={14} />
-            <span>Staff de Producción</span>
-            {isPerfilSelected('produccion') && <Check size={14} className="ml-1" />}
-          </button>
-        </div>
-
-        {/* Botón Toggle Consolidado Global (Brilla por sí solo, sin headers ni badges) */}
-        <button
+        <ToggleButton 
+          isActive={modoConsolidado}
           onClick={() => setModoConsolidado(!modoConsolidado)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all border shrink-0 ${
-            modoConsolidado 
-              ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-              : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-          }`}
+          icon={<Sparkles size={14} />}
         >
-          <Sparkles size={14} />
-          <span>Vista Consolidada Global</span>
-        </button>
-
+          Vista Consolidada Global
+        </ToggleButton>
       </div>
 
-      {/* 2. RENDERIZADO DE CONTENIDO (Sin headers redundantes, alineado a la altura de la tabla) */}
+      {/* 2. RENDERIZADO DE CONTENIDO */}
       {modoConsolidado ? (
-        <div className="overflow-x-auto custom-scrollbar">
-          <Table>
+        <div className="overflow-x-auto custom-scrollbar pt-2">
+          <Table className="border-none bg-transparent shadow-none">
             <TableHead>
               <TableRow className="border-b border-border/50">
                 <TableHeaderCell>Colaborador</TableHeaderCell>
@@ -265,20 +213,28 @@ export function EventoStaffTab({ eventoId: _eventoId }: EventoStaffTabProps) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {obtenerStaffProcesado(etapasStaff[0]).map((miembro) => (
-                <TableRow key={miembro.id} className="border-b border-border/30 hover:bg-transparent">
-                  <TableCell className="font-medium text-foreground">{miembro.nombre}</TableCell>
-                  <TableCell className="text-xs text-muted">
-                    <span className="capitalize font-semibold text-primary">{miembro.rol}</span> — {miembro.rolEspecifico}
-                  </TableCell>
-                  <TableCell className="text-xs font-mono text-foreground">{miembro.puntosAsignados}</TableCell>
-                  <TableCell align="right">
-                    <Badge variant={miembro.estado === 'Confirmado' ? 'success' : 'warning'}>
-                      {miembro.estado}
-                    </Badge>
+              {obtenerStaffProcesado('global').length > 0 ? (
+                obtenerStaffProcesado('global').map((miembro) => (
+                  <TableRow key={miembro.id} className="border-b border-border/30 hover:bg-transparent transition-colors">
+                    <TableCell className="font-medium text-foreground">{miembro.nombre}</TableCell>
+                    <TableCell className="text-xs text-muted">
+                      <span className="capitalize font-semibold text-primary">{miembro.rol}</span> — {miembro.rolEspecifico}
+                    </TableCell>
+                    <TableCell className="text-xs font-mono text-foreground">{miembro.puntosAsignados}</TableCell>
+                    <TableCell align="right">
+                      <Badge variant={miembro.estado === 'Confirmado' ? 'success' : 'warning'}>
+                        {miembro.estado}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} align="center" className="py-8 text-muted border-none">
+                    No hay personal en los perfiles seleccionados para proyectar globalmente.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>
@@ -288,76 +244,43 @@ export function EventoStaffTab({ eventoId: _eventoId }: EventoStaffTabProps) {
           const staffEtapa = obtenerStaffProcesado(etapa);
 
           return (
-            <div key={etapa.id} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div key={etapa.id} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-8">
               
-              {/* Columna Izquierda: Información de Etapa + Puntos Operativos alineados a la tabla */}
+              {/* Columna Izquierda: BlockHeader Oficial + Puntos Operativos */}
               <div className="lg:col-span-4 xl:col-span-3 space-y-4">
-                
-                {/* Información de la Etapa integrada arriba al mismo nivel que el header de la tabla */}
-                <div className="flex items-center gap-3 p-3 bg-surface/50 border border-border/40 rounded-2xl">
-                  <div className="p-2 bg-primary/10 text-primary rounded-xl shrink-0">
-                    <Clock size={16} />
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-bold text-foreground truncate">{etapa.nombre}</h4>
-                    <div className="flex items-center gap-2 text-[11px] font-mono text-muted">
-                      <span>{etapa.horario} hrs</span>
-                      <span>•</span>
-                      <span className="font-bold text-primary">{etapa.paxEtapa} PAX</span>
-                    </div>
-                  </div>
-                </div>
+                <BlockHeader 
+                  horario={etapa.horario}
+                  nombre={etapa.nombre}
+                  fase={etapa.fase}
+                  pax={etapa.paxEtapa}
+                />
 
-                {/* Puntos Operativos */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-mono uppercase text-muted font-bold ml-1">
-                    <ListFilter size={14} />
-                    <span>Puntos Operativos</span>
-                  </div>
-                  
-                  <div className="flex flex-col gap-2">
-                    <button
-                      onClick={() => toggleSeleccionPunto(etapa.id, 'todos')}
-                      className={`flex items-center justify-between p-3 rounded-2xl text-sm transition-all border ${
-                        seleccionActual === 'todos' 
-                          ? 'bg-primary text-primary-foreground border-primary shadow-md' 
-                          : 'bg-transparent hover:bg-surface text-foreground border-border/50'
-                      }`}
-                    >
-                      <span className="font-semibold">Consolidado Etapa</span>
-                      {seleccionActual === 'todos' && <Check size={16} />}
-                    </button>
+                <div className="flex flex-col gap-2">
+                  <SelectableCard 
+                    title="Consolidado Etapa"
+                    isActive={seleccionActual === 'todos'}
+                    onClick={() => toggleSeleccionPunto(etapa.id, 'todos')}
+                  />
 
-                    {etapa.puntos.map(punto => {
-                      const estaSeleccionado = seleccionActual !== 'todos' && seleccionActual.includes(punto.id);
-                      return (
-                        <button
-                          key={punto.id}
-                          onClick={() => toggleSeleccionPunto(etapa.id, punto.id)}
-                          className={`flex flex-col text-left p-3 rounded-2xl transition-all border ${
-                            estaSeleccionado 
-                              ? 'bg-primary/10 border-primary/30 shadow-sm' 
-                              : 'bg-transparent hover:bg-surface border-border/50'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span className={`font-medium text-sm ${estaSeleccionado ? 'text-primary font-bold' : 'text-foreground'}`}>
-                              {punto.nombre}
-                            </span>
-                            {estaSeleccionado && <Check size={16} className="text-primary" />}
-                          </div>
-                          <span className="text-xs font-mono text-muted mt-1">{punto.paxAsignado} PAX</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {etapa.puntos.map(punto => {
+                    const estaSeleccionado = seleccionActual !== 'todos' && seleccionActual.includes(punto.id);
+                    return (
+                      <SelectableCard 
+                        key={punto.id}
+                        title={punto.nombre}
+                        subtitle={`${punto.paxAsignado} PAX Asignados`}
+                        isActive={estaSeleccionado}
+                        onClick={() => toggleSeleccionPunto(etapa.id, punto.id)}
+                      />
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Columna Derecha: Tabla Flotante de Staff (Sus cabeceras inician exactamente a la misma altura que la info de etapa) */}
+              {/* Columna Derecha: Tabla Flotante Read-Only */}
               <div className="lg:col-span-8 xl:col-span-9">
                 <div className="overflow-x-auto custom-scrollbar">
-                  <Table>
+                  <Table className="border-none bg-transparent shadow-none">
                     <TableHead>
                       <TableRow className="border-b border-border/50">
                         <TableHeaderCell>Colaborador</TableHeaderCell>
@@ -369,7 +292,7 @@ export function EventoStaffTab({ eventoId: _eventoId }: EventoStaffTabProps) {
                     <TableBody>
                       {staffEtapa.length > 0 ? (
                         staffEtapa.map((miembro) => (
-                          <TableRow key={miembro.id} className="border-b border-border/30 hover:bg-transparent">
+                          <TableRow key={miembro.id} className="border-b border-border/30 hover:bg-transparent transition-colors">
                             <TableCell className="font-medium text-foreground">{miembro.nombre}</TableCell>
                             <TableCell className="text-xs text-muted">
                               <span className="capitalize font-semibold text-primary">{miembro.rol}</span> — {miembro.rolEspecifico}

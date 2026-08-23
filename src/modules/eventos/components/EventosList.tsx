@@ -7,6 +7,9 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell } from '@/components/ui/Table';
 import { ModuleHeader } from '@/components/ui/ModuleHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { DataCard } from '@/components/ui/DataCard';
+import { IconText } from '@/components/ui/IconText';
 import { CalendarDays, LayoutGrid, Table as TableIcon, Plus, Search, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { EventoConRelaciones } from '../hooks/useEventos';
 
@@ -57,7 +60,7 @@ export function EventosList({ eventos, cargando, onSelectEvent, onNuevoEvento }:
   return (
     <div className="flex flex-col h-full space-y-5 animate-fade-in">
       
-      {/* 1. HEADER DEL MÓDULO (Utilizando strict UI Kit API) */}
+      {/* 1. HEADER DEL MÓDULO */}
       <div className="shrink-0">
         <ModuleHeader 
           icon={<CalendarDays size={20} className="text-primary" />}
@@ -68,17 +71,14 @@ export function EventosList({ eventos, cargando, onSelectEvent, onNuevoEvento }:
               size="sm" 
               icon={<Plus size={16} />} 
               onClick={onNuevoEvento}
-            >
-              Nuevo Evento
-            </Button>
+              title="Nuevo Evento"
+            />
           }
         />
       </div>
 
-      {/* 2. TOOLBAR FLOTANTE (Sin línea divisoria ni bordes) */}
+      {/* 2. TOOLBAR FLOTANTE */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-        
-        {/* Buscador nativo del UI Kit */}
         <div className="w-full sm:w-80">
           <Input 
             icon={<Search size={14} />}
@@ -89,8 +89,6 @@ export function EventosList({ eventos, cargando, onSelectEvent, onNuevoEvento }:
         </div>
 
         <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
-          
-          {/* Toggle primero */}
           <ViewToggle 
             activeId={vistaActual}
             onChange={(id) => setVistaActual(id as VistaTipo)}
@@ -101,22 +99,10 @@ export function EventosList({ eventos, cargando, onSelectEvent, onNuevoEvento }:
             ]}
           />
 
-          {/* Paginador a la derecha, usando el Button transparente del UI Kit */}
           <div className="flex items-center gap-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              icon={<ChevronLeft size={16} />} 
-              onClick={prevMonth} 
-            />
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              icon={<ChevronRight size={16} />} 
-              onClick={nextMonth} 
-            />
+            <Button variant="ghost" size="sm" icon={<ChevronLeft size={16} />} onClick={prevMonth} />
+            <Button variant="ghost" size="sm" icon={<ChevronRight size={16} />} onClick={nextMonth} />
           </div>
-
         </div>
       </div>
 
@@ -127,11 +113,12 @@ export function EventosList({ eventos, cargando, onSelectEvent, onNuevoEvento }:
             Sincronizando agenda logística de eventos...
           </div>
         ) : eventosFiltrados.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center border border-dashed border-border rounded-2xl">
-            <CalendarDays size={48} className="text-muted mb-3 opacity-50" />
-            <p className="text-foreground font-bold text-sm">No se encontraron eventos registrados</p>
-            <p className="text-muted text-xs mt-1">Modifica tu búsqueda o crea un nuevo evento corporativo.</p>
-          </div>
+          /* REFACTOR: Uso estricto de EmptyState */
+          <EmptyState 
+            icon={<CalendarDays size={48} />}
+            title="No se encontraron eventos registrados"
+            description="Modifica tu búsqueda o crea un nuevo evento corporativo."
+          />
         ) : (
           <>
             {/* VISTA 1: CALENDARIO */}
@@ -141,24 +128,38 @@ export function EventosList({ eventos, cargando, onSelectEvent, onNuevoEvento }:
               </div>
             )}
             
-            {/* VISTA 2: TARJETAS (GRILLA) */}
+            {/* VISTA 2: TARJETAS (GRILLA) - REFACTORIZADA */}
             {vistaActual === 'tarjetas' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto custom-scrollbar pr-1 pb-4">
                 {eventosFiltrados.map((ev) => (
-                  <div key={ev.id} onClick={() => onSelectEvent(ev.id)} className="bg-surface border border-border rounded-2xl p-5 hover:border-primary/50 transition-all cursor-pointer flex flex-col justify-between group shadow-sm hover:shadow-md">
-                    <div>
-                      <div className="flex justify-between items-start gap-2 mb-3">
-                        <span className="text-xs font-mono text-primary font-bold uppercase tracking-wider">{ev.tipo_evento || 'Corporativo'}</span>
-                        {renderBadgeEstado(ev.estado)}
-                      </div>
-                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">{ev.nombre}</h3>
-                      {ev.mandante && <p className="text-xs text-muted mt-1">Mandante: <strong className="text-foreground">{ev.mandante.nombre}</strong></p>}
+                  <DataCard 
+                    key={ev.id}
+                    title={ev.nombre}
+                    badge={renderBadgeEstado(ev.estado)}
+                    onClick={() => onSelectEvent(ev.id)}
+                  >
+                    <span className="text-[10px] sm:text-xs font-mono text-primary font-bold uppercase tracking-wider block mb-1">
+                      {ev.tipo_evento || 'Corporativo'}
+                    </span>
+                    {ev.mandante && (
+                      <p className="text-xs text-muted">
+                        Mandante: <strong className="text-foreground">{ev.mandante.nombre}</strong>
+                      </p>
+                    )}
+                    
+                    <div className="pt-3 mt-3 border-t border-border/50 flex items-center justify-between">
+                      <IconText 
+                        icon={<CalendarDays size={13} />} 
+                        text={ev.fecha_evento} 
+                        textClassName="font-mono text-muted" 
+                      />
+                      <IconText 
+                        icon={<Users size={13} className="text-primary" />} 
+                        text={`${ev.total_pax} PAX`} 
+                        textClassName="font-mono font-bold text-foreground" 
+                      />
                     </div>
-                    <div className="pt-4 mt-4 border-t border-border/50 flex items-center justify-between text-xs font-mono text-muted">
-                      <div className="flex items-center gap-1.5"><CalendarDays size={13} /><span>{ev.fecha_evento}</span></div>
-                      <div className="flex items-center gap-1.5 text-foreground font-bold"><Users size={13} className="text-primary" /><span>{ev.total_pax} PAX</span></div>
-                    </div>
-                  </div>
+                  </DataCard>
                 ))}
               </div>
             )}
