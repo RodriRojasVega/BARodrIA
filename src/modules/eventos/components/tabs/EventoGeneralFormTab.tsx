@@ -1,8 +1,9 @@
+// src/modules/eventos/components/tabs/EventoGeneralFormTab.tsx
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { DateInput, TimeInput } from '@/components/ui/DateTimeInput'; // Usando nuestros nuevos componentes pro
+import { DateInput, TimeInput } from '@/components/ui/DateTimeInput';
 import { EventoFormData } from '../../hooks/useEventoMutations';
 import { supabase } from '@/lib/supabase';
 
@@ -14,16 +15,19 @@ interface EventoGeneralFormTabProps {
 export function EventoGeneralFormTab({ formData, onChange }: EventoGeneralFormTabProps) {
   const [tiposEvento, setTiposEvento] = useState<{ id: number; nombre: string }[]>([]);
   const [estadosEvento, setEstadosEvento] = useState<{ id: number; nombre: string }[]>([]);
+  const [spots, setSpots] = useState<{ id: number; nombre: string }[]>([]); // 👈 Estado para los spots
 
   useEffect(() => {
     async function cargarCatalogos() {
-      const [resTipos, resEstados] = await Promise.all([
+      const [resTipos, resEstados, resSpots] = await Promise.all([
         supabase.from('tipos_evento').select('id, nombre'),
-        supabase.from('estados_evento').select('id, nombre')
+        supabase.from('estados_evento').select('id, nombre'),
+        supabase.from('spots').select('id, nombre') // 👈 Consultamos los spots de la BD
       ]);
 
       if (resTipos.data) setTiposEvento(resTipos.data);
       if (resEstados.data) setEstadosEvento(resEstados.data);
+      if (resSpots.data) setSpots(resSpots.data);
     }
     cargarCatalogos();
   }, []);
@@ -31,7 +35,7 @@ export function EventoGeneralFormTab({ formData, onChange }: EventoGeneralFormTa
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
       
-      {/* Columna Izquierda: Datos Base, Tiempos y Staff */}
+      {/* Columna Izquierda: Datos Base, Spot, Tiempos y Staff */}
       <div className="space-y-4">
         <Input 
           label="Nombre del Evento" 
@@ -40,6 +44,18 @@ export function EventoGeneralFormTab({ formData, onChange }: EventoGeneralFormTa
           onChange={(e) => onChange('nombre', e.target.value)}
         />
         
+        {/* Selector de Spot (Centro de Eventos) */}
+        <Select 
+          label="Spot / Centro de Eventos"
+          value={formData.spot_id ?? ''}
+          onChange={(e) => onChange('spot_id', e.target.value ? Number(e.target.value) : null)}
+        >
+          <option value="">Seleccionar spot...</option>
+          {spots.map((spot) => (
+            <option key={spot.id} value={spot.id}>{spot.nombre}</option>
+          ))}
+        </Select>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select 
             label="Tipología"

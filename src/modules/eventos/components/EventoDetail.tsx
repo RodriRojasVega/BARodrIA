@@ -16,11 +16,12 @@ import { EventoStaffTab } from './EventoStaffTab';
 interface EventoDetailProps {
   evento: EventoConRelaciones;
   onVolver: () => void;
+  onEditar?: (eventoId: number) => void;
 }
 
 type TabKey = 'general' | 'cronograma' | 'forecast' | 'pickings' | 'staff';
 
-export function EventoDetail({ evento, onVolver }: EventoDetailProps) {
+export function EventoDetail({ evento, onVolver, onEditar }: EventoDetailProps){
   const [activeTab, setActiveTab] = useState<TabKey>('general');
 
   const tabsConfig = [
@@ -77,7 +78,8 @@ export function EventoDetail({ evento, onVolver }: EventoDetailProps) {
                 variant="secondary" 
                 size="sm" 
                 icon={<Edit size={15} />}
-                title="Editar"
+                onClick={() => onEditar?.(evento.id)}
+                title="Editar Evento"
               />
               <Button 
                 variant="danger" 

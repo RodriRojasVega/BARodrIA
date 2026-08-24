@@ -11,15 +11,24 @@ interface EventoGeneralTabProps {
 }
 
 export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
-  // TODO: Estos datos provendrán de las relaciones (etapas, staff y salones).
-  const resumenSalones = ['Salón Principal A', 'Terraza Exterior', 'Estación VIP'];
   const resumenModalidades = ['Barra Libre', 'Paquete Fijo'];
   const totalStaffAsignado = 24;
 
-  // Extraer nombres de catálogos o valores de respaldo seguros
   const tipoNombre = evento.tipo_evento_info?.nombre || (typeof evento.tipo_evento === 'string' ? evento.tipo_evento : 'Corporativo');
   const estadoNombre = evento.estado_info?.nombre || (typeof evento.estado === 'string' ? evento.estado : 'Cotización');
   const estadoSlug = evento.estado_info?.slug || (typeof evento.estado === 'string' ? evento.estado : 'cotizacion');
+
+  // Extraer y unificar dinámicamente los salones desde las etapas del evento
+  const salonesUnicos = Array.from(
+    new Set(
+      (evento.etapas || []).flatMap((etapa: any) => 
+        (etapa.salones || etapa.evento_etapa_salones || []).map((s: any) => s.salon?.nombre || s.nombre)
+      )
+    )
+  ).filter(Boolean);
+
+  // Obtener el nombre del spot limpio desde la relación
+  const spotNombre = evento.spot?.nombre || null;
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
@@ -94,37 +103,57 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
           </div>
         </SectionCard>
 
-        {/* COLUMNA 2: Locaciones y Modalidades */}
-        <SectionCard className="space-y-6 h-full">
-          {/* Salones */}
-          <div className="space-y-3">
+        {/* COLUMNA 2: Spot, Locaciones y Modalidades Separadas */}
+        <SectionCard className="space-y-5 h-full">
+          
+          {/* 1. Spot Principal */}
+          <div className="space-y-2">
             <IconText 
               icon={<Store size={15} className="text-primary" />} 
-              text="Locaciones Asignadas" 
+              text="Spot / Centro de Eventos" 
               textClassName="text-primary font-mono text-[11px] uppercase font-bold tracking-wider" 
             />
-            <div className="flex flex-wrap gap-2">
-              {resumenSalones.map(salon => (
-                <Badge key={salon} variant="default" size="sm">{salon}</Badge>
-              ))}
+            <div>
+              <h4 className="text-sm font-bold text-foreground">{spotNombre || 'No asignado'}</h4>
             </div>
           </div>
 
           <div className="h-px w-full bg-border/50" />
 
-          {/* Modalidades */}
-          <div className="space-y-3">
+          {/* 2. Locaciones Asignadas (Salones) */}
+          <div className="space-y-2">
+            <IconText 
+              icon={<MapPin size={15} className="text-primary" />} 
+              text="Locaciones Asignadas" 
+              textClassName="text-primary font-mono text-[11px] uppercase font-bold tracking-wider" 
+            />
+            <div className="flex flex-wrap gap-2 pt-1">
+              {salonesUnicos.length > 0 ? (
+                salonesUnicos.map(salon => (
+                  <Badge key={salon as string} variant="default" size="sm">{salon as string}</Badge>
+                ))
+              ) : (
+                <span className="text-xs text-muted italic">Sin salones específicos en etapas.</span>
+              )}
+            </div>
+          </div>
+
+          <div className="h-px w-full bg-border/50" />
+
+          {/* 3. Modalidades de Servicio */}
+          <div className="space-y-2">
             <IconText 
               icon={<Layers size={15} className="text-primary" />} 
               text="Modalidades de Servicio" 
               textClassName="text-primary font-mono text-[11px] uppercase font-bold tracking-wider" 
             />
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 pt-1">
               {resumenModalidades.map(mod => (
                 <Badge key={mod} variant="info" size="sm">{mod}</Badge>
               ))}
             </div>
           </div>
+
         </SectionCard>
 
         {/* COLUMNA 3: Observaciones y Restricciones */}

@@ -46,3 +46,8 @@ Este documento centraliza las ideas, mejoras y tareas pendientes por implementar
 ---
 
 💡 *Nota: Puedes editar y sincronizar este archivo directamente en tu entorno para ir tachando las tareas completadas o agregar nuevas ideas a medida que se te ocurran.*
+
+
+- Agregar función de eliminar evento
+- Implementar el arrastre de actividades y etapas en cronograma
+- Disenar e implementar lógicas de seguimiento de pickings (devoluciones).

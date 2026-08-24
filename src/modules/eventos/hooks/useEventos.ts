@@ -18,11 +18,13 @@ export interface EventoConRelaciones {
   cliente_final_id?: number | null;
   salon_id?: number | null;
   spot_id?: number | null;
-  tipo_evento: number | null; // ID numérico de la FK
-  estado: number;             // ID numérico de la FK
+  tipo_evento: number | null; 
+  estado: number;             
+  
   // Relaciones de catálogos y entidades
   mandante?: ClienteEmpresa;
   cliente_final?: ClienteEmpresa;
+  spot?: { id: number; nombre: string }; // 👈 Añadimos la interfaz para el Spot
   tipo_evento_info?: { id: number; slug: string; nombre: string };
   estado_info?: { id: number; slug: string; nombre: string };
 }
@@ -42,6 +44,7 @@ export function useEventos() {
           *,
           mandante:clientes_empresas!mandante_id(id, nombre, tipo, contacto_nombre, telefono, email),
           cliente_final:clientes_empresas!cliente_final_id(id, nombre, tipo, contacto_nombre, telefono, email),
+          spot:spots!spot_id(id, nombre),
           tipo_evento_info:tipos_evento!tipo_evento(id, slug, nombre),
           estado_info:estados_evento!estado(id, slug, nombre)
         `)

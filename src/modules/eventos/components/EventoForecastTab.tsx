@@ -1,45 +1,49 @@
 // src/modules/eventos/components/EventoForecastTab.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell } from '@/components/ui/Table';
 import { BlockHeader } from '@/components/ui/BlockHeader';
 import { SelectableCard } from '@/components/ui/SelectableCard';
 import { ToggleButton } from '@/components/ui/ToggleButton';
 import { CategoryFilter, type CategoryOption } from '@/components/ui/CategoryFilter';
 import { Martini, Package, Scale } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface EventoForecastTabProps {
   eventoId: number;
   totalPax?: number;
 }
 
-interface OfertaItem {
+interface ItemForecastCalculado {
   id: number;
-  tipo: 'coctel' | 'concepto';
+  tipo: string;
   categoria: string;
   nombre: string;
   consumoUnitario: number;
   peso: number;
   unidadBase: string;
+  volumenTotal: number;
 }
 
-interface PuntoServicioForecast {
+interface PuntoForecastReal {
   id: number;
   nombre: string;
   paxAsignado: number;
-  oferta: OfertaItem[];
+  oferta: ItemForecastCalculado[];
 }
 
-interface EtapaForecast {
+interface EtapaForecastReal {
   id: number;
   nombre: string;
   fase: string;
   horario: string;
   paxEtapa: number;
   reglaConsumo: number;
-  puntos: PuntoServicioForecast[];
+  puntos: PuntoForecastReal[];
 }
 
 export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
+  const [etapasForecast, setEtapasForecast] = useState<EtapaForecastReal[]>([]);
+  const [cargando, setCargando] = useState<boolean>(true);
   const [selecciones, setSelecciones] = useState<Record<number, 'todos' | number[]>>({});
   const [modoConsolidadoGlobal, setModoConsolidadoGlobal] = useState<boolean>(false);
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | number>('todos');
@@ -47,42 +51,110 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
   const categoriasFiltroOptions: CategoryOption[] = [
     { id: 'todos', label: 'Todos' },
     { id: 'coctel', label: 'Cócteles' },
-    { id: 'mocktail', label: 'Mocktails' },
-    { id: 'bebida', label: 'Bebidas' },
-    { id: 'jugo', label: 'Jugos' },
-    { id: 'agua', label: 'Aguas' },
+    { id: 'mixer', label: 'Mixers' },
+    { id: 'otro', label: 'Otros' },
   ];
 
-  const etapasForecast: EtapaForecast[] = [
-    {
-      id: 1,
-      nombre: 'Recepción & Cóctel',
-      fase: 'Etapa 1',
-      horario: '19:00 - 21:00 hrs',
-      paxEtapa: 600,
-      reglaConsumo: 1.15,
-      puntos: [
-        {
-          id: 101,
-          nombre: 'Barra Terraza Exterior',
-          paxAsignado: 450,
-          oferta: [
-            { id: 1, tipo: 'coctel', categoria: 'coctel', nombre: 'Pisco Sour Catedral', consumoUnitario: 1.5, peso: 1.2, unidadBase: 'unit' },
-            { id: 2, tipo: 'concepto', categoria: 'bebida', nombre: 'Bebida de Fantasía Cola', consumoUnitario: 250, peso: 0.8, unidadBase: 'ml' },
-          ]
-        },
-        {
-          id: 102,
-          nombre: 'Estación de Bienvenida VIP',
-          paxAsignado: 150,
-          oferta: [
-            { id: 4, tipo: 'concepto', categoria: 'agua', nombre: 'Espumante Brut', consumoUnitario: 200, peso: 1.5, unidadBase: 'ml' },
-            { id: 2, tipo: 'concepto', categoria: 'bebida', nombre: 'Bebida de Fantasía Cola', consumoUnitario: 250, peso: 0.3, unidadBase: 'ml' },
-          ]
+  // Cargar la información real desde Supabase para este evento
+  useEffect(() => {
+    async function cargarForecastReal() {
+      if (!eventoId) return;
+      setCargando(true);
+
+      try {
+        // 1. Obtener las etapas del evento
+        const { data: etapasData, error: errEtapas } = await supabase
+          .from('evento_etapas')
+          .select('id, nombre, orden, hora_inicio, hora_fin, pax_etapa, regla_consumo')
+          .eq('evento_id', eventoId)
+          .order('orden', { ascending: true });
+
+        if (errEtapas || !etapasData) {
+          console.error('Error al cargar etapas para forecast:', errEtapas);
+          setCargando(false);
+          return;
         }
-      ]
+
+        const etapasConstruidas: EtapaForecastReal[] = [];
+
+        for (const [index, etapa] of etapasData.entries()) {
+          // 2. Obtener los puntos de servicio de esta etapa
+          const { data: puntosData } = await supabase
+            .from('evento_puntos_servicio')
+            .select('id, nombre, pax_asignado')
+            .eq('etapa_id', etapa.id);
+
+          const puntosConstruidos: PuntoForecastReal[] = [];
+
+          if (puntosData) {
+            for (const punto of puntosData) {
+              // 3. Obtener los conceptos y pesos ajustados de cada punto
+              const { data: conceptosData } = await supabase
+                .from('evento_punto_conceptos')
+                .select(`
+                  peso_ajustado,
+                  conceptos_oferta (
+                    id,
+                    nombre,
+                    unidad_medida_base,
+                    tipo,
+                    slug
+                  )
+                `)
+                .eq('punto_servicio_id', punto.id);
+
+              const ofertaItems: ItemForecastCalculado[] = [];
+
+              if (conceptosData) {
+                conceptosData.forEach((item: any) => {
+                  const concepto = item.conceptos_oferta;
+                  if (!concepto) return;
+
+                  ofertaItems.push({
+                    id: concepto.id,
+                    tipo: concepto.tipo || 'otro',
+                    categoria: concepto.tipo || 'otro',
+                    nombre: concepto.nombre,
+                    consumoUnitario: 1, // Base estándar por unidad si no se especifica
+                    peso: Number(item.peso_ajustado) || 0, // Guardado como porcentaje (ej: 30%)
+                    unidadBase: concepto.unidad_medida_base || 'unit',
+                    volumenTotal: 0, // Se calcula matemáticamente abajo
+                  });
+                });
+              }
+
+              puntosConstruidos.push({
+                id: punto.id,
+                nombre: punto.nombre,
+                paxAsignado: punto.pax_asignado || 0,
+                oferta: ofertaItems,
+              });
+            }
+          }
+
+          const horarioTexto = `${etapa.hora_inicio?.slice(0, 5) || '--:--'} - ${etapa.hora_fin?.slice(0, 5) || '--:--'} hrs`;
+
+          etapasConstruidas.push({
+            id: etapa.id,
+            nombre: etapa.nombre,
+            fase: `Etapa ${index + 1}`,
+            horario: horarioTexto,
+            paxEtapa: etapa.pax_etapa || 0,
+            reglaConsumo: Number(etapa.regla_consumo) || 1, // Factor (ej: 1.15)
+            puntos: puntosConstruidos,
+          });
+        }
+
+        setEtapasForecast(etapasConstruidas);
+      } catch (error) {
+        console.error('Error procesando forecast:', error);
+      } finally {
+        setCargando(false);
+      }
     }
-  ];
+
+    cargarForecastReal();
+  }, [eventoId]);
 
   const toggleSeleccion = (etapaId: number, puntoId: number | 'todos') => {
     setSelecciones(prev => {
@@ -101,14 +173,17 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
     });
   };
 
-  const obtenerConsolidado = (etapa: EtapaForecast | 'global') => {
-    const consolidado = new Map<number, OfertaItem & { volumenTotal: number }>();
+  const obtenerConsolidado = (etapa: EtapaForecastReal | 'global') => {
+    const consolidado = new Map<number, ItemForecastCalculado>();
 
     if (etapa === 'global') {
       etapasForecast.forEach(e => {
         e.puntos.forEach(punto => {
           punto.oferta.forEach(item => {
-             const volumenCalculado = punto.paxAsignado * item.consumoUnitario * item.peso * e.reglaConsumo;
+             // Fórmula: PAX del punto * (Peso en % / 100) * Regla de consumo de la etapa
+             const factorPorcentaje = item.peso / 100;
+             const volumenCalculado = punto.paxAsignado * factorPorcentaje * e.reglaConsumo;
+
              if (consolidado.has(item.id)) {
                consolidado.get(item.id)!.volumenTotal += volumenCalculado;
              } else {
@@ -125,7 +200,9 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
 
       puntosActivos.forEach(punto => {
         punto.oferta.forEach(item => {
-          const volumenCalculado = punto.paxAsignado * item.consumoUnitario * item.peso * etapa.reglaConsumo;
+          const factorPorcentaje = item.peso / 100;
+          const volumenCalculado = punto.paxAsignado * factorPorcentaje * etapa.reglaConsumo;
+
           if (consolidado.has(item.id)) {
             consolidado.get(item.id)!.volumenTotal += volumenCalculado;
           } else {
@@ -143,10 +220,24 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
     return items;
   };
 
+  if (cargando) {
+    return <div className="p-8 text-center text-muted">Cargando matriz de forecast...</div>;
+  }
+
+  if (etapasForecast.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-muted border border-border/30 rounded-xl border-dashed">
+        <Scale size={32} className="mb-3 opacity-40" />
+        <p className="font-medium text-foreground">Sin datos de forecast registrados</p>
+        <p className="text-sm mt-1">Este evento aún no tiene etapas o puntos de servicio configurados en su oferta.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in pb-10" data-evento-id={eventoId}>
       
-      {/* Controles Superiores sin línea separadora inferior */}
+      {/* Controles Superiores */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-2">
         <CategoryFilter 
           options={categoriasFiltroOptions}
@@ -168,8 +259,7 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
           <Table className="border-none bg-transparent shadow-none">
             <TableHead>
               <TableRow className="border-b border-border/50">
-                <TableHeaderCell>Concepto Comercial / Cóctel</TableHeaderCell>
-                <TableHeaderCell align="center">Consumo Base</TableHeaderCell>
+                <TableHeaderCell>Concepto Comercial</TableHeaderCell>
                 <TableHeaderCell align="right">Volumen Requerido Global</TableHeaderCell>
               </TableRow>
             </TableHead>
@@ -189,9 +279,6 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
                         <span className="font-medium text-foreground">{item.nombre}</span>
                       </div>
                     </TableCell>
-                    <TableCell align="center" className="font-mono text-xs text-muted">
-                      {item.consumoUnitario} {item.unidadBase}/PAX
-                    </TableCell>
                     <TableCell align="right">
                       <span className="font-mono text-base font-bold text-primary">
                         {item.volumenTotal.toLocaleString('es-CL', { maximumFractionDigits: 1 })} {item.unidadBase}
@@ -201,7 +288,7 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3} align="center" className="py-8 text-muted border-none">
+                  <TableCell colSpan={2} align="center" className="py-8 text-muted border-none">
                     No hay datos consolidados para proyectar en las categorías seleccionadas.
                   </TableCell>
                 </TableRow>
@@ -213,12 +300,12 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
         etapasForecast.map((etapa) => {
           const seleccionActual = selecciones[etapa.id] || 'todos';
           const itemsConsolidados = obtenerConsolidado(etapa);
-          const porcentajeHolgura = (etapa.reglaConsumo * 100 - 100).toFixed(0);
+          const porcentajeHolgura = ((etapa.reglaConsumo * 100) - 100).toFixed(0);
 
           return (
             <div key={etapa.id} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-8">
               
-              {/* Columna Izquierda: BlockHeader Oficial del UI Kit + Puntos Operativos */}
+              {/* Columna Izquierda: BlockHeader + Puntos */}
               <div className="lg:col-span-4 xl:col-span-3 space-y-4">
                 <BlockHeader 
                   horario={etapa.horario}
@@ -250,15 +337,14 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
                 </div>
               </div>
 
-              {/* Columna Derecha: Tabla Flotante Read-Only */}
+              {/* Columna Derecha: Tabla Read-Only */}
               <div className="lg:col-span-8 xl:col-span-9">
                 <div className="overflow-x-auto custom-scrollbar">
                   <Table className="border-none bg-transparent shadow-none">
                     <TableHead>
                       <TableRow className="border-b border-border/50">
-                        <TableHeaderCell>Concepto Comercial / Cóctel</TableHeaderCell>
-                        <TableHeaderCell align="center">Consumo Base</TableHeaderCell>
-                        <TableHeaderCell align="center">Peso (Ajuste)</TableHeaderCell>
+                        <TableHeaderCell>Concepto Comercial</TableHeaderCell>
+                        <TableHeaderCell align="center">Preferencia</TableHeaderCell>
                         <TableHeaderCell align="right">Volumen Requerido</TableHeaderCell>
                       </TableRow>
                     </TableHead>
@@ -279,10 +365,7 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
                               </div>
                             </TableCell>
                             <TableCell align="center" className="font-mono text-xs text-muted">
-                              {item.consumoUnitario} {item.unidadBase}/PAX
-                            </TableCell>
-                            <TableCell align="center" className="font-mono text-xs text-muted">
-                              {item.peso}x
+                              {item.peso}%
                             </TableCell>
                             <TableCell align="right">
                               <span className="font-mono text-base font-bold text-primary">
@@ -293,7 +376,7 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4} align="center" className="py-8 text-muted border-none">
+                          <TableCell colSpan={3} align="center" className="py-8 text-muted border-none">
                             No hay elementos para los filtros o puntos seleccionados.
                           </TableCell>
                         </TableRow>
