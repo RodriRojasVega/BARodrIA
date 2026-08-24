@@ -151,7 +151,11 @@ export function useEventoMutations() {
       return nuevoEvento;
     },
     onSuccess: () => {
+      // 👈 Invalidamos TODAS las llaves relacionadas al evento para forzar recarga
       queryClient.invalidateQueries({ queryKey: ['eventos_b2b'] });
+      queryClient.invalidateQueries({ queryKey: ['cronograma_detalle'] });
+      queryClient.invalidateQueries({ queryKey: ['evento_puntos_servicio_real'] });
+      queryClient.invalidateQueries({ queryKey: ['evento_detalle_form'] });
     },
   });
 
@@ -275,7 +279,11 @@ export function useEventoMutations() {
       return eventoActualizado;
     },
     onSuccess: () => {
+      // 👈 Invalidamos TODAS las llaves relacionadas al evento para forzar recarga
       queryClient.invalidateQueries({ queryKey: ['eventos_b2b'] });
+      queryClient.invalidateQueries({ queryKey: ['cronograma_detalle'] });
+      queryClient.invalidateQueries({ queryKey: ['evento_puntos_servicio_real'] });
+      queryClient.invalidateQueries({ queryKey: ['evento_detalle_form'] });
     },
   });
 
@@ -286,7 +294,11 @@ export function useEventoMutations() {
       return id;
     },
     onSuccess: () => {
+      // 👈 Invalidamos TODAS las llaves relacionadas al evento para forzar recarga
       queryClient.invalidateQueries({ queryKey: ['eventos_b2b'] });
+      queryClient.invalidateQueries({ queryKey: ['cronograma_detalle'] });
+      queryClient.invalidateQueries({ queryKey: ['evento_puntos_servicio_real'] });
+      queryClient.invalidateQueries({ queryKey: ['evento_detalle_form'] });
     },
   });
 

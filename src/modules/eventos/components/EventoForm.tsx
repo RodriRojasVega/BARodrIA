@@ -14,18 +14,50 @@ import { EventoForecastFormTab, type PuntoServicioForm } from './tabs/EventoFore
 
 interface EventoFormProps {
   eventoId?: number | null; 
-  onGuardado: () => void;
+  onGuardado: (id?: number) => void;
   onCancelar: () => void;
 }
 
 type FormTabKey = 'general' | 'etapas' | 'oferta';
+
+interface EtapaRemota {
+  id: number;
+  orden: number;
+  nombre: string;
+  hora_inicio?: string | null;
+  hora_fin?: string | null;
+  // 👈 CORRECCIÓN: Restringido a los literales exactos para satisfacer a EtapaForm
+  modalidad_calculo?: 'paquete_fijo' | 'barra_libre' | 'tickets' | null; 
+  pax_etapa?: number | null;
+  regla_consumo?: number | null;
+  evento_etapa_salones?: Array<{ salon_id: number }>;
+}
+
+interface ActividadRemota {
+  id: number;
+  orden: number;
+  etapa_id: number | null;
+  nombre: string;
+  hora_inicio?: string | null;
+  hora_fin?: string | null;
+  es_hito?: boolean | null;
+}
+
+interface PuntoRemoto {
+  id: number;
+  etapa_id: number;
+  nombre: string;
+  pax_asignado?: number | null;
+  menu_id?: number | null;
+  evento_punto_salones?: Array<{ salon_id: number }>;
+  evento_punto_conceptos?: Array<{ concepto_id: number; peso_ajustado?: number | null }>;
+}
 
 export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps) {
   const [activeTab, setActiveTab] = useState<FormTabKey>('general');
   const { eventos } = useEventos();
   const isEditMode = eventoId !== null && eventoId !== undefined;
   
-  // 1. Obtenemos el detalle remoto de etapas, actividades y puntos
   const { data: detalleRemoto, isLoading: cargandoDetalle } = useEventoDetalleForm(eventoId, isEditMode);
 
   const [formData, setFormData] = useState<EventoFormData>(() => {
@@ -52,7 +84,7 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
           cliente_final_id: eventoActual.cliente_final_id || null,
           observaciones_logistica: eventoActual.observaciones_logistica || '',
           estado: estadoId,
-          spot_id: eventoActual.spot_id || null,
+          spot_id: eventoActual.spot_id || null, 
         };
       }
     }
@@ -88,35 +120,37 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
     { id: 'oferta', label: '3. Oferta y Puntos de Servicio' },
   ];
 
-  // 2. Inicializamos los estados alimentándolos directamente de detalleRemoto si ya cargó
-  const [actividadesRemotasPrevias, setActividadesRemotasPrevias] = useState<any[] | null>(null);
-  const [etapasRemotasPrevias, setEtapasRemotasPrevias] = useState<any[] | null>(null);
-  const [puntosRemotosPrevios, setPuntosRemotosPrevios] = useState<any[] | null>(null);
+  const [actividadesRemotasPrevias, setActividadesRemotasPrevias] = useState<ActividadForm[] | null>(null);
+  const [etapasRemotasPrevias, setEtapasRemotasPrevias] = useState<EtapaForm[] | null>(null);
+  const [puntosRemotosPrevios, setPuntosRemotosPrevios] = useState<PuntoServicioForm[] | null>(null);
 
-  // Mapeo limpio y declarativo cuando llega el detalle remoto
-  const etapas: EtapaForm[] = etapasRemotasPrevias || (detalleRemoto?.etapas ? detalleRemoto.etapas.map((e: any) => ({
+  const etapas: EtapaForm[] = etapasRemotasPrevias || (detalleRemoto?.etapas ? (detalleRemoto.etapas as EtapaRemota[]).map((e, index) => ({
     id: e.id,
+    evento_id: eventoId || 0,
+    orden: e.orden || index + 1,
     nombre: e.nombre,
     hora_inicio: e.hora_inicio || '',
     hora_fin: e.hora_fin || '',
     modalidad_calculo: e.modalidad_calculo || 'paquete_fijo',
     pax_etapa: e.pax_etapa || 0,
     regla_consumo: Number(e.regla_consumo) || 1,
-    salon_ids: (e.evento_etapa_salones || []).map((s: any) => s.salon_id),
+    salon_ids: (e.evento_etapa_salones || []).map((s) => s.salon_id),
   })) : []);
 
-  const actividades: ActividadForm[] = actividadesRemotasPrevias || (detalleRemoto?.actividades ? detalleRemoto.actividades.map((a: any) => ({
+  const actividades: ActividadForm[] = actividadesRemotasPrevias || (detalleRemoto?.actividades ? (detalleRemoto.actividades as ActividadRemota[]).map((a, index) => ({
     id: a.id,
+    evento_id: eventoId || 0,
+    orden: a.orden || index + 1,
     etapa_id: a.etapa_id,
     nombre: a.nombre,
     hora_inicio: a.hora_inicio || '',
     hora_fin: a.hora_fin || '',
-    es_hito: a.es_hito || false,
+    es_hito: Boolean(a.es_hito),
   })) : []);
 
-  const puntos: PuntoServicioForm[] = puntosRemotosPrevios || (detalleRemoto?.puntos ? detalleRemoto.puntos.map((p: any) => {
+  const puntos: PuntoServicioForm[] = puntosRemotosPrevios || (detalleRemoto?.puntos ? (detalleRemoto.puntos as PuntoRemoto[]).map((p) => {
     const pesosMap: Record<number, number> = {};
-    (p.evento_punto_conceptos || []).forEach((c: any) => {
+    (p.evento_punto_conceptos || []).forEach((c) => {
       pesosMap[c.concepto_id] = Number(c.peso_ajustado) || 0;
     });
     return {
@@ -124,13 +158,12 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
       etapa_id: p.etapa_id,
       nombre: p.nombre,
       pax: p.pax_asignado || 0,
-      salon_ids: (p.evento_punto_salones || []).map((s: any) => s.salon_id),
+      salon_ids: (p.evento_punto_salones || []).map((s) => s.salon_id),
       menu_id: p.menu_id || null,
       pesos_ajustados: pesosMap,
     };
   }) : []);
 
-  // Setters seguros que permiten al usuario seguir editando tras la carga inicial
   const setEtapasWrapper = (nuevasEtapas: EtapaForm[] | ((prev: EtapaForm[]) => EtapaForm[])) => {
     const actual = typeof nuevasEtapas === 'function' ? nuevasEtapas(etapas) : nuevasEtapas;
     setEtapasRemotasPrevias(actual);
@@ -152,18 +185,27 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
     try {
       const payload: EventoFormData = {
         ...formData,
+        estado: estadoBorrador ? 1 : formData.estado,
         actividades, 
         etapas,
         puntos,
       };
 
+      let eventoGuardadoId = eventoId;
+
       if (isEditMode && eventoId) {
         await actualizarEvento.mutateAsync({ id: eventoId, data: payload });
       } else {
-        await crearEvento.mutateAsync(payload);
+        const nuevoEvento = await crearEvento.mutateAsync(payload);
+        eventoGuardadoId = nuevoEvento.id;
       }
       
-      onGuardado();
+      if (estadoBorrador) {
+        alert('✅ Borrador guardado exitosamente.'); 
+      } else {
+        onGuardado(eventoGuardadoId ?? undefined);
+      }
+      
     } catch (error) {
       console.error('Error al guardar el evento:', error);
       alert('Ocurrió un error al intentar guardar el evento.');

@@ -811,6 +811,118 @@ export type Database = {
           },
         ]
       }
+      evento_punto_conceptos: {
+        Row: {
+          concepto_id: number
+          peso_ajustado: number
+          punto_servicio_id: number
+        }
+        Insert: {
+          concepto_id: number
+          peso_ajustado?: number
+          punto_servicio_id: number
+        }
+        Update: {
+          concepto_id?: number
+          peso_ajustado?: number
+          punto_servicio_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epc_concepto_fkey"
+            columns: ["concepto_id"]
+            isOneToOne: false
+            referencedRelation: "conceptos_oferta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epc_punto_fkey"
+            columns: ["punto_servicio_id"]
+            isOneToOne: false
+            referencedRelation: "evento_puntos_servicio"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evento_punto_salones: {
+        Row: {
+          punto_servicio_id: number
+          salon_id: number
+        }
+        Insert: {
+          punto_servicio_id: number
+          salon_id: number
+        }
+        Update: {
+          punto_servicio_id?: number
+          salon_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "epsalones_punto_fkey"
+            columns: ["punto_servicio_id"]
+            isOneToOne: false
+            referencedRelation: "evento_puntos_servicio"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "epsalones_salon_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salones_espacios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evento_puntos_servicio: {
+        Row: {
+          etapa_id: number
+          evento_id: number
+          id: number
+          menu_id: number | null
+          nombre: string
+          pax_asignado: number
+        }
+        Insert: {
+          etapa_id: number
+          evento_id: number
+          id?: never
+          menu_id?: number | null
+          nombre: string
+          pax_asignado?: number
+        }
+        Update: {
+          etapa_id?: number
+          evento_id?: number
+          id?: never
+          menu_id?: number | null
+          nombre?: string
+          pax_asignado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eps_etapa_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "evento_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eps_evento_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eps_menu_fkey"
+            columns: ["menu_id"]
+            isOneToOne: false
+            referencedRelation: "menus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evento_staff_asignacion: {
         Row: {
           etapa_id: number | null
@@ -849,13 +961,6 @@ export type Database = {
             columns: ["evento_id"]
             isOneToOne: false
             referencedRelation: "eventos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "evento_staff_asignacion_punto_servicio_id_fkey"
-            columns: ["punto_servicio_id"]
-            isOneToOne: false
-            referencedRelation: "puntos_servicio"
             referencedColumns: ["id"]
           },
           {
@@ -1198,6 +1303,60 @@ export type Database = {
           },
         ]
       }
+      menu_conceptos: {
+        Row: {
+          concepto_id: number
+          menu_id: number
+          peso_defecto: number
+        }
+        Insert: {
+          concepto_id: number
+          menu_id: number
+          peso_defecto?: number
+        }
+        Update: {
+          concepto_id?: number
+          menu_id?: number
+          peso_defecto?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mc_concepto_fkey"
+            columns: ["concepto_id"]
+            isOneToOne: false
+            referencedRelation: "conceptos_oferta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mc_menu_fkey"
+            columns: ["menu_id"]
+            isOneToOne: false
+            referencedRelation: "menus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menus: {
+        Row: {
+          descripcion: string | null
+          estado: string | null
+          id: number
+          nombre: string
+        }
+        Insert: {
+          descripcion?: string | null
+          estado?: string | null
+          id?: never
+          nombre: string
+        }
+        Update: {
+          descripcion?: string | null
+          estado?: string | null
+          id?: never
+          nombre?: string
+        }
+        Relationships: []
+      }
       mesas: {
         Row: {
           capacidad_personas: number | null
@@ -1243,106 +1402,6 @@ export type Database = {
           nombre?: string
           observaciones?: string | null
           telefono?: string | null
-        }
-        Relationships: []
-      }
-      punto_servicio_asignaciones: {
-        Row: {
-          evento_etapa_salon_id: number
-          id: number
-          pax_estimado_asignado: number | null
-          punto_servicio_id: number
-        }
-        Insert: {
-          evento_etapa_salon_id: number
-          id?: never
-          pax_estimado_asignado?: number | null
-          punto_servicio_id: number
-        }
-        Update: {
-          evento_etapa_salon_id?: number
-          id?: never
-          pax_estimado_asignado?: number | null
-          punto_servicio_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "psa_etapa_salon_fkey"
-            columns: ["evento_etapa_salon_id"]
-            isOneToOne: false
-            referencedRelation: "evento_etapa_salones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "psa_punto_fkey"
-            columns: ["punto_servicio_id"]
-            isOneToOne: false
-            referencedRelation: "puntos_servicio"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      punto_servicio_oferta: {
-        Row: {
-          coctel_id: number | null
-          concepto_id: number | null
-          factor_ajuste_demanda: number | null
-          id: number
-          punto_servicio_id: number
-        }
-        Insert: {
-          coctel_id?: number | null
-          concepto_id?: number | null
-          factor_ajuste_demanda?: number | null
-          id?: never
-          punto_servicio_id: number
-        }
-        Update: {
-          coctel_id?: number | null
-          concepto_id?: number | null
-          factor_ajuste_demanda?: number | null
-          id?: never
-          punto_servicio_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "pto_srv_oferta_coctel_fkey"
-            columns: ["coctel_id"]
-            isOneToOne: false
-            referencedRelation: "cocteles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pto_srv_oferta_concepto_fkey"
-            columns: ["concepto_id"]
-            isOneToOne: false
-            referencedRelation: "conceptos_oferta"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pto_srv_oferta_punto_fkey"
-            columns: ["punto_servicio_id"]
-            isOneToOne: false
-            referencedRelation: "puntos_servicio"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      puntos_servicio: {
-        Row: {
-          estado: string | null
-          id: number
-          nombre: string
-        }
-        Insert: {
-          estado?: string | null
-          id?: never
-          nombre: string
-        }
-        Update: {
-          estado?: string | null
-          id?: never
-          nombre?: string
         }
         Relationships: []
       }

@@ -51,3 +51,6 @@ Este documento centraliza las ideas, mejoras y tareas pendientes por implementar
 - Agregar función de eliminar evento
 - Implementar el arrastre de actividades y etapas en cronograma
 - Disenar e implementar lógicas de seguimiento de pickings (devoluciones).
+
+Actualizar database.type.ts:
+supabase gen types typescript --project-id qnsbkeqgtprrirgasric --schema public > src/types/database.types.ts

@@ -21,12 +21,18 @@ export interface EventoConRelaciones {
   tipo_evento: number | null; 
   estado: number;             
   
-  // Relaciones de catálogos y entidades
   mandante?: ClienteEmpresa;
   cliente_final?: ClienteEmpresa;
-  spot?: { id: number; nombre: string }; // 👈 Añadimos la interfaz para el Spot
+  spot?: { id: number; nombre: string }; 
   tipo_evento_info?: { id: number; slug: string; nombre: string };
   estado_info?: { id: number; slug: string; nombre: string };
+  // Añadimos el tipo estricto para solucionar el error en EventoGeneralTab
+  etapas?: { 
+    id: number; 
+    orden: number; 
+    nombre: string; 
+    evento_etapa_salones?: { salon_id: number; salones_espacios?: { nombre: string } }[] 
+  }[];
 }
 
 export function useEventos() {

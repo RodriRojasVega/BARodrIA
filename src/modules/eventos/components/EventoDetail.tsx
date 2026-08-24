@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Layers, Calculator, ClipboardList, UserCheck, Printer, Edit, Trash2, Info, CalendarRange } from 'lucide-react';
 import type { EventoConRelaciones } from '../hooks/useEventos';
+import { useEventoMutations } from '../hooks/useEventoMutations'; // 👈 1. Importamos el hook de mutaciones
 
 import { EventoGeneralTab } from './EventoGeneralTab';
 import { EventoCronogramaTab } from './EventoCronogramaTab';
@@ -23,6 +24,7 @@ type TabKey = 'general' | 'cronograma' | 'forecast' | 'pickings' | 'staff';
 
 export function EventoDetail({ evento, onVolver, onEditar }: EventoDetailProps){
   const [activeTab, setActiveTab] = useState<TabKey>('general');
+  const { eliminarEvento } = useEventoMutations(); // 👈 2. Instanciamos la función de eliminar
 
   const tabsConfig = [
     { id: 'general', label: 'Info. General', icon: <Info size={14} /> },
@@ -32,7 +34,6 @@ export function EventoDetail({ evento, onVolver, onEditar }: EventoDetailProps){
     { id: 'staff', label: 'Asignación de Staff', icon: <UserCheck size={14} /> },
   ];
 
-  // Extracción segura del nombre y slug del estado utilizando el catálogo relacional
   const estadoNombre = evento.estado_info?.nombre || 'Cotización';
   const estadoSlug = evento.estado_info?.slug || 'cotizacion';
   const tipoNombre = evento.tipo_evento_info?.nombre || 'Evento Corporativo';
@@ -44,6 +45,22 @@ export function EventoDetail({ evento, onVolver, onEditar }: EventoDetailProps){
       case 'ejecutado': return <Badge variant="info">{nombre}</Badge>;
       case 'cancelado': return <Badge variant="danger">{nombre}</Badge>;
       default: return <Badge variant="default">{nombre}</Badge>;
+    }
+  };
+
+  // 👈 3. Creamos la función manejadora con la confirmación de seguridad
+  const handleEliminar = async () => {
+    const confirmar = window.confirm(
+      '¿Estás seguro de que deseas eliminar este evento? Esta acción borrará todas sus etapas y puntos, y no se puede deshacer.'
+    );
+    if (confirmar) {
+      try {
+        await eliminarEvento.mutateAsync(evento.id);
+        onVolver(); // Volvemos al listado/calendario tras eliminar
+      } catch (error) {
+        alert('Error al eliminar el evento. Revisa la consola para más detalles.');
+        console.error(error);
+      }
     }
   };
 
@@ -81,11 +98,14 @@ export function EventoDetail({ evento, onVolver, onEditar }: EventoDetailProps){
                 onClick={() => onEditar?.(evento.id)}
                 title="Editar Evento"
               />
+              {/* 👈 4. Conectamos la función al botón y bloqueamos clics dobles mientras procesa */}
               <Button 
                 variant="danger" 
                 size="sm" 
                 icon={<Trash2 size={15} />}
-                title="Eliminar"
+                title="Eliminar Evento"
+                onClick={handleEliminar}
+                disabled={eliminarEvento.isPending}
               />
             </div>
           }
@@ -105,27 +125,22 @@ export function EventoDetail({ evento, onVolver, onEditar }: EventoDetailProps){
         {/* 3. CONTENIDO DE LAS PESTAÑAS */}
         <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-4">
           
-          {/* PESTAÑA 1: INFORMACIÓN GENERAL (Modularizada) */}
           <TabPanel id="general" activeTab={activeTab}>
             <EventoGeneralTab evento={evento} />
           </TabPanel>
 
-          {/* PESTAÑA 2: CRONOGRAMA Y ETAPAS */}
           <TabPanel id="cronograma" activeTab={activeTab}>
             <EventoCronogramaTab eventoId={evento.id} />
           </TabPanel>
 
-          {/* PESTAÑA 3: FORECAST & MATRIZ BOM */}
           <TabPanel id="forecast" activeTab={activeTab}>
             <EventoForecastTab eventoId={evento.id} totalPax={evento.total_pax} />
           </TabPanel>
 
-          {/* PESTAÑA 4: PICKINGS */}
           <TabPanel id="pickings" activeTab={activeTab}>
             <EventoPickingsTab eventoId={evento.id} totalPax={evento.total_pax} />
           </TabPanel>
 
-          {/* PESTAÑA 5: STAFF */}
           <TabPanel id="staff" activeTab={activeTab}>
             <EventoStaffTab eventoId={evento.id} />
           </TabPanel>

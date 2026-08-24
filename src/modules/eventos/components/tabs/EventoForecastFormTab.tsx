@@ -27,7 +27,7 @@ interface EventoForecastFormTabProps {
 
 export interface PuntoServicioForm {
   id: string; 
-  etapa_id: string | number; // 👈 Adaptado para soportar IDs temporales
+  etapa_id: string | number;
   nombre: string;
   pax: number;
   salon_ids: number[];
@@ -89,7 +89,7 @@ export function EventoForecastFormTab({
     setPuntoActivoId(nuevoPunto.id);
   };
 
-  const handleUpdatePunto = (id: string, field: keyof PuntoServicioForm, value: any) => {
+  const handleUpdatePunto = (id: string, field: keyof PuntoServicioForm, value: unknown) => {
     onChangePuntos(puntos.map(p => {
       if (p.id !== id) return p;
       const updated = { ...p, [field]: value };
@@ -138,7 +138,6 @@ export function EventoForecastFormTab({
   const puntoActivo = puntos.find(p => p.id === puntoActivoId);
   const menuDelPunto = mockMenus.find(m => m.id === puntoActivo?.menu_id);
 
-  // Si no hay etapas creadas en la pestaña anterior
   if (etapas.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-muted p-8 border border-border/30 rounded-xl bg-transparent border-dashed mt-4">
@@ -166,7 +165,6 @@ export function EventoForecastFormTab({
             const excesoPax = paxAsignados > paxObjetivo;
             const puntosDeEtapa = puntos.filter(p => p.etapa_id === etapa.id);
             
-            // Usamos la regla de consumo de la etapa si no hay factor local editado
             const factorActual = factoresEtapa[etapa.id] !== undefined 
               ? factoresEtapa[etapa.id] 
               : ((Number(etapa.regla_consumo) || 1) - 1) * 100;
@@ -258,8 +256,9 @@ export function EventoForecastFormTab({
                     ))
                   )}
 
+                  {/* 👈 CORRECCIÓN APLICADA: variant="outline" cambiado a variant="secondary" */}
                   <Button 
-                    variant="outline" 
+                    variant="secondary" 
                     size="sm" 
                     icon={<Plus size={14} />} 
                     className="w-full mt-1 border-dashed border-border/40 bg-transparent text-muted-foreground hover:text-foreground hover:bg-surface-muted/20"

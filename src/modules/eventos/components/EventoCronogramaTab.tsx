@@ -18,6 +18,11 @@ interface EventoCronogramaTabProps {
   eventoId: number;
 }
 
+interface EventoEtapaRelacion {
+  salon_id: number;
+  salones_espacios?: { nombre: string };
+}
+
 export function EventoCronogramaTab({ eventoId }: EventoCronogramaTabProps) {
   const [faseActiva, setFaseActiva] = useState<number | null>(null);
 
@@ -37,7 +42,6 @@ export function EventoCronogramaTab({ eventoId }: EventoCronogramaTabProps) {
     return puntos.filter(p => p.etapa_id === etapaId);
   };
 
-  // Mapeo dinámico para el VerticalTimeline con la insignia de Fase (F)
   const timelineItems: VerticalTimelineItem[] = actividades.map(a => {
     const etapaVinculada = etapas.find(e => e.id === a.etapa_id);
     return {
@@ -46,7 +50,7 @@ export function EventoCronogramaTab({ eventoId }: EventoCronogramaTabProps) {
       nombre: a.nombre,
       hora_inicio: a.hora_inicio?.slice(0, 5) || '',
       hora_fin: a.hora_fin?.slice(0, 5) || '',
-      es_hito: a.es_hito,
+      es_hito: a.es_hito === true ? true : undefined,
       faseOrden: etapaVinculada ? etapaVinculada.orden : undefined
     };
   });
@@ -65,7 +69,6 @@ export function EventoCronogramaTab({ eventoId }: EventoCronogramaTabProps) {
     <div className="w-full animate-fade-in pb-8 pt-4">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* TIMELINE */}
         <section className="lg:col-span-4 lg:sticky lg:top-4">
           {actividades.length === 0 ? (
             <div className="text-xs text-muted italic p-4 text-center border border-border/50 rounded-xl">
@@ -80,7 +83,6 @@ export function EventoCronogramaTab({ eventoId }: EventoCronogramaTabProps) {
           )}
         </section>
 
-        {/* TABLA DE ETAPAS */}
         <section className="lg:col-span-8">
           <div className="w-full overflow-x-auto custom-scrollbar">
             <Table className="border-none bg-transparent shadow-none">
@@ -139,8 +141,8 @@ export function EventoCronogramaTab({ eventoId }: EventoCronogramaTabProps) {
 
                         <TableCell>
                           <div className="flex flex-col gap-2 min-w-[200px]">
-                            {etapa.evento_etapa_salones && etapa.evento_etapa_salones.length > 0 ? (
-                              etapa.evento_etapa_salones.map((rel: any) => (
+                            {etapa.evento_etapa_salones && (etapa.evento_etapa_salones as EventoEtapaRelacion[]).length > 0 ? (
+                              (etapa.evento_etapa_salones as EventoEtapaRelacion[]).map((rel) => (
                                 <div key={rel.salon_id} className={cn(
                                   "flex items-center gap-1.5 px-2 py-1 rounded-md border w-fit transition-colors",
                                   isActive ? "bg-primary/10 border-primary/30" : "bg-surface-muted/50 border-border/50"

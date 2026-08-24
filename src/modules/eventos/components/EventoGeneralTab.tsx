@@ -18,22 +18,20 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
   const estadoNombre = evento.estado_info?.nombre || (typeof evento.estado === 'string' ? evento.estado : 'Cotización');
   const estadoSlug = evento.estado_info?.slug || (typeof evento.estado === 'string' ? evento.estado : 'cotizacion');
 
-  // Extraer y unificar dinámicamente los salones desde las etapas del evento
+  // 👈 CORRECCIÓN: Tipado estricto leyendo únicamente evento_etapa_salones según la interfaz de useEventos
   const salonesUnicos = Array.from(
     new Set(
-      (evento.etapas || []).flatMap((etapa: any) => 
-        (etapa.salones || etapa.evento_etapa_salones || []).map((s: any) => s.salon?.nombre || s.nombre)
+      (evento.etapas || []).flatMap((etapa) => 
+        (etapa.evento_etapa_salones || []).map((s) => s.salones_espacios?.nombre)
       )
     )
   ).filter(Boolean);
 
-  // Obtener el nombre del spot limpio desde la relación
   const spotNombre = evento.spot?.nombre || null;
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       
-      {/* 1. PRIMERA FILA: 6 TARJETAS KPI (Dashboard Edge-to-Edge) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <EventDashboardCard 
           label="Fecha Operativa" 
@@ -69,12 +67,9 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
         />
       </div>
 
-      {/* 2. SEGUNDA FILA: GRILLA DE 3 COLUMNAS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* COLUMNA 1: Entidades Comerciales */}
         <SectionCard className="space-y-6 h-full">
-          {/* Mandante */}
           <div className="space-y-2">
             <IconText 
               icon={<Building size={15} className="text-primary" />} 
@@ -89,7 +84,6 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
 
           <div className="h-px w-full bg-border/50" />
 
-          {/* Cliente Final */}
           <div className="space-y-2">
             <IconText 
               icon={<MapPin size={15} className="text-primary" />} 
@@ -103,10 +97,8 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
           </div>
         </SectionCard>
 
-        {/* COLUMNA 2: Spot, Locaciones y Modalidades Separadas */}
         <SectionCard className="space-y-5 h-full">
           
-          {/* 1. Spot Principal */}
           <div className="space-y-2">
             <IconText 
               icon={<Store size={15} className="text-primary" />} 
@@ -120,7 +112,6 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
 
           <div className="h-px w-full bg-border/50" />
 
-          {/* 2. Locaciones Asignadas (Salones) */}
           <div className="space-y-2">
             <IconText 
               icon={<MapPin size={15} className="text-primary" />} 
@@ -129,8 +120,8 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
             />
             <div className="flex flex-wrap gap-2 pt-1">
               {salonesUnicos.length > 0 ? (
-                salonesUnicos.map(salon => (
-                  <Badge key={salon as string} variant="default" size="sm">{salon as string}</Badge>
+                salonesUnicos.map((salon, idx) => (
+                  <Badge key={idx} variant="default" size="sm">{salon as string}</Badge>
                 ))
               ) : (
                 <span className="text-xs text-muted italic">Sin salones específicos en etapas.</span>
@@ -140,7 +131,6 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
 
           <div className="h-px w-full bg-border/50" />
 
-          {/* 3. Modalidades de Servicio */}
           <div className="space-y-2">
             <IconText 
               icon={<Layers size={15} className="text-primary" />} 
@@ -156,7 +146,6 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
 
         </SectionCard>
 
-        {/* COLUMNA 3: Observaciones y Restricciones */}
         <SectionCard className="space-y-3 h-full bg-surface-muted/30">
           <IconText 
             icon={<FileText size={15} className="text-primary" />} 

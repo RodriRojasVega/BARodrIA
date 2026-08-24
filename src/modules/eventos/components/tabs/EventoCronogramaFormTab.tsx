@@ -1,3 +1,4 @@
+// src/modules/eventos/components/tabs/EventoCronogramaFormTab.tsx
 import React, { useState } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -31,8 +32,10 @@ export interface EtapaForm extends Omit<EventoEtapa, 'id'> {
   actividad_id_temp?: number | string;
 }
 
-export interface ActividadForm extends Omit<EventoActividadCronograma, 'id'> {
+// 👈 CORRECCIÓN 1: Permitimos que etapa_id reciba temporales tipo string ('temp_123') durante la edición
+export interface ActividadForm extends Omit<EventoActividadCronograma, 'id' | 'etapa_id'> {
   id: number | string;
+  etapa_id: number | string | null;
 }
 
 export interface Salon {
@@ -248,10 +251,10 @@ export function EventoCronogramaFormTab({
         </div>
 
         <div className="flex justify-between items-center pt-2">
+          {/* 👈 CORRECCIÓN 2: Eliminada la propiedad title inválida */}
           <ToggleButton 
             isActive={editingActividad.es_hito} 
             onClick={() => setEditingActividad({ ...editingActividad, es_hito: !editingActividad.es_hito })}
-            title="Marcar como Hito Crítico"
           >
             <Star size={14} className={editingActividad.es_hito ? 'fill-current' : ''} />
           </ToggleButton>
@@ -517,12 +520,13 @@ export function EventoCronogramaFormTab({
                       </TableCell>
 
                       <TableCell align="center">
+                        {/* 👈 CORRECCIÓN 3: Tamaños y variantes válidos del UI Kit */}
                         <div className="flex items-center justify-center gap-1">
-                          <Button variant="ghost" size="inline" icon={<ChevronUp size={16} />} onClick={() => handleMoveEtapa(index, 'up')} disabled={index === 0} title="Mover Arriba" />
-                          <Button variant="ghost" size="inline" icon={<ChevronDown size={16} />} onClick={() => handleMoveEtapa(index, 'down')} disabled={index === etapas.length - 1} title="Mover Abajo" />
+                          <Button variant="ghost" size="sm" icon={<ChevronUp size={16} />} onClick={() => handleMoveEtapa(index, 'up')} disabled={index === 0} title="Mover Arriba" />
+                          <Button variant="ghost" size="sm" icon={<ChevronDown size={16} />} onClick={() => handleMoveEtapa(index, 'down')} disabled={index === etapas.length - 1} title="Mover Abajo" />
                           <div className="w-px h-4 bg-border/50 mx-1"></div>
-                          <Button variant="ghost" size="inline" className="text-primary hover:bg-primary/10" icon={<Edit size={15} />} onClick={() => handleEditEtapa(etapa)} title="Editar Etapa" />
-                          <Button variant="inline-danger" size="inline" icon={<Trash2 size={15} />} onClick={() => handleDeleteEtapa(etapa.id)} title="Eliminar Etapa" />
+                          <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10" icon={<Edit size={15} />} onClick={() => handleEditEtapa(etapa)} title="Editar Etapa" />
+                          <Button variant="danger" size="sm" icon={<Trash2 size={15} />} onClick={() => handleDeleteEtapa(etapa.id)} title="Eliminar Etapa" />
                         </div>
                       </TableCell>
                     </TableRow>

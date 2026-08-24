@@ -25,16 +25,36 @@ export function EventosView() {
     setSubVista('formulario');
   };
 
-  // NUEVA: Maneja la transición del detalle hacia el formulario en modo edición
   const handleEditarEvento = (id: number) => {
     setEventoSeleccionadoId(id);
     setSubVista('formulario');
   };
 
-  const handleVolver = () => {
+  // 👈 Función para el botón volver explícito desde el Detail
+  const handleVolverAlListado = () => {
     setEventoSeleccionadoId(null);
     setSubVista('listado');
     recargarEventos();
+  };
+
+  // 👈 NUEVO: Función inteligente para cuando el formulario Guarda
+  const handleGuardadoFormulario = (nuevoId?: number) => {
+    if (nuevoId) {
+      setEventoSeleccionadoId(nuevoId); // Guarda el ID del evento editado o recién creado
+      setSubVista('detalle'); // Te redirige al Detail en lugar del listado
+    } else {
+      setSubVista('listado');
+    }
+    recargarEventos();
+  };
+
+  // 👈 NUEVO: Función inteligente para cuando el formulario Cancela
+  const handleCancelarFormulario = () => {
+    if (eventoSeleccionadoId) {
+      setSubVista('detalle'); // Si estabas editando, vuelve al detail
+    } else {
+      setSubVista('listado'); // Si estabas creando uno nuevo, vuelve al listado
+    }
   };
 
   return (
@@ -59,17 +79,17 @@ export function EventosView() {
           return (
             <EventoDetail 
               evento={eventoObj} 
-              onVolver={handleVolver} 
-              onEditar={handleEditarEvento} // 👈 CONECTADO AQUÍ
+              onVolver={handleVolverAlListado} 
+              onEditar={handleEditarEvento} 
             />
           );
         })()}
 
         {subVista === 'formulario' && (
           <EventoForm 
-            eventoId={eventoSeleccionadoId} // 👈 PASAMOS EL ID PARA QUE SEPA QUE ESTÁ EDITANDO
-            onGuardado={handleVolver} 
-            onCancelar={handleVolver} 
+            eventoId={eventoSeleccionadoId} 
+            onGuardado={handleGuardadoFormulario} // 👈 Conectado a la nueva función
+            onCancelar={handleCancelarFormulario} // 👈 Conectado a la nueva función
           />
         )}
       </div>
