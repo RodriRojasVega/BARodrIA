@@ -32,7 +32,6 @@ export interface EtapaForm extends Omit<EventoEtapa, 'id'> {
   actividad_id_temp?: number | string;
 }
 
-// 👈 CORRECCIÓN 1: Permitimos que etapa_id reciba temporales tipo string ('temp_123') durante la edición
 export interface ActividadForm extends Omit<EventoActividadCronograma, 'id' | 'etapa_id'> {
   id: number | string;
   etapa_id: number | string | null;
@@ -65,6 +64,9 @@ export function EventoCronogramaFormTab({
   const [editingActividad, setEditingActividad] = useState<ActividadForm | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [actToDelete, setActToDelete] = useState<ActividadForm | null>(null);
+  
+  // Estado para rastrear la selección activa cruzada (Timeline <-> Tabla)
+  const [activeFaseOrden, setActiveFaseOrden] = useState<number | null>(null);
 
   // ==========================================
   // LÓGICA DE ETAPAS
@@ -89,6 +91,7 @@ export function EventoCronogramaFormTab({
   };
 
   const handleEditEtapa = (etapa: EtapaForm) => {
+    // Buscamos de forma robusta la actividad vinculada a esta etapa
     const linkedAct = actividades.find(a => String(a.etapa_id) === String(etapa.id));
     setEditingEtapa({ ...etapa, actividad_id_temp: linkedAct ? linkedAct.id : '' });
   };
@@ -103,10 +106,13 @@ export function EventoCronogramaFormTab({
       onChangeEtapas([...etapas, editingEtapa]);
     }
 
+    // Sincronización bidireccional estricta del vínculo Etapa <-> Actividad
     const nuevasActividades = actividades.map(a => {
+      // Si esta actividad fue seleccionada en el select temporal de la etapa
       if (editingEtapa.actividad_id_temp && String(a.id) === String(editingEtapa.actividad_id_temp)) {
         return { ...a, etapa_id: editingEtapa.id };
       }
+      // Si la actividad estaba vinculada a esta etapa pero ahora se desvinculó en el select
       if (String(a.etapa_id) === String(editingEtapa.id) && String(a.id) !== String(editingEtapa.actividad_id_temp)) {
         return { ...a, etapa_id: null };
       }
@@ -204,7 +210,7 @@ export function EventoCronogramaFormTab({
     if (updatedEditing) setEditingActividad(updatedEditing);
   };
 
-  // Preparamos datos del Timeline. Validamos duplicidad si es un registro "temp" nuevo.
+  // Preparamos datos del Timeline
   const timelineData = [...actividades];
   if (editingActividad && !actividades.some(a => String(a.id) === String(editingActividad.id))) {
     timelineData.push(editingActividad);
@@ -251,9 +257,8 @@ export function EventoCronogramaFormTab({
         </div>
 
         <div className="flex justify-between items-center pt-2">
-          {/* 👈 CORRECCIÓN 2: Eliminada la propiedad title inválida */}
           <ToggleButton 
-            isActive={editingActividad.es_hito} 
+            isActive={!!editingActividad.es_hito} 
             onClick={() => setEditingActividad({ ...editingActividad, es_hito: !editingActividad.es_hito })}
           >
             <Star size={14} className={editingActividad.es_hito ? 'fill-current' : ''} />
@@ -325,10 +330,8 @@ export function EventoCronogramaFormTab({
               onChange={(e) => setEditingEtapa({ ...editingEtapa, actividad_id_temp: e.target.value })}
             >
               <option value="">-- Ninguna --</option>
-              {actividades
-                .filter(a => !a.etapa_id || String(a.etapa_id) === String(editingEtapa.id))
-                .map(a => (
-                  <option key={a.id} value={a.id}>{a.nombre}</option>
+              {actividades.map(a => (
+                <option key={a.id} value={a.id}>{a.nombre || `Actividad #${a.orden}`}</option>
               ))}
             </Select>
 
@@ -377,7 +380,6 @@ export function EventoCronogramaFormTab({
           "flex flex-col gap-4 transition-all duration-300 ease-in-out", 
           viewMode === 'split' ? "lg:col-span-4 lg:sticky lg:top-4" : viewMode === 'actividades' ? "lg:col-span-12 max-w-3xl mx-auto w-full" : "hidden"
         )}>
-          {/* HEADER DEL PANEL IZQUIERDO */}
           <div className="flex items-center gap-2 border-b border-border/50 pb-2">
             {viewMode === 'split' && (
               <Button variant="ghost" size="sm" icon={<PanelLeftClose size={16} className="text-muted" />} onClick={() => setViewMode('etapas')} title="Ocultar Línea de Tiempo" />
@@ -401,9 +403,16 @@ export function EventoCronogramaFormTab({
             <VerticalTimeline 
               items={timelineItems} 
               activeItem={editingActividad ? editingActividad.id : null}
-              onSelectItem={(orden) => {
-                const act = actividades.find(a => a.orden === orden);
-                if (act) setEditingActividad(act);
+              onSelectItem={(ordenOrId) => {
+                const act = actividades.find(a => a.id === ordenOrId || a.orden === ordenOrId);
+                if (act) {
+                  setEditingActividad(act);
+                  // Destacamos visualmente la etapa vinculada si la tiene
+                  if (act.etapa_id) {
+                    const etapaVinculada = etapas.find(e => String(e.id) === String(act.etapa_id));
+                    if (etapaVinculada) setActiveFaseOrden(etapaVinculada.orden);
+                  }
+                }
               }}
               onEdit={(id) => {
                 const act = actividades.find(a => String(a.id) === String(id));
@@ -425,7 +434,6 @@ export function EventoCronogramaFormTab({
           "flex flex-col gap-4 transition-all duration-300 ease-in-out", 
           viewMode === 'split' ? "lg:col-span-8" : viewMode === 'etapas' ? "lg:col-span-12" : "hidden"
         )}>
-          {/* HEADER DEL PANEL DERECHO */}
           <div className="flex items-center gap-2 border-b border-border/50 pb-2">
             {viewMode === 'etapas' && (
               <Button variant="ghost" size="sm" icon={<PanelLeft size={16} className="text-muted" />} onClick={() => setViewMode('split')} title="Mostrar Línea de Tiempo" />
@@ -465,14 +473,22 @@ export function EventoCronogramaFormTab({
                   if (isEditing) return renderFilaEdicionEtapa();
 
                   const linkedAct = actividades.find(a => String(a.etapa_id) === String(etapa.id));
+                  const isHighlighted = activeFaseOrden === etapa.orden || (editingActividad && String(editingActividad.etapa_id) === String(etapa.id));
 
                   return (
-                    <TableRow key={etapa.id} className="border-border/40 hover:bg-surface-muted/30 transition-colors">
+                    <TableRow 
+                      key={etapa.id} 
+                      onClick={() => setActiveFaseOrden(etapa.orden === activeFaseOrden ? null : etapa.orden)}
+                      className={cn(
+                        "cursor-pointer transition-colors",
+                        isHighlighted ? "bg-primary/5 border-l-2 border-primary" : "border-border/40 hover:bg-surface-muted/30"
+                      )}
+                    >
                       <TableCell>
                         <div className="flex flex-col min-w-[140px]">
-                          <span className="font-semibold text-sm text-foreground">{etapa.nombre}</span>
+                          <span className={cn("font-semibold text-sm", isHighlighted ? "text-primary" : "text-foreground")}>{etapa.nombre}</span>
                           <IconText 
-                            icon={<Clock size={12} className="text-primary/70" />}
+                            icon={<Clock size={12} className={isHighlighted ? "text-primary" : "text-primary/70"} />}
                             text={`${etapa.hora_inicio?.slice(0, 5) || '--:--'} - ${etapa.hora_fin?.slice(0, 5) || '--:--'} hrs`}
                             textClassName="font-mono text-xs text-muted"
                             className="mt-1"
@@ -505,7 +521,7 @@ export function EventoCronogramaFormTab({
                         <div className="flex flex-col items-start gap-2">
                           {renderBadgeModalidad(etapa.modalidad_calculo)}
                           {linkedAct && (
-                            <div className="flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20" title="Actividad Asociada">
+                            <div className="flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 shadow-xs" title="Actividad Asociada">
                               <Link2 size={10} className="shrink-0" />
                               <span className="font-medium truncate max-w-[120px]">{linkedAct.nombre}</span>
                             </div>
@@ -520,8 +536,7 @@ export function EventoCronogramaFormTab({
                       </TableCell>
 
                       <TableCell align="center">
-                        {/* 👈 CORRECCIÓN 3: Tamaños y variantes válidos del UI Kit */}
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="sm" icon={<ChevronUp size={16} />} onClick={() => handleMoveEtapa(index, 'up')} disabled={index === 0} title="Mover Arriba" />
                           <Button variant="ghost" size="sm" icon={<ChevronDown size={16} />} onClick={() => handleMoveEtapa(index, 'down')} disabled={index === etapas.length - 1} title="Mover Abajo" />
                           <div className="w-px h-4 bg-border/50 mx-1"></div>
@@ -533,7 +548,6 @@ export function EventoCronogramaFormTab({
                   );
                 })}
 
-                {/* FILTRO STRICTO CONTRA DUPLICADOS EN ETAPAS */}
                 {editingEtapa && !etapas.some(e => String(e.id) === String(editingEtapa.id)) && renderFilaEdicionEtapa()}
               </TableBody>
             </Table>

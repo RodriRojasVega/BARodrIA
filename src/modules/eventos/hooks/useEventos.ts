@@ -18,15 +18,14 @@ export interface EventoConRelaciones {
   cliente_final_id?: number | null;
   salon_id?: number | null;
   spot_id?: number | null;
-  tipo_evento: number | null; 
-  estado: number;             
+  tipo_evento_id: number | null; // Actualizado a tipo_evento_id
+  estado_id: number;            // Actualizado a estado_id
   
   mandante?: ClienteEmpresa;
   cliente_final?: ClienteEmpresa;
   spot?: { id: number; nombre: string }; 
-  tipo_evento_info?: { id: number; slug: string; nombre: string };
-  estado_info?: { id: number; slug: string; nombre: string };
-  // Añadimos el tipo estricto para solucionar el error en EventoGeneralTab
+  tipos_evento?: { id: number; slug: string; nombre: string }; // Actualizado al nombre real del Join
+  estados_evento?: { id: number; slug: string; nombre: string }; // Actualizado al nombre real del Join
   etapas?: { 
     id: number; 
     orden: number; 
@@ -44,26 +43,27 @@ export function useEventos() {
   } = useQuery({
     queryKey: ['eventos_b2b'],
     queryFn: async () => {
+      // Ajustamos la consulta con las FKs e identificadores correctos
       const { data, error: err } = await supabase
         .from('eventos')
         .select(`
           *,
-          mandante:clientes_empresas!mandante_id(id, nombre, tipo, contacto_nombre, telefono, email),
-          cliente_final:clientes_empresas!cliente_final_id(id, nombre, tipo, contacto_nombre, telefono, email),
+          mandante:clientes_empresas!mandante_id(id, nombre, tipo_id, contacto_nombre, telefono, email, tipos_clientes(*)),
+          cliente_final:clientes_empresas!cliente_final_id(id, nombre, tipo_id, contacto_nombre, telefono, email, tipos_clientes(*)),
           spot:spots!spot_id(id, nombre),
-          tipo_evento_info:tipos_evento!tipo_evento(id, slug, nombre),
-          estado_info:estados_evento!estado(id, slug, nombre)
+          tipos_evento:tipos_evento!tipo_evento_id(id, slug, nombre),
+          estados_evento:estados_evento!estado_id(id, slug, nombre)
         `)
         .order('fecha_evento', { ascending: true });
 
       if (err) {
         console.warn('⚠️ Error en Supabase. Activando Fallback a Mocks:', err.message);
-        return mockEventosLista as EventoConRelaciones[];
+        return mockEventosLista as unknown as EventoConRelaciones[];
       }
 
       if (!data || data.length === 0) {
         console.warn('⚠️ Tabla de eventos vacía en Supabase. Mostrando Mock Data.');
-        return mockEventosLista as EventoConRelaciones[];
+        return mockEventosLista as unknown as EventoConRelaciones[];
       }
 
       return data as unknown as EventoConRelaciones[];

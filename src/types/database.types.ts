@@ -134,6 +134,36 @@ export type Database = {
         }
         Relationships: []
       }
+      cliente_spots: {
+        Row: {
+          cliente_id: number
+          spot_id: number
+        }
+        Insert: {
+          cliente_id: number
+          spot_id: number
+        }
+        Update: {
+          cliente_id?: number
+          spot_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_spots_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes_empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_spots_spot_id_fkey"
+            columns: ["spot_id"]
+            isOneToOne: false
+            referencedRelation: "spots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes_empresas: {
         Row: {
           contacto_nombre: string | null
@@ -141,7 +171,7 @@ export type Database = {
           id: number
           nombre: string
           telefono: string | null
-          tipo: string | null
+          tipo_id: number | null
         }
         Insert: {
           contacto_nombre?: string | null
@@ -149,7 +179,7 @@ export type Database = {
           id?: never
           nombre: string
           telefono?: string | null
-          tipo?: string | null
+          tipo_id?: number | null
         }
         Update: {
           contacto_nombre?: string | null
@@ -157,9 +187,17 @@ export type Database = {
           id?: never
           nombre?: string
           telefono?: string | null
-          tipo?: string | null
+          tipo_id?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clientes_empresas_tipo_id_fkey"
+            columns: ["tipo_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_clientes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       coctel_galeria_fotos: {
         Row: {
@@ -333,12 +371,12 @@ export type Database = {
           maridaje_justificacion: string | null
           maridaje_propuesta: string | null
           nombre: string
+          notas_boca: string | null
+          notas_inspiracion: string | null
+          notas_nariz: string | null
+          notas_vista: string | null
           porcentaje_azucar: number
           precio_venta_sugerido: number
-          reseña_boca: string | null
-          reseña_inspiracion: string | null
-          reseña_nariz: string | null
-          reseña_vista: string | null
           slug: string
           soporte_id: number
           tecnica_id: number
@@ -356,12 +394,12 @@ export type Database = {
           maridaje_justificacion?: string | null
           maridaje_propuesta?: string | null
           nombre: string
+          notas_boca?: string | null
+          notas_inspiracion?: string | null
+          notas_nariz?: string | null
+          notas_vista?: string | null
           porcentaje_azucar?: number
           precio_venta_sugerido?: number
-          reseña_boca?: string | null
-          reseña_inspiracion?: string | null
-          reseña_nariz?: string | null
-          reseña_vista?: string | null
           slug: string
           soporte_id: number
           tecnica_id: number
@@ -379,12 +417,12 @@ export type Database = {
           maridaje_justificacion?: string | null
           maridaje_propuesta?: string | null
           nombre?: string
+          notas_boca?: string | null
+          notas_inspiracion?: string | null
+          notas_nariz?: string | null
+          notas_vista?: string | null
           porcentaje_azucar?: number
           precio_venta_sugerido?: number
-          reseña_boca?: string | null
-          reseña_inspiracion?: string | null
-          reseña_nariz?: string | null
-          reseña_vista?: string | null
           slug?: string
           soporte_id?: number
           tecnica_id?: number
@@ -564,21 +602,21 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "cie_categoria_fkey"
+            foreignKeyName: "concepto_insumo_equivalencias_categoria_servicio_id_fkey"
             columns: ["categoria_servicio_id"]
             isOneToOne: false
             referencedRelation: "categorias_servicio"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cie_concepto_fkey"
+            foreignKeyName: "concepto_insumo_equivalencias_concepto_id_fkey"
             columns: ["concepto_id"]
             isOneToOne: false
             referencedRelation: "conceptos_oferta"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cie_insumo_fkey"
+            foreignKeyName: "concepto_insumo_equivalencias_insumo_id_fkey"
             columns: ["insumo_id"]
             isOneToOne: false
             referencedRelation: "insumos"
@@ -752,14 +790,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "ev_etapa_salon_etapa_fkey"
+            foreignKeyName: "evento_etapa_salones_etapa_id_fkey"
             columns: ["etapa_id"]
             isOneToOne: false
             referencedRelation: "evento_etapas"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "ev_etapa_salon_salon_fkey"
+            foreignKeyName: "evento_etapa_salones_salon_id_fkey"
             columns: ["salon_id"]
             isOneToOne: false
             referencedRelation: "salones_espacios"
@@ -829,14 +867,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "epc_concepto_fkey"
+            foreignKeyName: "evento_punto_conceptos_concepto_id_fkey"
             columns: ["concepto_id"]
             isOneToOne: false
             referencedRelation: "conceptos_oferta"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "epc_punto_fkey"
+            foreignKeyName: "evento_punto_conceptos_punto_servicio_id_fkey"
             columns: ["punto_servicio_id"]
             isOneToOne: false
             referencedRelation: "evento_puntos_servicio"
@@ -859,14 +897,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "epsalones_punto_fkey"
+            foreignKeyName: "evento_punto_salones_punto_servicio_id_fkey"
             columns: ["punto_servicio_id"]
             isOneToOne: false
             referencedRelation: "evento_puntos_servicio"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "epsalones_salon_fkey"
+            foreignKeyName: "evento_punto_salones_salon_id_fkey"
             columns: ["salon_id"]
             isOneToOne: false
             referencedRelation: "salones_espacios"
@@ -976,7 +1014,7 @@ export type Database = {
         Row: {
           cliente_final_id: number | null
           created_at: string
-          estado: number
+          estado_id: number
           fecha_evento: string
           hora_fin: string
           hora_inicio: string
@@ -988,13 +1026,13 @@ export type Database = {
           slug: string
           spot_id: number | null
           staff_proyectado: number | null
-          tipo_evento: number | null
+          tipo_evento_id: number | null
           total_pax: number
         }
         Insert: {
           cliente_final_id?: number | null
           created_at?: string
-          estado?: number
+          estado_id?: number
           fecha_evento: string
           hora_fin: string
           hora_inicio: string
@@ -1006,13 +1044,13 @@ export type Database = {
           slug: string
           spot_id?: number | null
           staff_proyectado?: number | null
-          tipo_evento?: number | null
+          tipo_evento_id?: number | null
           total_pax: number
         }
         Update: {
           cliente_final_id?: number | null
           created_at?: string
-          estado?: number
+          estado_id?: number
           fecha_evento?: string
           hora_fin?: string
           hora_inicio?: string
@@ -1024,7 +1062,7 @@ export type Database = {
           slug?: string
           spot_id?: number | null
           staff_proyectado?: number | null
-          tipo_evento?: number | null
+          tipo_evento_id?: number | null
           total_pax?: number
         }
         Relationships: [
@@ -1037,7 +1075,7 @@ export type Database = {
           },
           {
             foreignKeyName: "eventos_estado_id_fkey"
-            columns: ["estado"]
+            columns: ["estado_id"]
             isOneToOne: false
             referencedRelation: "estados_evento"
             referencedColumns: ["id"]
@@ -1065,7 +1103,7 @@ export type Database = {
           },
           {
             foreignKeyName: "eventos_tipo_evento_id_fkey"
-            columns: ["tipo_evento"]
+            columns: ["tipo_evento_id"]
             isOneToOne: false
             referencedRelation: "tipos_evento"
             referencedColumns: ["id"]
@@ -1321,14 +1359,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "mc_concepto_fkey"
+            foreignKeyName: "menu_conceptos_concepto_id_fkey"
             columns: ["concepto_id"]
             isOneToOne: false
             referencedRelation: "conceptos_oferta"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "mc_menu_fkey"
+            foreignKeyName: "menu_conceptos_menu_id_fkey"
             columns: ["menu_id"]
             isOneToOne: false
             referencedRelation: "menus"
@@ -1596,7 +1634,6 @@ export type Database = {
       }
       sub_recetas_artesanales: {
         Row: {
-          control_mermas_economia_circular: string | null
           elaboracion_instrucciones: string
           garnish_relacionado_id: number | null
           id: number
@@ -1607,10 +1644,10 @@ export type Database = {
           slug: string
           tipo_id: number
           unidad_rendimiento: string
+          uso_mermas: string | null
           vida_util: string
         }
         Insert: {
-          control_mermas_economia_circular?: string | null
           elaboracion_instrucciones: string
           garnish_relacionado_id?: number | null
           id?: number
@@ -1621,10 +1658,10 @@ export type Database = {
           slug: string
           tipo_id: number
           unidad_rendimiento: string
+          uso_mermas?: string | null
           vida_util: string
         }
         Update: {
-          control_mermas_economia_circular?: string | null
           elaboracion_instrucciones?: string
           garnish_relacionado_id?: number | null
           id?: number
@@ -1635,16 +1672,10 @@ export type Database = {
           slug?: string
           tipo_id?: number
           unidad_rendimiento?: string
+          uso_mermas?: string | null
           vida_util?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_sub_receta_tipo"
-            columns: ["tipo_id"]
-            isOneToOne: false
-            referencedRelation: "tipos_sub_recetas"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "sub_recetas_artesanales_garnish_relacionado_id_fkey"
             columns: ["garnish_relacionado_id"]
@@ -1657,6 +1688,13 @@ export type Database = {
             columns: ["insumo_asociado_id"]
             isOneToOne: false
             referencedRelation: "insumos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sub_recetas_artesanales_tipo_id_fkey"
+            columns: ["tipo_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_sub_recetas"
             referencedColumns: ["id"]
           },
         ]
@@ -1680,6 +1718,27 @@ export type Database = {
           dilucion_estimada_porcentaje?: number
           herramienta_requerida?: string
           id?: number
+          nombre?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      tipos_clientes: {
+        Row: {
+          descripcion: string | null
+          id: number
+          nombre: string
+          slug: string
+        }
+        Insert: {
+          descripcion?: string | null
+          id?: never
+          nombre: string
+          slug: string
+        }
+        Update: {
+          descripcion?: string | null
+          id?: never
           nombre?: string
           slug?: string
         }

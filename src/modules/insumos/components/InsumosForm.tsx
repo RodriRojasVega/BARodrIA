@@ -1,6 +1,6 @@
 // src/modules/insumos/components/InsumosForm.tsx
-import { useState, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Search, Edit3 } from 'lucide-react';
+import { useState, useMemo, ChangeEvent } from 'react';
+import { Trash2, Edit3 } from 'lucide-react';
 import { calcularCostoUnitarioInsumo } from '@/lib/calculos';
 
 // Tipos desde la fuente de verdad
@@ -35,24 +35,9 @@ interface Props {
 }
 
 export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVolver, onGuardar }: Props) {
-  const [formData, setFormData] = useState({
-    nombre: '', 
-    tipo_id: tipos[0]?.id.toString() || '', 
-    unidad_medida: 'ml',
-    formato_envase: 750 as number | string, 
-    precio_compra: 0 as number | string, 
-    graduacion_alcohol_base: 0 as number | string, 
-    rendimiento_neto_porcentaje: 100 as number | string, 
-    es_artesanal: false
-  });
-  
-  const [proveedoresAsociados, setProveedoresAsociados] = useState<Map<number, number | null>>(new Map());
-  const [busquedaDisponibles, setBusquedaDisponibles] = useState('');
-  const [busquedaAsignados, setBusquedaAsignados] = useState('');
-
-  useEffect(() => {
+  const [formData, setFormData] = useState(() => {
     if (insumoAEditar) {
-      setFormData({
+      return {
         nombre: insumoAEditar.nombre, 
         tipo_id: insumoAEditar.tipo_id?.toString() || '',
         unidad_medida: insumoAEditar.unidad_medida || 'ml', 
@@ -61,12 +46,29 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
         graduacion_alcohol_base: insumoAEditar.graduacion_alcohol_base,
         rendimiento_neto_porcentaje: insumoAEditar.rendimiento_neto_porcentaje ? Number(insumoAEditar.rendimiento_neto_porcentaje) * 100 : 100,
         es_artesanal: !!insumoAEditar.es_artesanal
-      });
-      const mapaProv = new Map<number, number | null>();
-      insumoAEditar.proveedores?.forEach(p => mapaProv.set(p.proveedor_id, p.precio_oferta ? Number(p.precio_oferta) : null));
-      setProveedoresAsociados(mapaProv);
+      };
     }
-  }, [insumoAEditar]);
+    return {
+      nombre: '', 
+      tipo_id: tipos[0]?.id.toString() || '', 
+      unidad_medida: 'ml',
+      formato_envase: 750 as number | string, 
+      precio_compra: 0 as number | string, 
+      graduacion_alcohol_base: 0 as number | string, 
+      rendimiento_neto_porcentaje: 100 as number | string, 
+      es_artesanal: false
+    };
+  });
+  
+  const [proveedoresAsociados, setProveedoresAsociados] = useState<Map<number, number | null>>(() => {
+    const mapaProv = new Map<number, number | null>();
+    if (insumoAEditar) {
+      insumoAEditar.proveedores?.forEach(p => mapaProv.set(p.proveedor_id, p.precio_oferta ? Number(p.precio_oferta) : null));
+    }
+    return mapaProv;
+  });
+  const [busquedaDisponibles, setBusquedaDisponibles] = useState('');
+  const [busquedaAsignados, setBusquedaAsignados] = useState('');
 
   const costoCalculadoActual = useMemo(() => {
     const pCompra = Number(formData.precio_compra) || 0;
@@ -83,21 +85,32 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
 
   const proveedoresAsignados = useMemo(() => proveedores
       .filter(p => proveedoresAsociados.has(p.id))
-      .filter(p => p.nombre.toLowerCase().includes(busquedaAsignados.toLowerCase())), 
+      .filter(p => p.nombre.toLowerCase().includes(busquedaAsignados.toLowerCase())),
   [proveedores, proveedoresAsociados, busquedaAsignados]);
 
-  const agregarProveedor = (id: number) => { 
-    setProveedoresAsociados(prev => new Map(prev).set(id, null)); 
+  const agregarProveedor = (id: number) => {
+    const nuevoMap = new Map(proveedoresAsociados);
+    nuevoMap.set(id, null);
+    setProveedoresAsociados(nuevoMap);
   };
-  
-  const removerProveedor = (id: number) => { 
-    const mapa = new Map(proveedoresAsociados); 
-    mapa.delete(id); 
-    setProveedoresAsociados(mapa); 
+
+  const removerProveedor = (id: number) => {
+    const nuevoMap = new Map(proveedoresAsociados);
+    nuevoMap.delete(id);
+    setProveedoresAsociados(nuevoMap);
   };
-  
-  const actualizarPrecioProveedor = (id: number, val: string) => { 
-    setProveedoresAsociados(prev => new Map(prev).set(id, val === '' ? null : Number(val))); 
+
+  const actualizarPrecioProveedor = (id: number, valor: string) => {
+    const nuevoMap = new Map(proveedoresAsociados);
+    const num = valor === '' ? null : parseFloat(valor);
+    nuevoMap.set(id, num);
+    setProveedoresAsociados(nuevoMap);
+  };
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    setFormData(prev => ({ ...prev, [name]: val }));
   };
 
   /*const aplicarMejorOferta = () => {
@@ -143,39 +156,44 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
       <div className="space-y-6 flex-1">
         <Input 
           label="Nombre del Insumo"
+          name="nombre"
           type="text" 
           required 
           value={formData.nombre} 
-          onChange={(e: any) => setFormData({...formData, nombre: e.target.value})}
+          onChange={handleInputChange}
           placeholder="Ej. Gin London Dry"
         />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
           <Select 
             label="Tipo de Insumo"
+            name="tipo_id"
             value={formData.tipo_id} 
-            onChange={(e: any) => setFormData({...formData, tipo_id: e.target.value})}
+            onChange={handleInputChange}
           >
             {tipos.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
           </Select>
 
           <Input 
             label="Graduación (% ABV)"
+            name="graduacion_alcohol_base"
             type="number" 
             step="0.1" 
             value={formData.graduacion_alcohol_base} 
-            onChange={(e: any) => setFormData({...formData, graduacion_alcohol_base: e.target.value})}
+            onChange={handleInputChange}
           />
 
           <div className="bg-primary/5 border border-primary/20 px-4 rounded-xl flex items-center gap-3 h-[42px]">
             <input 
               type="checkbox" 
+              name="es_artesanal"
+              id="es_artesanal"
               disabled={!!insumoAEditar} 
               checked={formData.es_artesanal} 
-              onChange={e => setFormData({...formData, es_artesanal: e.target.checked})} 
+              onChange={handleInputChange} 
               className="w-4 h-4 rounded bg-surface border-border accent-primary cursor-pointer shrink-0" 
             />
-            <label className="text-xs text-primary font-bold uppercase tracking-wider truncate">
+            <label htmlFor="es_artesanal" className="text-xs text-primary font-bold uppercase tracking-wider truncate cursor-pointer">
               ¿Producción Propia? {!!insumoAEditar && <span className="text-muted italic ml-1">(Inmutable)</span>}
             </label>
           </div>
@@ -186,16 +204,18 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <Input 
               label="Total Compra ($)"
+              name="precio_compra"
               type="number" 
               step="any" 
               required 
               value={formData.precio_compra} 
-              onChange={(e: any) => setFormData({...formData, precio_compra: e.target.value})}
+              onChange={handleInputChange}
             />
             <Select 
               label="Unidad Base"
+              name="unidad_medida"
               value={formData.unidad_medida} 
-              onChange={(e: any) => setFormData({...formData, unidad_medida: e.target.value})}
+              onChange={handleInputChange}
             >
               <option value="ml">Mililitros (ml)</option>
               <option value="g">Gramos (g)</option>
@@ -203,18 +223,20 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
             </Select>
             <Input 
               label="Formato / Envase"
+              name="formato_envase"
               type="number" 
               step="any" 
               required 
               value={formData.formato_envase} 
-              onChange={(e: any) => setFormData({...formData, formato_envase: e.target.value})}
+              onChange={handleInputChange}
             />
             <Input 
               label="Rendimiento (%)"
+              name="rendimiento_neto_porcentaje"
               type="number" 
               step="1" 
               value={formData.rendimiento_neto_porcentaje} 
-              onChange={(e: any) => setFormData({...formData, rendimiento_neto_porcentaje: e.target.value})} 
+              onChange={handleInputChange} 
             />
           </div>
 
@@ -246,10 +268,10 @@ export function InsumosForm({ insumoAEditar, tipos, proveedores, guardando, onVo
                 <div key={p.id} className="flex gap-2">
                    <Input 
                     placeholder="Precio" 
-                    value={(proveedoresAsignados as any).get?.(p.id) ?? ''}
-                    onChange={(e: any) => actualizarPrecioProveedor(p.id, e.target.value)}
+                    value={proveedoresAsociados.get(p.id) ?? ''}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => actualizarPrecioProveedor(p.id, e.target.value)}
                    />
-                   <Button type="button" variant="inline-danger" onClick={() => removerProveedor(p.id)}><Trash2 size={16}/></Button>
+                   <Button type="button" variant="danger" size="sm" onClick={() => removerProveedor(p.id)} icon={<Trash2 size={16}/>} />
                 </div>
               ))
             }

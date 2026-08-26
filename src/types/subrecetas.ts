@@ -1,7 +1,5 @@
 // src/types/subrecetas.ts
 
-// 1. Importamos la definición real de UnidadMedida y tipado si es necesario
-// O definimos las locales solo si son específicas de este módulo
 export type UnidadMedida = 'ml' | 'g' | 'unit' | 'dash';
 
 export interface TipoSubReceta {
@@ -10,9 +8,6 @@ export interface TipoSubReceta {
   nombre: string;
   descripcion: string | null;
 }
-
-// 2. ELIMINAMOS InsumoGlobal de aquí.
-// En los archivos que usaban InsumoGlobal, ahora importaremos desde '@/types/insumos'
 
 export interface IngredienteBOM {
   insumo_id: number;

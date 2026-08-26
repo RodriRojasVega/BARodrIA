@@ -1,6 +1,7 @@
 // src/modules/insumos/InsumosView.tsx
 import { useState } from 'react';
 import { useInsumos } from './hooks/useInsumos';
+import { useInsumoMutations } from './hooks/useInsumoMutations';
 
 // Tipos: Globales desde @/types, locales desde ./types
 import type { Insumo, InsumoPrecioHistorico } from '@/types/insumos';
@@ -17,11 +18,10 @@ export function InsumosView() {
     tipos, 
     proveedores, 
     cargando, 
-    guardando, 
-    guardarInsumo, 
-    eliminarInsumo, 
     obtenerHistorico 
   } = useInsumos();
+
+  const { guardarInsumo, eliminarInsumo } = useInsumoMutations();
   
   // Estado UI
   const [vista, setVista] = useState<VistaInsumo>('listado');
@@ -37,18 +37,23 @@ export function InsumosView() {
     setVista('detalle');
     
     setCargandoHistorial(true);
-    const hist = await obtenerHistorico(insumo.id);
-    setHistoricoActivo(hist);
-    setCargandoHistorial(false);
+    try {
+      const hist = await obtenerHistorico(insumo.id);
+      setHistoricoActivo(hist);
+    } catch {
+      setHistoricoActivo([]);
+    } finally {
+      setCargandoHistorial(false);
+    }
   };
 
   const procesarEliminacion = async (id: number, nombre: string) => {
     if (!confirm(`¿Estás seguro de eliminar el insumo "${nombre}"?`)) return;
-    const exito = await eliminarInsumo(id);
-    if (exito) {
+    try {
+      await eliminarInsumo.mutateAsync(id);
       setVista('listado');
-    } else {
-      alert("No se pudo eliminar el insumo.");
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "No se pudo eliminar el insumo.");
     }
   };
 
@@ -75,7 +80,7 @@ export function InsumosView() {
 
       {vista === 'detalle' && insumoActivo && (
         <InsumosDetail 
-          insumo={insumoActivo} 
+          insumo={insumos.find(i => i.id === insumoActivo.id) || insumoActivo} 
           tipos={tipos} 
           historialPrecios={historialFormateado}
           cargandoHistorial={cargandoHistorial}
@@ -87,22 +92,29 @@ export function InsumosView() {
 
       {vista === 'formulario' && (
         <InsumosForm 
+          key={insumoActivo?.id ?? 'nuevo'}
           insumoAEditar={insumoActivo} 
           tipos={tipos} 
           proveedores={proveedores} 
-          guardando={guardando} 
+          guardando={guardarInsumo.isPending} 
           onVolver={() => insumoActivo ? setVista('detalle') : setVista('listado')} 
           onGuardar={async (payload, provsAsociados) => {
-            const res = await guardarInsumo(payload, provsAsociados, !!insumoActivo, insumoActivo?.id.toString());
-            if (res.success && res.insumoActualizado) {
-              setInsumoActivo(res.insumoActualizado);
-              setVista('detalle');
-              setCargandoHistorial(true);
-              const hist = await obtenerHistorico(res.insumoActualizado.id);
-              setHistoricoActivo(hist);
-              setCargandoHistorial(false);
-            } else if (res.success) {
-              setVista('listado');
+            try {
+              const nuevoId = await guardarInsumo.mutateAsync({
+                payload,
+                proveedoresAsociados: provsAsociados,
+                isEdicion: !!insumoActivo,
+                idEdicion: insumoActivo?.id.toString()
+              });
+              const insumoActualizado = insumos.find(i => i.id === nuevoId);
+              if (insumoActualizado) {
+                setInsumoActivo(insumoActualizado);
+                setVista('detalle');
+              } else {
+                setVista('listado');
+              }
+            } catch (err: unknown) {
+              alert(err instanceof Error ? err.message : 'Error al guardar insumo');
             }
           }} 
         />

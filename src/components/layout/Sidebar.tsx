@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
+  Map,
   ShoppingCart, 
   Truck, 
   FlaskConical, 
@@ -9,7 +10,7 @@ import {
   ScrollText, 
   Calendar, 
   Settings, 
-  Palette,
+  Star,
   ChevronLeft,
   ChevronRight,
   type LucideIcon // Importamos el tipo oficial de los iconos
@@ -28,6 +29,8 @@ interface NavItem {
 // 2. Aplicamos la interfaz al arreglo
 const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/Clientes', label: 'Clientes', icon: Star },
+  { path: '/spots', label: 'Spots', icon: Map },
   { path: '/eventos', label: 'Eventos', icon: Calendar },
   { path: '/cartas', label: 'Cartas', icon: ScrollText },
   { path: '/cocteles', label: 'Cócteles', icon: Wine },
@@ -35,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/insumos', label: 'Insumos', icon: ShoppingCart },
   { path: '/proveedores', label: 'Proveedores', icon: Truck },
   { path: '/catalogos', label: 'Catálogos Estáticos', icon: Settings },
-  { path: '/uikit', label: 'Laboratorio UI', icon: Palette },
+  //{ path: '/uikit', label: 'Laboratorio UI', icon: Palette },
   //{ path: '/bartender', label: 'Modo Bartender', icon: MonitorPlay, special: true },
 ];
 

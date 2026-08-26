@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/Button';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
 import { Save, CheckCircle, CalendarPlus } from 'lucide-react';
 import { EventoGeneralFormTab } from './tabs/EventoGeneralFormTab';
-import { useEventoMutations, EventoFormData } from '../hooks/useEventoMutations';
-import { useEventos, EventoConRelaciones } from '../hooks/useEventos';
+import { useEventoMutations, type EventoFormData } from '../hooks/useEventoMutations';
+import { useEventos, type EventoConRelaciones } from '../hooks/useEventos';
 import { useSalonesSpot } from '../hooks/useSalonesSpot';
 import { useEventoDetalleForm } from '../hooks/useEventoDetalleForm';
 import { EventoCronogramaFormTab, type ActividadForm, type EtapaForm } from './tabs/EventoCronogramaFormTab';
@@ -26,7 +26,6 @@ interface EtapaRemota {
   nombre: string;
   hora_inicio?: string | null;
   hora_fin?: string | null;
-  // 👈 CORRECCIÓN: Restringido a los literales exactos para satisfacer a EtapaForm
   modalidad_calculo?: 'paquete_fijo' | 'barra_libre' | 'tickets' | null; 
   pax_etapa?: number | null;
   regla_consumo?: number | null;
@@ -60,21 +59,22 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
   
   const { data: detalleRemoto, isLoading: cargandoDetalle } = useEventoDetalleForm(eventoId, isEditMode);
 
+  // Inicialización perezosa asegurada y nombres de FKs actualizados
   const [formData, setFormData] = useState<EventoFormData>(() => {
     if (isEditMode && eventos) {
       const eventoActual = eventos.find((e: EventoConRelaciones) => e.id === eventoId);
       if (eventoActual) {
-        const tipoId: number | null = typeof eventoActual.tipo_evento === 'number' 
-          ? eventoActual.tipo_evento 
-          : (eventoActual.tipo_evento_info?.id ?? null);
+        const tipoId: number | null = typeof eventoActual.tipo_evento_id === 'number' 
+          ? eventoActual.tipo_evento_id 
+          : null;
 
-        const estadoId: number = typeof eventoActual.estado === 'number' 
-          ? eventoActual.estado 
-          : (eventoActual.estado_info?.id ?? 1);
+        const estadoId: number = typeof eventoActual.estado_id === 'number' 
+          ? eventoActual.estado_id 
+          : 1;
 
         return {
           nombre: eventoActual.nombre || '',
-          tipo_evento: tipoId,
+          tipo_evento_id: tipoId,
           total_pax: eventoActual.total_pax || 0,
           staff_proyectado: eventoActual.staff_proyectado || 0,
           fecha_evento: eventoActual.fecha_evento || '',
@@ -83,7 +83,7 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
           mandante_id: eventoActual.mandante_id || null,
           cliente_final_id: eventoActual.cliente_final_id || null,
           observaciones_logistica: eventoActual.observaciones_logistica || '',
-          estado: estadoId,
+          estado_id: estadoId,
           spot_id: eventoActual.spot_id || null, 
         };
       }
@@ -91,7 +91,7 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
 
     return {
       nombre: '',
-      tipo_evento: null,
+      tipo_evento_id: null,
       total_pax: 0,
       staff_proyectado: 0,
       fecha_evento: '',
@@ -100,7 +100,7 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
       mandante_id: null,
       cliente_final_id: null,
       observaciones_logistica: '',
-      estado: 1, 
+      estado_id: 1, 
       spot_id: null,
     };
   });
@@ -185,7 +185,7 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
     try {
       const payload: EventoFormData = {
         ...formData,
-        estado: estadoBorrador ? 1 : formData.estado,
+        estado_id: estadoBorrador ? 1 : formData.estado_id, // Usando estado_id
         actividades, 
         etapas,
         puntos,
@@ -201,14 +201,13 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
       }
       
       if (estadoBorrador) {
-        alert('✅ Borrador guardado exitosamente.'); 
+        console.log('✅ Borrador guardado exitosamente.'); // Regla 7: Eliminamos alert
       } else {
         onGuardado(eventoGuardadoId ?? undefined);
       }
       
     } catch (error) {
-      console.error('Error al guardar el evento:', error);
-      alert('Ocurrió un error al intentar guardar el evento.');
+      console.error('Error al guardar el evento:', error); // Regla 7: Eliminamos alert
     }
   };
 
@@ -233,7 +232,9 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
                 onClick={() => handleGuardar(true)}
                 disabled={cargando}
                 title="Guardar Borrador"
-              />
+              >
+                Borrador
+              </Button>
               <Button 
                 variant="primary" 
                 size="sm" 
@@ -241,7 +242,9 @@ export function EventoForm({ eventoId, onGuardado, onCancelar }: EventoFormProps
                 onClick={() => handleGuardar(false)}
                 disabled={cargando}
                 title="Guardar y Salir"
-              />
+              >
+                Guardar
+              </Button>
             </div>
           }
         />

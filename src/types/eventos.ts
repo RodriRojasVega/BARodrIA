@@ -1,26 +1,20 @@
 // src/types/eventos.ts
+import type { ClienteEmpresa } from './clientes';
+import type { Spot, SalonEspacio } from './spots';
 
 // ==========================================
 // ENUMS Y TIPOS LITERALES
 // ==========================================
-export type TipoClienteEmpresa = 'empresa_final' | 'productora' | 'banquetera' | 'centro_eventos' | 'particular';
+// Mantenemos estos tipos por si los usas para validar slugs en el frontend,
+// aunque en la entidad principal ahora usaremos los IDs numéricos.
 export type TipoEvento = 'corporativo' | 'matrimonio' | 'cumpleanos' | 'activacion_marca' | 'festival_masivo' | 'particular' | 'otro';
 export type EstadoEvento = 'cotizacion' | 'confirmado' | 'en_produccion' | 'ejecutado' | 'cancelado';
 export type ModalidadCalculo = 'paquete_fijo' | 'barra_libre' | 'tickets';
 export type CategoriaHerramienta = 'preparacion' | 'servicio' | 'montaje';
 export type RolStaff = 'produccion' | 'barback' | 'bartender' | 'capitan';
 
-// ==========================================
-// ENTIDADES DEL CRM B2B
-// ==========================================
-export interface ClienteEmpresa {
-  id: number;
-  nombre: string;
-  tipo: TipoClienteEmpresa | null;
-  contacto_nombre: string | null;
-  telefono: string | null;
-  email: string | null;
-}
+// Reexportamos ClienteEmpresa para que el módulo de eventos siga disponiendo de ella de forma nativa
+export type { ClienteEmpresa };
 
 // ==========================================
 // ENTIDADES DEL EVENTO Y LOGÍSTICA
@@ -33,17 +27,25 @@ export interface Evento {
   hora_inicio: string;  // Formato HH:mm:ss
   hora_fin: string;     // Formato HH:mm:ss
   total_pax: number;
-  estado: EstadoEvento;
+  estado_id: number; // Actualizado: FK a estados_evento
   observaciones_logistica: string | null;
   created_at: string;
   
   // Relaciones Geográficas y Comerciales
   salon_id: number | null;
   spot_id: number | null;
-  tipo_evento: TipoEvento | null;
+  tipo_evento_id: number | null; // Actualizado: FK a tipos_evento
   mandante_id: number | null;
   cliente_final_id: number | null;
-  cliente_empresa_id: number | null; // Legacy
+  staff_proyectado?: number;
+
+  // Joins opcionales para renderizado en vistas
+  spots?: Spot;
+  salones_espacios?: SalonEspacio;
+  mandante?: ClienteEmpresa;
+  cliente_final?: ClienteEmpresa;
+  estados_evento?: { nombre: string; slug: string }; // Join con catálogo de estados
+  tipos_evento?: { nombre: string; slug: string }; // Join con catálogo de tipos
 }
 
 export interface EventoEtapa {

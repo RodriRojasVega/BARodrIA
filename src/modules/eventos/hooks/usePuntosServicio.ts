@@ -5,10 +5,10 @@ import { supabase } from '@/lib/supabase';
 export interface PuntoServicio {
   id: number;
   punto_servicio_id?: number;
-  evento_etapa_salon_id?: number; // Mantenemos compatibilidad de interfaz si la UI lo lee
+  evento_etapa_salon_id?: number; 
   etapa_id: number;
   nombre: string;
-  pax_estimado_asignado: number | null;
+  pax_asignado: number | null; // Actualizado a pax_asignado para calzar con la UI y BD
   estado: string | null;
 }
 
@@ -23,7 +23,6 @@ export function usePuntosServicio(eventoId: number | null) {
     queryFn: async () => {
       if (!eventoId) return [];
 
-      // Consultamos directamente la nueva tabla transaccional de puntos del evento
       const { data, error: err } = await supabase
         .from('evento_puntos_servicio')
         .select(`
@@ -40,16 +39,16 @@ export function usePuntosServicio(eventoId: number | null) {
         return [];
       }
 
-      if (!data || data.length == 0) {
+      if (!data || data.length === 0) {
         return [];
       }
 
-      // Mapeamos al formato que espera la UI del cronograma
-      const mapeoPuntos: PuntoServicio[] = data.map((item: any) => ({
+      // Mapeo tipado estrictamente sin usar 'any'
+      const mapeoPuntos: PuntoServicio[] = data.map((item) => ({
         id: item.id,
         etapa_id: item.etapa_id,
         nombre: item.nombre,
-        pax_estimado_asignado: item.pax_asignado,
+        pax_asignado: item.pax_asignado,
         estado: 'activo',
       }));
 

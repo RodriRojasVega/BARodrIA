@@ -1,3 +1,4 @@
+// src/modules/eventos/data/eventoMock.ts
 import type { EventoConRelaciones } from '../hooks/useEventos';
 
 export interface EtapaOperativaMock {
@@ -16,13 +17,13 @@ export const mockEventoDetalleCompleto: EventoConRelaciones = {
   id: 1,
   slug: 'gran-aniversario-corporativo-2026',
   nombre: 'Gran Aniversario Corporativo 2026',
-  tipo_evento: 1, // ID de tipo_evento
+  tipo_evento_id: 1, 
   fecha_evento: '2026-08-25',
   hora_inicio: '19:00:00',
   hora_fin: '04:00:00',
   total_pax: 3500,
-  staff_proyectado: 120, // Nuevo campo obligatorio
-  estado: 1, // ID de estados_evento (1 = Cotización)
+  staff_proyectado: 120, 
+  estado_id: 1, 
   mandante_id: 101,
   cliente_final_id: 202,
   salon_id: 1,
@@ -31,7 +32,8 @@ export const mockEventoDetalleCompleto: EventoConRelaciones = {
   mandante: {
     id: 101,
     nombre: 'Productora Global Events SpA',
-    tipo: 'productora',
+    tipo_id: 2, // ID de tipo parametrizado (ej. Productora)
+    tipos_clientes: { id: 2, slug: 'productora', nombre: 'Productora', descripcion: null },
     contacto_nombre: 'Carlos Mendoza',
     telefono: '+56912345678',
     email: 'contacto@globalevents.cl'
@@ -39,17 +41,18 @@ export const mockEventoDetalleCompleto: EventoConRelaciones = {
   cliente_final: {
     id: 202,
     nombre: 'Banco de Innovación Tecnológica',
-    tipo: 'empresa_final',
+    tipo_id: 1, // ID de tipo parametrizado (ej. Empresa Final)
+    tipos_clientes: { id: 1, slug: 'empresa_final', nombre: 'Empresa Final', descripcion: null },
     contacto_nombre: 'Ana Torres',
     telefono: '+56987654321',
     email: 'atorres@bancoit.cl'
   },
-  tipo_evento_info: {
+  tipos_evento: {
     id: 1,
     slug: 'corporativo',
     nombre: 'Corporativo'
   },
-  estado_info: {
+  estados_evento: {
     id: 1,
     slug: 'cotizacion',
     nombre: 'Cotización'
@@ -62,13 +65,13 @@ export const mockEventosLista: EventoConRelaciones[] = [
     id: 2,
     slug: 'lanzamiento-marca-tech-2026',
     nombre: 'Lanzamiento de Marca Tech',
-    tipo_evento: 4, // ID 4 = Activación de Marca
+    tipo_evento_id: 4, 
     fecha_evento: '2026-08-30',
     hora_inicio: '20:00:00',
     hora_fin: '02:00:00',
     total_pax: 800,
     staff_proyectado: 35,
-    estado: 2, // ID 2 = Confirmado
+    estado_id: 2, 
     mandante_id: 102,
     cliente_final_id: 203,
     salon_id: 2,
@@ -77,7 +80,8 @@ export const mockEventosLista: EventoConRelaciones[] = [
     mandante: {
       id: 102,
       nombre: 'Marketing Experencial Ltda',
-      tipo: 'productora',
+      tipo_id: 2,
+      tipos_clientes: { id: 2, slug: 'productora', nombre: 'Productora', descripcion: null },
       contacto_nombre: 'Sofía Valdés',
       telefono: '+56998877665',
       email: 'svaldes@marketing.cl'
@@ -85,17 +89,18 @@ export const mockEventosLista: EventoConRelaciones[] = [
     cliente_final: {
       id: 203,
       nombre: 'TechStore Andina',
-      tipo: 'empresa_final',
+      tipo_id: 1,
+      tipos_clientes: { id: 1, slug: 'empresa_final', nombre: 'Empresa Final', descripcion: null },
       contacto_nombre: 'Felipe Rojas',
       telefono: '+56955443322',
       email: 'frojas@techstore.cl'
     },
-    tipo_evento_info: {
+    tipos_evento: {
       id: 4,
       slug: 'activacion_marca',
       nombre: 'Activación de Marca'
     },
-    estado_info: {
+    estados_evento: {
       id: 2,
       slug: 'confirmado',
       nombre: 'Confirmado'

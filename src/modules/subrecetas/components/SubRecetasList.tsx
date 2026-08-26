@@ -63,7 +63,7 @@ export function SubRecetasList({
     const filtradas = data.filter(sr => {
       const tipoObj = tipos.find(t => t.id === sr.tipo_id);
       const coincidenciaNombre = sr.nombre.toLowerCase().includes(busqueda.toLowerCase());
-      const coincidenciaTipo = tipoObj?.nombre?.toLowerCase().includes(busqueda.toLowerCase());
+      const coincidenciaTipo = tipoObj?.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ?? false;
       return coincidenciaNombre || coincidenciaTipo;
     });
 
@@ -106,7 +106,7 @@ export function SubRecetasList({
       <ModuleHeader 
         icon={<FlaskConical size={20} />}
         title="Sub-recetas Artesanales"
-        action={
+        primaryAction={
             <div className="flex gap-2">
                 <Button variant="secondary" size="sm" onClick={() => setShowKpis(!showKpis)}>
                     {showKpis ? 'Ocultar KPIs' : 'Ver KPIs'}
@@ -145,13 +145,13 @@ export function SubRecetasList({
       <div className="flex flex-col flex-1 space-y-2">
         <Table className="flex-1">
           <TableHead>
-            <tr>
+            <TableRow>
               <TableHeaderCell isSortable sortDirection={columnaOrden === 'nombre' ? (ordenAsc ? 'asc' : 'desc') : null} onSort={() => manejarOrden('nombre')}>Nombre</TableHeaderCell>
               <TableHeaderCell isSortable sortDirection={columnaOrden === 'tipo' ? (ordenAsc ? 'asc' : 'desc') : null} onSort={() => manejarOrden('tipo')}>Tipo</TableHeaderCell>
               <TableHeaderCell align="right" isSortable sortDirection={columnaOrden === 'rendimiento_batch' ? (ordenAsc ? 'asc' : 'desc') : null} onSort={() => manejarOrden('rendimiento_batch')}>Rendimiento</TableHeaderCell>
               <TableHeaderCell align="right" isSortable sortDirection={columnaOrden === 'costo_lote_clp' ? (ordenAsc ? 'asc' : 'desc') : null} onSort={() => manejarOrden('costo_lote_clp')}>Costo Lote</TableHeaderCell>
               <TableHeaderCell align="right" isSortable sortDirection={columnaOrden === 'costo_unitario_clp' ? (ordenAsc ? 'asc' : 'desc') : null} onSort={() => manejarOrden('costo_unitario_clp')}>Costo Unit</TableHeaderCell>
-            </tr>
+            </TableRow>
           </TableHead>
           <TableBody>
             {paginadas.map((sr) => {

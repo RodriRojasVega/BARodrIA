@@ -1,49 +1,21 @@
 // src/modules/eventos/components/EventoForecastTab.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Table, TableHead, TableBody, TableRow, TableCell, TableHeaderCell } from '@/components/ui/Table';
 import { BlockHeader } from '@/components/ui/BlockHeader';
 import { SelectableCard } from '@/components/ui/SelectableCard';
 import { ToggleButton } from '@/components/ui/ToggleButton';
 import { CategoryFilter, type CategoryOption } from '@/components/ui/CategoryFilter';
 import { Martini, Package, Scale } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useForecastReal, type EtapaForecastReal, type ItemForecastCalculado } from '../hooks/useForecastReal';
 
 interface EventoForecastTabProps {
   eventoId: number;
   totalPax?: number;
 }
 
-interface ItemForecastCalculado {
-  id: number;
-  tipo: string;
-  categoria: string;
-  nombre: string;
-  consumoUnitario: number;
-  peso: number;
-  unidadBase: string;
-  volumenTotal: number;
-}
-
-interface PuntoForecastReal {
-  id: number;
-  nombre: string;
-  paxAsignado: number;
-  oferta: ItemForecastCalculado[];
-}
-
-interface EtapaForecastReal {
-  id: number;
-  nombre: string;
-  fase: string;
-  horario: string;
-  paxEtapa: number;
-  reglaConsumo: number;
-  puntos: PuntoForecastReal[];
-}
-
 export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
-  const [etapasForecast, setEtapasForecast] = useState<EtapaForecastReal[]>([]);
-  const [cargando, setCargando] = useState<boolean>(true);
+  const { data: etapasForecast = [], isLoading: cargando } = useForecastReal(eventoId);
+  
   const [selecciones, setSelecciones] = useState<Record<number, 'todos' | number[]>>({});
   const [modoConsolidadoGlobal, setModoConsolidadoGlobal] = useState<boolean>(false);
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | number>('todos');
@@ -54,107 +26,6 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
     { id: 'mixer', label: 'Mixers' },
     { id: 'otro', label: 'Otros' },
   ];
-
-  // Cargar la información real desde Supabase para este evento
-  useEffect(() => {
-    async function cargarForecastReal() {
-      if (!eventoId) return;
-      setCargando(true);
-
-      try {
-        // 1. Obtener las etapas del evento
-        const { data: etapasData, error: errEtapas } = await supabase
-          .from('evento_etapas')
-          .select('id, nombre, orden, hora_inicio, hora_fin, pax_etapa, regla_consumo')
-          .eq('evento_id', eventoId)
-          .order('orden', { ascending: true });
-
-        if (errEtapas || !etapasData) {
-          console.error('Error al cargar etapas para forecast:', errEtapas);
-          setCargando(false);
-          return;
-        }
-
-        const etapasConstruidas: EtapaForecastReal[] = [];
-
-        for (const [index, etapa] of etapasData.entries()) {
-          // 2. Obtener los puntos de servicio de esta etapa
-          const { data: puntosData } = await supabase
-            .from('evento_puntos_servicio')
-            .select('id, nombre, pax_asignado')
-            .eq('etapa_id', etapa.id);
-
-          const puntosConstruidos: PuntoForecastReal[] = [];
-
-          if (puntosData) {
-            for (const punto of puntosData) {
-              // 3. Obtener los conceptos y pesos ajustados de cada punto
-              const { data: conceptosData } = await supabase
-                .from('evento_punto_conceptos')
-                .select(`
-                  peso_ajustado,
-                  conceptos_oferta (
-                    id,
-                    nombre,
-                    unidad_medida_base,
-                    tipo,
-                    slug
-                  )
-                `)
-                .eq('punto_servicio_id', punto.id);
-
-              const ofertaItems: ItemForecastCalculado[] = [];
-
-              if (conceptosData) {
-                conceptosData.forEach((item: any) => {
-                  const concepto = item.conceptos_oferta;
-                  if (!concepto) return;
-
-                  ofertaItems.push({
-                    id: concepto.id,
-                    tipo: concepto.tipo || 'otro',
-                    categoria: concepto.tipo || 'otro',
-                    nombre: concepto.nombre,
-                    consumoUnitario: 1, // Base estándar por unidad si no se especifica
-                    peso: Number(item.peso_ajustado) || 0, // Guardado como porcentaje (ej: 30%)
-                    unidadBase: concepto.unidad_medida_base || 'unit',
-                    volumenTotal: 0, // Se calcula matemáticamente abajo
-                  });
-                });
-              }
-
-              puntosConstruidos.push({
-                id: punto.id,
-                nombre: punto.nombre,
-                paxAsignado: punto.pax_asignado || 0,
-                oferta: ofertaItems,
-              });
-            }
-          }
-
-          const horarioTexto = `${etapa.hora_inicio?.slice(0, 5) || '--:--'} - ${etapa.hora_fin?.slice(0, 5) || '--:--'} hrs`;
-
-          etapasConstruidas.push({
-            id: etapa.id,
-            nombre: etapa.nombre,
-            fase: `Etapa ${index + 1}`,
-            horario: horarioTexto,
-            paxEtapa: etapa.pax_etapa || 0,
-            reglaConsumo: Number(etapa.regla_consumo) || 1, // Factor (ej: 1.15)
-            puntos: puntosConstruidos,
-          });
-        }
-
-        setEtapasForecast(etapasConstruidas);
-      } catch (error) {
-        console.error('Error procesando forecast:', error);
-      } finally {
-        setCargando(false);
-      }
-    }
-
-    cargarForecastReal();
-  }, [eventoId]);
 
   const toggleSeleccion = (etapaId: number, puntoId: number | 'todos') => {
     setSelecciones(prev => {
@@ -179,8 +50,7 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
     if (etapa === 'global') {
       etapasForecast.forEach(e => {
         e.puntos.forEach(punto => {
-          punto.oferta.forEach(item => {
-             // Fórmula: PAX del punto * (Peso en % / 100) * Regla de consumo de la etapa
+           punto.oferta.forEach(item => {
              const factorPorcentaje = item.peso / 100;
              const volumenCalculado = punto.paxAsignado * factorPorcentaje * e.reglaConsumo;
 
@@ -221,7 +91,7 @@ export function EventoForecastTab({ eventoId }: EventoForecastTabProps) {
   };
 
   if (cargando) {
-    return <div className="p-8 text-center text-muted">Cargando matriz de forecast...</div>;
+    return <div className="p-8 text-center text-muted font-mono animate-pulse">Cargando matriz de forecast...</div>;
   }
 
   if (etapasForecast.length === 0) {

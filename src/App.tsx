@@ -3,12 +3,14 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { Topbar } from './components/layout/Topbar';
 import { DashboardView } from './modules/dashboard/DashboardView';
+import { ClientesView } from './modules/clientes/ClienteView';
+import { SpotsView } from './modules/spots/SpotsView';
 import { InsumosView } from './modules/insumos/InsumosView';
 import { ProveedoresView } from './modules/proveedores/ProveedoresView';
 import { CatalogosView } from './modules/catalogos/CatalogosView';
 import { SubRecetasModule } from './modules/subrecetas/SubRecetasView';
-import { CoctelView } from './modules/coctel/CoctelView';
-import { CartaView } from './modules/carta/CartaView';
+import { CoctelView } from './modules/cocteles/CoctelView';
+import { CartaView } from './modules/cartas/CartaView';
 import { UiKitView } from './modules/uikit/UiKitView';
 import { EventosView } from './modules/eventos/EventosView';
 
@@ -36,6 +38,8 @@ function App() {
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<DashboardView />} />
+              <Route path="/clientes" element={<ClientesView />} />
+              <Route path="/spots" element={<SpotsView />} />
               <Route path="/eventos" element={<EventosView />} />
               <Route path="/insumos" element={<InsumosView />} />
               <Route path="/subrecetas" element={<SubRecetasModule />} />

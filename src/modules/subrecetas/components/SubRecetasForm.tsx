@@ -21,7 +21,7 @@ interface Props {
   ingredientesBase: IngredienteBOM[];
   pasosBase: PasoPreparacion[];
   tipos: TipoSubReceta[];
-  onGuardar: (payload: any, ingredientes: IngredienteBOM[], pasos: PasoPreparacion[]) => void;
+  onGuardar: (payload: Record<string, unknown>, ingredientes: IngredienteBOM[], pasos: PasoPreparacion[]) => void;
   onCancelar: () => void;
 }
 
@@ -48,14 +48,25 @@ export function SubRecetasForm({
   const [ingredientes, setIngredientes] = useState<IngredienteBOM[]>(ingredientesBase);
   const [pasos] = useState<PasoPreparacion[]>(pasosBase);
 
-  const updateIngrediente = (index: number, field: string, value: any) => {
+  const updateIngrediente = (index: number, field: keyof IngredienteBOM, value: unknown) => {
     setIngredientes(prev => prev.map((ing, i) => {
       if (i !== index) return ing;
+      
       const updated = { ...ing, [field]: value };
+      
       if (field === 'insumo_id') {
-        const ref = insumosDisponibles.find(item => item.id === Number(value));
-        if (ref) updated.unidad_medida = ref.unidad_medida;
+        const insumoIdNum = Number(value);
+        const ref = insumosDisponibles.find(item => item.id === insumoIdNum);
+        if (ref) {
+          updated.insumo_id = insumoIdNum;
+          updated.unidad_medida = ref.unidad_medida;
+        }
       }
+      
+      if (field === 'cantidad') {
+        updated.cantidad = Number(value) || 0;
+      }
+
       return updated;
     }));
   };
@@ -72,7 +83,7 @@ export function SubRecetasForm({
 
   const handleGuardarClick = (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = {
+    const payload: Record<string, unknown> = {
       nombre: nombre.trim(),
       tipo_id: parseInt(tipoId) || null,
       rendimiento_batch: parseFloat(rendimiento) || 0,
@@ -92,9 +103,9 @@ export function SubRecetasForm({
       <ModuleHeader 
         icon={<TestTube size={20} />}
         title={subRecetaBase ? 'Editar Sub-receta' : 'Nueva Sub-receta'}
-        action={
+        primaryAction={
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={onCancelar}>Volver</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={onCancelar}>Volver</Button>
             <Button type="submit" variant="primary" size="sm" icon={<Save size={14} />}>Guardar</Button>
           </div>
         }
@@ -115,18 +126,18 @@ export function SubRecetasForm({
         <section className="space-y-4">
            <div className="flex justify-between items-center border-b border-border pb-2">
             <h3 className="text-xs font-bold text-primary uppercase tracking-wider">Ingredientes (BOM)</h3>
-            <Button variant="secondary" size="sm" icon={<Plus size={14}/>} onClick={() => setIngredientes([...ingredientes, { insumo_id: 0, cantidad: 0, unidad_medida: '' }])}>Agregar</Button>
+            <Button type="button" variant="secondary" size="sm" icon={<Plus size={14}/>} onClick={() => setIngredientes([...ingredientes, { insumo_id: 0, cantidad: 0, unidad_medida: '' }])}>Agregar</Button>
           </div>
           {ingredientes.map((ing, idx) => (
              <DynamicIngredientRow key={idx} onRemove={() => setIngredientes(ingredientes.filter((_, i) => i !== idx))}>
                <div className="sm:col-span-8">
-                 <Select value={ing.insumo_id.toString()} onChange={v => updateIngrediente(idx, 'insumo_id', v)}>
+                 <Select value={ing.insumo_id.toString()} onChange={e => updateIngrediente(idx, 'insumo_id', e.target.value)}>
                     <option value="0">Seleccione insumo...</option>
                     {insumosDisponibles.map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
                  </Select>
                </div>
                <div className="sm:col-span-4 flex items-center gap-2">
-                 <Input type="number" value={ing.cantidad} onChange={v => updateIngrediente(idx, 'cantidad', v)} />
+                 <Input type="number" value={ing.cantidad} onChange={e => updateIngrediente(idx, 'cantidad', e.target.value)} />
                  <span className="text-xs text-muted w-10">{ing.unidad_medida}</span>
                </div>
              </DynamicIngredientRow>

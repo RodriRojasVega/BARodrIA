@@ -14,11 +14,13 @@ export function EventoGeneralTab({ evento }: EventoGeneralTabProps) {
   const resumenModalidades = ['Barra Libre', 'Paquete Fijo'];
   const totalStaffAsignado = 24;
 
-  const tipoNombre = evento.tipo_evento_info?.nombre || (typeof evento.tipo_evento === 'string' ? evento.tipo_evento : 'Corporativo');
-  const estadoNombre = evento.estado_info?.nombre || (typeof evento.estado === 'string' ? evento.estado : 'Cotización');
-  const estadoSlug = evento.estado_info?.slug || (typeof evento.estado === 'string' ? evento.estado : 'cotizacion');
+  // Actualizado para usar las nuevas relaciones de Supabase (tipos_evento y estados_evento)
+  // Eliminadas las validaciones typeof string porque ahora los IDs son estrictamente number | null
+  const tipoNombre = evento.tipos_evento?.nombre || 'Corporativo';
+  const estadoNombre = evento.estados_evento?.nombre || 'Cotización';
+  const estadoSlug = evento.estados_evento?.slug || 'cotizacion';
 
-  // 👈 CORRECCIÓN: Tipado estricto leyendo únicamente evento_etapa_salones según la interfaz de useEventos
+  // Tipado estricto leyendo únicamente evento_etapa_salones según la interfaz de useEventos
   const salonesUnicos = Array.from(
     new Set(
       (evento.etapas || []).flatMap((etapa) => 

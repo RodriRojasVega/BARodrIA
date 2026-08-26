@@ -1,6 +1,6 @@
 // src/modules/subrecetas/components/SubRecetasDetail.tsx
 import { useState } from 'react';
-import { ArrowLeft, Edit3, Trash2, Info, Truck, History, Beaker, Layers, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, Edit3, Trash2, Beaker, Layers, Link as LinkIcon } from 'lucide-react';
 
 // Tipos
 import type { SubRecetaItem } from './SubRecetasList';
@@ -64,7 +64,7 @@ export function SubRecetasDetail({
             <Badge variant="info" size="sm">{subReceta.categoria_nombre || 'S/T'}</Badge>
           </div>
         }
-        action={
+        primaryAction={
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" icon={<ArrowLeft size={14} />} onClick={onVolver}>Volver</Button>
             <Button variant="secondary" size="sm" icon={<Edit3 size={14}/>} onClick={() => onEditar(subReceta)}>Editar</Button>
@@ -92,11 +92,11 @@ export function SubRecetasDetail({
               <h4 className="font-bold text-xs text-muted uppercase tracking-widest mb-3">Composición (Ingredientes)</h4>
               <Table>
                 <TableHead>
-                  <tr>
+                  <TableRow>
                     <TableHeaderCell>Insumo</TableHeaderCell>
                     <TableHeaderCell align="right">Cantidad</TableHeaderCell>
                     <TableHeaderCell align="right">Costo Parcial</TableHeaderCell>
-                  </tr>
+                  </TableRow>
                 </TableHead>
                 <TableBody>
                   {ingredientesBase.map((ing, idx) => {

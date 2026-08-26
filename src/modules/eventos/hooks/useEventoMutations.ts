@@ -6,7 +6,7 @@ import type { PuntoServicioForm } from '../components/tabs/EventoForecastFormTab
 
 export interface EventoFormData {
   nombre: string;
-  tipo_evento: number | null; 
+  tipo_evento_id: number | null; // Actualizado: FK a tipos_evento
   total_pax: number;
   staff_proyectado: number;    
   fecha_evento: string;
@@ -15,7 +15,7 @@ export interface EventoFormData {
   mandante_id?: number | null;
   cliente_final_id?: number | null;
   observaciones_logistica?: string;
-  estado: number;            
+  estado_id: number;             // Actualizado: FK a estados_evento
   salon_id?: number | null;
   spot_id?: number | null;
   
@@ -41,7 +41,7 @@ export function useEventoMutations() {
       const payload = {
         ...eventoData,
         slug: `${slug}-${Date.now().toString().slice(-4)}`,
-        estado: eventoData.estado || 1, 
+        estado_id: eventoData.estado_id || 1, // Usando estado_id
       };
 
       const { data: nuevoEvento, error: errEvento } = await supabase
@@ -151,7 +151,6 @@ export function useEventoMutations() {
       return nuevoEvento;
     },
     onSuccess: () => {
-      // 👈 Invalidamos TODAS las llaves relacionadas al evento para forzar recarga
       queryClient.invalidateQueries({ queryKey: ['eventos_b2b'] });
       queryClient.invalidateQueries({ queryKey: ['cronograma_detalle'] });
       queryClient.invalidateQueries({ queryKey: ['evento_puntos_servicio_real'] });
@@ -166,7 +165,7 @@ export function useEventoMutations() {
       // 1. Actualizar cabecera
       const { data: eventoActualizado, error: errEvento } = await supabase
         .from('eventos')
-        .update(eventoData)
+        .update(eventoData) // eventoData ahora contiene estado_id y tipo_evento_id
         .eq('id', id)
         .select()
         .single();
@@ -279,7 +278,6 @@ export function useEventoMutations() {
       return eventoActualizado;
     },
     onSuccess: () => {
-      // 👈 Invalidamos TODAS las llaves relacionadas al evento para forzar recarga
       queryClient.invalidateQueries({ queryKey: ['eventos_b2b'] });
       queryClient.invalidateQueries({ queryKey: ['cronograma_detalle'] });
       queryClient.invalidateQueries({ queryKey: ['evento_puntos_servicio_real'] });
@@ -294,7 +292,6 @@ export function useEventoMutations() {
       return id;
     },
     onSuccess: () => {
-      // 👈 Invalidamos TODAS las llaves relacionadas al evento para forzar recarga
       queryClient.invalidateQueries({ queryKey: ['eventos_b2b'] });
       queryClient.invalidateQueries({ queryKey: ['cronograma_detalle'] });
       queryClient.invalidateQueries({ queryKey: ['evento_puntos_servicio_real'] });

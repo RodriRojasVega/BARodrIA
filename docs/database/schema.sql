@@ -66,10 +66,10 @@ CREATE TABLE public.cocteles (
   soporte_id integer NOT NULL,
   hielo_id integer NOT NULL,
   tecnica_id integer NOT NULL,
-  reseña_inspiracion text,
-  reseña_vista character varying,
-  reseña_nariz character varying,
-  reseña_boca character varying,
+  notas_inspiracion text,
+  notas_vista character varying,
+  notas_nariz character varying,
+  notas_boca character varying,
   maridaje_propuesta character varying,
   maridaje_justificacion text,
   maridaje_alternativa character varying,
@@ -116,14 +116,14 @@ CREATE TABLE public.sub_recetas_artesanales (
   elaboracion_instrucciones text NOT NULL,
   indicaciones_almacenamiento text NOT NULL,
   vida_util character varying NOT NULL,
-  control_mermas_economia_circular text,
+  uso_mermas text,
   garnish_relacionado_id integer,
   insumo_asociado_id integer NOT NULL,
   tipo_id integer NOT NULL,
   CONSTRAINT sub_recetas_artesanales_pkey PRIMARY KEY (id),
   CONSTRAINT sub_recetas_artesanales_garnish_relacionado_id_fkey FOREIGN KEY (garnish_relacionado_id) REFERENCES public.insumos(id),
   CONSTRAINT sub_recetas_artesanales_insumo_asociado_id_fkey FOREIGN KEY (insumo_asociado_id) REFERENCES public.insumos(id),
-  CONSTRAINT fk_sub_receta_tipo FOREIGN KEY (tipo_id) REFERENCES public.tipos_sub_recetas(id)
+  CONSTRAINT sub_recetas_artesanales_tipo_id_fkey FOREIGN KEY (tipo_id) REFERENCES public.tipos_sub_recetas(id)
 );
 CREATE TABLE public.sub_receta_ingredientes (
   id integer NOT NULL DEFAULT nextval('sub_receta_ingredientes_id_seq'::regclass),
@@ -222,11 +222,12 @@ CREATE TABLE public.carta_cocteles (
 CREATE TABLE public.clientes_empresas (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
   nombre character varying NOT NULL,
-  tipo character varying CHECK (tipo::text = ANY (ARRAY['empresa_final'::text, 'productora'::text, 'banquetera'::text, 'centro_eventos'::text, 'particular'::text])),
   contacto_nombre character varying,
   telefono character varying,
   email character varying,
-  CONSTRAINT clientes_empresas_pkey PRIMARY KEY (id)
+  tipo_id integer,
+  CONSTRAINT clientes_empresas_pkey PRIMARY KEY (id),
+  CONSTRAINT clientes_empresas_tipo_id_fkey FOREIGN KEY (tipo_id) REFERENCES public.tipos_clientes(id)
 );
 CREATE TABLE public.salones_espacios (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -241,25 +242,26 @@ CREATE TABLE public.eventos (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
   slug character varying NOT NULL UNIQUE,
   nombre character varying NOT NULL,
-  cliente_empresa_id integer,
   salon_id integer,
   fecha_evento date NOT NULL,
   hora_inicio time without time zone NOT NULL,
   hora_fin time without time zone NOT NULL,
   total_pax integer NOT NULL,
-  estado character varying NOT NULL DEFAULT 'cotizacion'::character varying CHECK (estado::text = ANY (ARRAY['cotizacion'::character varying, 'confirmado'::character varying, 'en_produccion'::character varying, 'ejecutado'::character varying, 'cancelado'::character varying]::text[])),
+  estado_id integer NOT NULL DEFAULT 1,
   observaciones_logistica text,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   spot_id integer,
-  tipo_evento character varying CHECK (tipo_evento::text = ANY (ARRAY['corporativo'::text, 'matrimonio'::text, 'cumpleanos'::text, 'activacion_marca'::text, 'festival_masivo'::text, 'particular'::text, 'otro'::text])),
+  tipo_evento_id integer,
   mandante_id integer,
   cliente_final_id integer,
+  staff_proyectado integer DEFAULT 0,
   CONSTRAINT eventos_pkey PRIMARY KEY (id),
-  CONSTRAINT eventos_cliente_fkey FOREIGN KEY (cliente_empresa_id) REFERENCES public.clientes_empresas(id),
   CONSTRAINT eventos_salon_fkey FOREIGN KEY (salon_id) REFERENCES public.salones_espacios(id),
   CONSTRAINT eventos_spot_fkey FOREIGN KEY (spot_id) REFERENCES public.spots(id),
   CONSTRAINT eventos_mandante_id_fkey FOREIGN KEY (mandante_id) REFERENCES public.clientes_empresas(id),
-  CONSTRAINT eventos_cliente_final_id_fkey FOREIGN KEY (cliente_final_id) REFERENCES public.clientes_empresas(id)
+  CONSTRAINT eventos_cliente_final_id_fkey FOREIGN KEY (cliente_final_id) REFERENCES public.clientes_empresas(id),
+  CONSTRAINT eventos_estado_id_fkey FOREIGN KEY (estado_id) REFERENCES public.estados_evento(id),
+  CONSTRAINT eventos_tipo_evento_id_fkey FOREIGN KEY (tipo_evento_id) REFERENCES public.tipos_evento(id)
 );
 CREATE TABLE public.evento_etapas (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -298,25 +300,8 @@ CREATE TABLE public.evento_etapa_salones (
   etapa_id integer NOT NULL,
   salon_id integer NOT NULL,
   CONSTRAINT evento_etapa_salones_pkey PRIMARY KEY (id),
-  CONSTRAINT ev_etapa_salon_etapa_fkey FOREIGN KEY (etapa_id) REFERENCES public.evento_etapas(id),
-  CONSTRAINT ev_etapa_salon_salon_fkey FOREIGN KEY (salon_id) REFERENCES public.salones_espacios(id)
-);
-CREATE TABLE public.puntos_servicio (
-  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
-  nombre character varying NOT NULL,
-  estado character varying DEFAULT 'activo'::character varying,
-  CONSTRAINT puntos_servicio_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.punto_servicio_oferta (
-  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
-  punto_servicio_id integer NOT NULL,
-  coctel_id integer,
-  factor_ajuste_demanda numeric DEFAULT 1.00,
-  concepto_id integer,
-  CONSTRAINT punto_servicio_oferta_pkey PRIMARY KEY (id),
-  CONSTRAINT pto_srv_oferta_punto_fkey FOREIGN KEY (punto_servicio_id) REFERENCES public.puntos_servicio(id),
-  CONSTRAINT pto_srv_oferta_coctel_fkey FOREIGN KEY (coctel_id) REFERENCES public.cocteles(id),
-  CONSTRAINT pto_srv_oferta_concepto_fkey FOREIGN KEY (concepto_id) REFERENCES public.conceptos_oferta(id)
+  CONSTRAINT evento_etapa_salones_etapa_id_fkey FOREIGN KEY (etapa_id) REFERENCES public.evento_etapas(id),
+  CONSTRAINT evento_etapa_salones_salon_id_fkey FOREIGN KEY (salon_id) REFERENCES public.salones_espacios(id)
 );
 CREATE TABLE public.mesas (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -398,17 +383,7 @@ CREATE TABLE public.evento_staff_asignacion (
   CONSTRAINT evento_staff_asignacion_pkey PRIMARY KEY (id),
   CONSTRAINT evento_staff_asignacion_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.staff(id),
   CONSTRAINT evento_staff_asignacion_evento_id_fkey FOREIGN KEY (evento_id) REFERENCES public.eventos(id),
-  CONSTRAINT evento_staff_asignacion_etapa_id_fkey FOREIGN KEY (etapa_id) REFERENCES public.evento_etapas(id),
-  CONSTRAINT evento_staff_asignacion_punto_servicio_id_fkey FOREIGN KEY (punto_servicio_id) REFERENCES public.puntos_servicio(id)
-);
-CREATE TABLE public.punto_servicio_asignaciones (
-  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
-  punto_servicio_id integer NOT NULL,
-  evento_etapa_salon_id integer NOT NULL,
-  pax_estimado_asignado integer,
-  CONSTRAINT punto_servicio_asignaciones_pkey PRIMARY KEY (id),
-  CONSTRAINT psa_etapa_salon_fkey FOREIGN KEY (evento_etapa_salon_id) REFERENCES public.evento_etapa_salones(id),
-  CONSTRAINT psa_punto_fkey FOREIGN KEY (punto_servicio_id) REFERENCES public.puntos_servicio(id)
+  CONSTRAINT evento_staff_asignacion_etapa_id_fkey FOREIGN KEY (etapa_id) REFERENCES public.evento_etapas(id)
 );
 CREATE TABLE public.categorias_servicio (
   id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
@@ -435,7 +410,92 @@ CREATE TABLE public.concepto_insumo_equivalencias (
   prioridad integer NOT NULL DEFAULT 1,
   estado character varying DEFAULT 'activo'::character varying,
   CONSTRAINT concepto_insumo_equivalencias_pkey PRIMARY KEY (id),
-  CONSTRAINT cie_concepto_fkey FOREIGN KEY (concepto_id) REFERENCES public.conceptos_oferta(id),
-  CONSTRAINT cie_categoria_fkey FOREIGN KEY (categoria_servicio_id) REFERENCES public.categorias_servicio(id),
-  CONSTRAINT cie_insumo_fkey FOREIGN KEY (insumo_id) REFERENCES public.insumos(id)
+  CONSTRAINT concepto_insumo_equivalencias_concepto_id_fkey FOREIGN KEY (concepto_id) REFERENCES public.conceptos_oferta(id),
+  CONSTRAINT concepto_insumo_equivalencias_categoria_servicio_id_fkey FOREIGN KEY (categoria_servicio_id) REFERENCES public.categorias_servicio(id),
+  CONSTRAINT concepto_insumo_equivalencias_insumo_id_fkey FOREIGN KEY (insumo_id) REFERENCES public.insumos(id)
+);
+CREATE TABLE public.evento_actividades_cronograma (
+  id bigint NOT NULL DEFAULT nextval('evento_actividades_cronograma_id_seq'::regclass),
+  evento_id bigint,
+  etapa_id bigint,
+  orden integer NOT NULL DEFAULT 0,
+  nombre character varying NOT NULL,
+  hora_inicio time without time zone NOT NULL,
+  hora_fin time without time zone NOT NULL,
+  es_hito boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT evento_actividades_cronograma_pkey PRIMARY KEY (id),
+  CONSTRAINT evento_actividades_cronograma_evento_id_fkey FOREIGN KEY (evento_id) REFERENCES public.eventos(id),
+  CONSTRAINT evento_actividades_cronograma_etapa_id_fkey FOREIGN KEY (etapa_id) REFERENCES public.evento_etapas(id)
+);
+CREATE TABLE public.estados_evento (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  slug character varying NOT NULL UNIQUE,
+  nombre character varying NOT NULL,
+  descripcion text,
+  orden integer DEFAULT 0,
+  CONSTRAINT estados_evento_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.tipos_evento (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  slug character varying NOT NULL UNIQUE,
+  nombre character varying NOT NULL,
+  descripcion text,
+  CONSTRAINT tipos_evento_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.menus (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  nombre character varying NOT NULL,
+  descripcion text,
+  estado character varying DEFAULT 'activo'::character varying,
+  CONSTRAINT menus_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.menu_conceptos (
+  menu_id integer NOT NULL,
+  concepto_id integer NOT NULL,
+  peso_defecto numeric NOT NULL DEFAULT 1.00,
+  CONSTRAINT menu_conceptos_pkey PRIMARY KEY (menu_id, concepto_id),
+  CONSTRAINT menu_conceptos_menu_id_fkey FOREIGN KEY (menu_id) REFERENCES public.menus(id),
+  CONSTRAINT menu_conceptos_concepto_id_fkey FOREIGN KEY (concepto_id) REFERENCES public.conceptos_oferta(id)
+);
+CREATE TABLE public.evento_puntos_servicio (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  evento_id integer NOT NULL,
+  etapa_id integer NOT NULL,
+  menu_id integer,
+  nombre character varying NOT NULL,
+  pax_asignado integer NOT NULL DEFAULT 0,
+  CONSTRAINT evento_puntos_servicio_pkey PRIMARY KEY (id),
+  CONSTRAINT eps_evento_fkey FOREIGN KEY (evento_id) REFERENCES public.eventos(id),
+  CONSTRAINT eps_etapa_fkey FOREIGN KEY (etapa_id) REFERENCES public.evento_etapas(id),
+  CONSTRAINT eps_menu_fkey FOREIGN KEY (menu_id) REFERENCES public.menus(id)
+);
+CREATE TABLE public.evento_punto_salones (
+  punto_servicio_id integer NOT NULL,
+  salon_id integer NOT NULL,
+  CONSTRAINT evento_punto_salones_pkey PRIMARY KEY (punto_servicio_id, salon_id),
+  CONSTRAINT evento_punto_salones_punto_servicio_id_fkey FOREIGN KEY (punto_servicio_id) REFERENCES public.evento_puntos_servicio(id),
+  CONSTRAINT evento_punto_salones_salon_id_fkey FOREIGN KEY (salon_id) REFERENCES public.salones_espacios(id)
+);
+CREATE TABLE public.evento_punto_conceptos (
+  punto_servicio_id integer NOT NULL,
+  concepto_id integer NOT NULL,
+  peso_ajustado numeric NOT NULL DEFAULT 100,
+  CONSTRAINT evento_punto_conceptos_pkey PRIMARY KEY (punto_servicio_id, concepto_id),
+  CONSTRAINT evento_punto_conceptos_punto_servicio_id_fkey FOREIGN KEY (punto_servicio_id) REFERENCES public.evento_puntos_servicio(id),
+  CONSTRAINT evento_punto_conceptos_concepto_id_fkey FOREIGN KEY (concepto_id) REFERENCES public.conceptos_oferta(id)
+);
+CREATE TABLE public.cliente_spots (
+  cliente_id integer NOT NULL,
+  spot_id integer NOT NULL,
+  CONSTRAINT cliente_spots_pkey PRIMARY KEY (cliente_id, spot_id),
+  CONSTRAINT cliente_spots_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes_empresas(id),
+  CONSTRAINT cliente_spots_spot_id_fkey FOREIGN KEY (spot_id) REFERENCES public.spots(id)
+);
+CREATE TABLE public.tipos_clientes (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  slug character varying NOT NULL UNIQUE,
+  nombre character varying NOT NULL,
+  descripcion text,
+  CONSTRAINT tipos_clientes_pkey PRIMARY KEY (id)
 );

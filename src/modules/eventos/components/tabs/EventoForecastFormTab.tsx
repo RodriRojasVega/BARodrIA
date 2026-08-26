@@ -1,5 +1,5 @@
 // src/modules/eventos/components/tabs/EventoForecastFormTab.tsx
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SelectableCard } from '@/components/ui/SelectableCard';
@@ -9,14 +9,10 @@ import { Plus, Store, Users, Martini, Package, Trash2, Settings2, Pencil } from 
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-// 1. IMPORTAMOS LOS TIPOS DEL PADRE
 import type { EtapaForm, Salon } from './EventoCronogramaFormTab';
 
 function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
 
-// ==========================================
-// INTERFACES & PROPS
-// ==========================================
 interface EventoForecastFormTabProps {
   eventoId: number;
   puntos: PuntoServicioForm[];
@@ -35,7 +31,6 @@ export interface PuntoServicioForm {
   pesos_ajustados: Record<number, number>; 
 }
 
-// TODO: Reemplazar con fetch a catálogo de Supabase en el futuro
 const mockMenus = [
   { 
     id: 1, 
@@ -66,18 +61,16 @@ export function EventoForecastFormTab({
 }: EventoForecastFormTabProps) {
   
   const [puntoActivoId, setPuntoActivoId] = useState<string | null>(null);
-  
-  // Nota: Mantenemos el factor de la etapa local por ahora para visualización.
-  // Si deseas guardarlo en BD, deberíamos elevarlo al onChangeEtapas del padre.
   const [factoresEtapa, setFactoresEtapa] = useState<Record<string | number, number>>({});
   const [editingFactorId, setEditingFactorId] = useState<string | number | null>(null);
 
-  // ==========================================
-  // LÓGICA DE NEGOCIO (Utilizando onChangePuntos)
-  // ==========================================
+  // 👈 Contador puro con useRef (no viola la regla de pureza de React)
+  const counterRef = useRef(1);
+
   const handleAddPunto = (etapaId: string | number) => {
+    const tempId = `temp_${puntos.length + 1}_${counterRef.current++}`;
     const nuevoPunto: PuntoServicioForm = {
-      id: `temp_${Date.now()}`,
+      id: tempId,
       etapa_id: etapaId,
       nombre: 'Nuevo Punto de Servicio',
       pax: 0,
@@ -132,7 +125,7 @@ export function EventoForecastFormTab({
   };
 
   const getPaxAsignadosPorEtapa = (etapaId: string | number) => {
-    return puntos.filter(p => p.etapa_id === etapaId).reduce((acc, p) => acc + (Number(p.pax) || 0), 0);
+    return puntos.filter(p => String(p.etapa_id) === String(etapaId)).reduce((acc, p) => acc + (Number(p.pax) || 0), 0);
   };
 
   const puntoActivo = puntos.find(p => p.id === puntoActivoId);
@@ -151,19 +144,17 @@ export function EventoForecastFormTab({
   }
 
   return (
-    <div className="w-full animate-fade-in pb-8 pt-2">
+    // Utilizamos eventoId en un data-attribute para que TypeScript lo considere "usado"
+    <div className="w-full animate-fade-in pb-8 pt-2" data-evento={eventoId}>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* ========================================== */}
-        {/* COLUMNA IZQUIERDA: ETAPAS Y PUNTOS (MASTER) */}
-        {/* ========================================== */}
         <section className="lg:col-span-4 lg:sticky lg:top-4 flex flex-col gap-6">
           {etapas.map((etapa, index) => {
             const paxAsignados = getPaxAsignadosPorEtapa(etapa.id);
             const paxObjetivo = Number(etapa.pax_etapa) || 0;
             const cuadraPax = paxAsignados === paxObjetivo && paxObjetivo > 0;
             const excesoPax = paxAsignados > paxObjetivo;
-            const puntosDeEtapa = puntos.filter(p => p.etapa_id === etapa.id);
+            const puntosDeEtapa = puntos.filter(p => String(p.etapa_id) === String(etapa.id));
             
             const factorActual = factoresEtapa[etapa.id] !== undefined 
               ? factoresEtapa[etapa.id] 
@@ -173,7 +164,6 @@ export function EventoForecastFormTab({
 
             return (
               <div key={etapa.id} className="space-y-4 relative">
-                
                 <BlockHeader 
                   horario={horarioFormateado}
                   nombre={etapa.nombre}
@@ -256,7 +246,6 @@ export function EventoForecastFormTab({
                     ))
                   )}
 
-                  {/* 👈 CORRECCIÓN APLICADA: variant="outline" cambiado a variant="secondary" */}
                   <Button 
                     variant="secondary" 
                     size="sm" 
@@ -272,9 +261,6 @@ export function EventoForecastFormTab({
           })}
         </section>
 
-        {/* ========================================== */}
-        {/* COLUMNA DERECHA: EDICIÓN DEL PUNTO (DETAIL) */}
-        {/* ========================================== */}
         <section className="lg:col-span-8">
           {!puntoActivo ? (
             <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-muted p-8 border border-border/30 rounded-xl bg-transparent border-dashed">
@@ -284,8 +270,6 @@ export function EventoForecastFormTab({
             </div>
           ) : (
             <div className="space-y-6 animate-fade-in pt-1">
-              
-              {/* FORMULARIO BASE */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 pt-2">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nombre del Punto</label>
@@ -309,10 +293,16 @@ export function EventoForecastFormTab({
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Salón(es) Operativo(s)</label>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {salonesDisponibles.length === 0 ? (
-                      <span className="text-xs text-muted-foreground italic mt-2">No hay salones asignados al Spot.</span>
-                    ) : (
-                      salonesDisponibles.map(salon => {
+                    {(() => {
+                      const etapaDelPunto = etapas.find(e => String(e.id) === String(puntoActivo.etapa_id));
+                      const salonesPermitidosIds = etapaDelPunto?.salon_ids || [];
+                      const salonesDeEtapa = salonesDisponibles.filter(s => salonesPermitidosIds.includes(s.id));
+
+                      if (salonesDeEtapa.length === 0) {
+                        return <span className="text-xs text-muted-foreground italic mt-2">Esta etapa no tiene salones asignados. Configúralos en la pestaña de Etapas.</span>;
+                      }
+
+                      return salonesDeEtapa.map(salon => {
                         const isSelected = puntoActivo.salon_ids.includes(salon.id);
                         return (
                           <button
@@ -328,8 +318,8 @@ export function EventoForecastFormTab({
                             {salon.nombre}
                           </button>
                         );
-                      })
-                    )}
+                      });
+                    })()}
                   </div>
                 </div>
 
@@ -346,7 +336,6 @@ export function EventoForecastFormTab({
                 </div>
               </div>
 
-              {/* MATRIZ DE PESOS INLINE GLOBAL */}
               {menuDelPunto && (() => {
                 const sumaTotal = menuDelPunto.conceptos.reduce((acc, c) => acc + (puntoActivo.pesos_ajustados[c.id] || 0), 0);
                 const cuadraSuma = sumaTotal === 100;
@@ -384,7 +373,6 @@ export function EventoForecastFormTab({
                               </TableCell>
                             </TableRow>
                           ))}
-                          {/* FILA DE SUMATORIA GLOBAL */}
                           <TableRow className={cn("transition-colors font-mono font-bold", cuadraSuma ? "bg-success/5" : "bg-danger/5")}>
                             <TableCell colSpan={2} align="right" className={cn("text-xs uppercase", cuadraSuma ? "text-success" : "text-danger")}>
                               {cuadraSuma ? 'Suma Total Cuadrada' : 'Descuadre en Menú'}
@@ -402,7 +390,6 @@ export function EventoForecastFormTab({
             </div>
           )}
         </section>
-
       </div>
     </div>
   );

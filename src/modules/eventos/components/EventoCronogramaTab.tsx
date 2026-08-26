@@ -164,7 +164,7 @@ export function EventoCronogramaTab({ eventoId }: EventoCronogramaTabProps) {
                                       <span className={cn("font-medium", isActive && "text-foreground")}>{punto.nombre}</span>
                                     </div>
                                     <span className={cn("font-mono text-muted border px-1 py-0.5 rounded", isActive ? "border-primary/30" : "border-border/40")}>
-                                      {punto.pax_estimado_asignado} PAX
+                                      {punto.pax_asignado || 0} PAX {/* 👈 Bug corregido: pax_asignado */}
                                     </span>
                                   </div>
                                 ))}

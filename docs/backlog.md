@@ -54,3 +54,15 @@ Este documento centraliza las ideas, mejoras y tareas pendientes por implementar
 
 Actualizar database.type.ts:
 supabase gen types typescript --project-id qnsbkeqgtprrirgasric --schema public > src/types/database.types.ts
+
+npx vite optimize --force
+
+rm -rf node_modules
+rm -rf .vite
+rm -rf dist
+
+npm cache clean --force
+
+npm install
+
+killall node
