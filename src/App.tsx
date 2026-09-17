@@ -1,6 +1,6 @@
 // src/App.tsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Sidebar } from './components/layout/Sidebar';
+import { MainSidebar } from './components/MainSidebar';
 import { Topbar } from './components/layout/Topbar';
 import { DashboardView } from './modules/dashboard/DashboardView';
 import { ClientesView } from './modules/clientes/ClienteView';
@@ -23,7 +23,7 @@ function App() {
         {/* LA MAGIA AQUÍ: Agregamos 'self-start' 
             Esto evita que el sidebar se estire al infinito y permite que 'sticky' funcione perfecto */}
         <div className="sticky top-0 h-screen shrink-0 z-50 self-start flex">
-          <Sidebar />
+          <MainSidebar />
         </div>
         
         {/* Columna Derecha de la App */}
